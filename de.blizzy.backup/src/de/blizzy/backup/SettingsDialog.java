@@ -58,6 +58,12 @@ class SettingsDialog extends Dialog {
 	}
 	
 	@Override
+	protected void configureShell(Shell newShell) {
+		super.configureShell(newShell);
+		newShell.setImages(BackupApplication.getWindowImages());
+	}
+	
+	@Override
 	protected boolean isResizable() {
 		return true;
 	}

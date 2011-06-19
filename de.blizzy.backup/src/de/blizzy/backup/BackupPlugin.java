@@ -66,6 +66,6 @@ public class BackupPlugin extends AbstractUIPlugin {
 	}
 	
 	ImageDescriptor getImageDescriptor(String path) {
-		return AbstractUIPlugin.imageDescriptorFromPlugin(ID, "etc/icons/" + path); //$NON-NLS-1$
+		return AbstractUIPlugin.imageDescriptorFromPlugin(ID, path);
 	}
 }

@@ -20,18 +20,21 @@ package de.blizzy.backup;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
 
 class TrayIcon {
 	private TrayItem trayItem;
+	private Image image;
 
 	TrayIcon(Display display) {
 		Tray systemTray = display.getSystemTray();
 		if (systemTray != null) {
 			trayItem = new TrayItem(systemTray, SWT.NONE);
-			trayItem.setImage(display.getSystemImage(SWT.ICON_INFORMATION));
+			image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
+			trayItem.setImage(image);
 			trayItem.setToolTipText("blizzy's Backup"); //$NON-NLS-1$
 			trayItem.addSelectionListener(new SelectionAdapter() {
 				@Override
@@ -43,6 +46,9 @@ class TrayIcon {
 	}
 	
 	void dispose() {
+		if (image != null) {
+			image.dispose();
+		}
 		if (trayItem != null) {
 			trayItem.dispose();
 		}

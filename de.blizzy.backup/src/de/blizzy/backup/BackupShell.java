@@ -60,6 +60,8 @@ class BackupShell {
 	BackupShell(Display display) {
 		shell = new Shell(display);
 		shell.setText("blizzy's Backup"); //$NON-NLS-1$
+		shell.setImages(BackupApplication.getWindowImages());
+		
 		GridLayout layout = new GridLayout(1, false);
 		layout.marginWidth = 20;
 		layout.marginHeight = 20;

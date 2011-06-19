@@ -27,7 +27,9 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.jface.dialogs.IDialogSettings;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 public class BackupApplication implements IApplication {
 	private static boolean running = true;
@@ -36,13 +38,22 @@ public class BackupApplication implements IApplication {
 	private static Timer timer;
 	private static BackupRun backupRun;
 	private static long nextBackupRunTime;
+	private static Image[] windowImages;
 
 	public Object start(IApplicationContext context) throws Exception {
 		display = Display.getDefault();
 		
-		context.applicationRunning();
-
 		setupDefaultPreferences();
+
+		Image image16 = AbstractUIPlugin.imageDescriptorFromPlugin(
+				BackupPlugin.ID, "etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
+		Image image32 = AbstractUIPlugin.imageDescriptorFromPlugin(
+				BackupPlugin.ID, "etc/logo/logo_32.png").createImage(display); //$NON-NLS-1$
+		Image image48 = AbstractUIPlugin.imageDescriptorFromPlugin(
+				BackupPlugin.ID, "etc/logo/logo_48.png").createImage(display); //$NON-NLS-1$
+		windowImages = new Image[] { image16, image32, image48 };
+
+		context.applicationRunning();
 		
 		TrayIcon trayIcon = new TrayIcon(display);
 		timer = new Timer();
@@ -67,6 +78,10 @@ public class BackupApplication implements IApplication {
 		timer = null;
 		trayIcon.dispose();
 		
+		image16.dispose();
+		image32.dispose();
+		image48.dispose();
+
 		if (backupRun != null) {
 			backupRun.stopBackupAndWait();
 		}
@@ -168,5 +183,9 @@ public class BackupApplication implements IApplication {
 	
 	static long getNextScheduledBackupRunTime() {
 		return nextBackupRunTime;
+	}
+	
+	static Image[] getWindowImages() {
+		return windowImages;
 	}
 }

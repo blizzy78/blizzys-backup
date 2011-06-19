@@ -138,9 +138,9 @@ class RestoreDialog extends Dialog {
 		private Image fileImage;
 
 		EntryLabelProvider(Device device) {
-			rootFolderImage = BackupPlugin.getDefault().getImageDescriptor("rootFolder.gif").createImage(device); //$NON-NLS-1$
-			folderImage = BackupPlugin.getDefault().getImageDescriptor("folder.gif").createImage(device); //$NON-NLS-1$
-			fileImage = BackupPlugin.getDefault().getImageDescriptor("file.gif").createImage(device); //$NON-NLS-1$
+			rootFolderImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/rootFolder.gif").createImage(device); //$NON-NLS-1$
+			folderImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/folder.gif").createImage(device); //$NON-NLS-1$
+			fileImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/file.gif").createImage(device); //$NON-NLS-1$
 		}
 		
 		public void dispose() {
@@ -210,6 +210,12 @@ class RestoreDialog extends Dialog {
 		IDialogSettings settingsSection = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
 		outputFolder = settingsSection.get("outputFolder"); //$NON-NLS-1$
 		database = new Database(new File(outputFolder, "$blizzysbackup")); //$NON-NLS-1$
+	}
+	
+	@Override
+	protected void configureShell(Shell newShell) {
+		super.configureShell(newShell);
+		newShell.setImages(BackupApplication.getWindowImages());
 	}
 	
 	@Override

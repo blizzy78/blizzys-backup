@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="backup"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            icon="">
+         <run
+               class="de.blizzy.backup.BackupApplication">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="backup"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="de.blizzy.backup.backup"
+            name="%product.name">
+         <property
+               name="appName"
+               value="%product.name">
+         </property>
+      </product>
+   </extension>
+</plugin>

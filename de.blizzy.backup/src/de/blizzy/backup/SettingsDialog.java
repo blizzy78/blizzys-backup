@@ -1,0 +1,234 @@
+/*
+blizzy's Backup - Easy to use personal file backup application
+Copyright (C) 2011 Maik Schreiber
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+package de.blizzy.backup;
+
+import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
+import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.IDialogSettings;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ListViewer;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ViewerSorter;
+import org.eclipse.osgi.util.NLS;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.DirectoryDialog;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
+
+class SettingsDialog extends Dialog {
+	private ListViewer foldersViewer;
+	private Text outputFolderText;
+	private Button hourlyCheckbox;
+
+	SettingsDialog(Shell parentShell) {
+		super(parentShell);
+	}
+	
+	@Override
+	protected boolean isResizable() {
+		return true;
+	}
+	
+	@Override
+	protected Control createDialogArea(Composite parent) {
+		IDialogSettings settings = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
+
+		Composite composite = (Composite) super.createDialogArea(parent);
+		((GridLayout) composite.getLayout()).numColumns = 1;
+		((GridLayout) composite.getLayout()).verticalSpacing = 10;
+
+		Group foldersComposite = new Group(composite, SWT.NONE);
+		foldersComposite.setText("Folders to Backup"); //$NON-NLS-1$
+		foldersComposite.setLayout(new GridLayout(2, false));
+		foldersComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		
+		Set<String> folders = new HashSet<String>();
+		String[] savedFolders = settings.getArray("folders"); //$NON-NLS-1$
+		if (savedFolders != null) {
+			for (String folder : savedFolders) {
+				folders.add(folder);
+			}
+		}
+		
+		foldersViewer = new ListViewer(foldersComposite, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+		foldersViewer.setContentProvider(new ArrayContentProvider());
+		foldersViewer.setSorter(new ViewerSorter() {
+			@Override
+			public int compare(Viewer viewer, Object e1, Object e2) {
+				return ((String) e1).compareToIgnoreCase((String) e2);
+			}
+		});
+		GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
+		gd.widthHint = convertWidthInCharsToPixels(60);
+		gd.heightHint = convertHeightInCharsToPixels(10);
+		foldersViewer.getControl().setLayoutData(gd);
+		foldersViewer.setInput(folders);
+		
+		Composite folderButtonsComposite = new Composite(foldersComposite, SWT.NONE);
+		GridLayout layout = new GridLayout(1, false);
+		layout.marginWidth = 0;
+		layout.marginHeight = 0;
+		folderButtonsComposite.setLayout(layout);
+		folderButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, false));
+
+		Button addFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
+		addFolderButton.setText("Add"); //$NON-NLS-1$
+		addFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		
+		final Button removeFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
+		removeFolderButton.setText("Remove"); //$NON-NLS-1$
+		removeFolderButton.setEnabled(false);
+		removeFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		
+		Group settingsComposite = new Group(composite, SWT.NONE);
+		settingsComposite.setText("Settings"); //$NON-NLS-1$
+		settingsComposite.setLayout(new GridLayout(3, false));
+		settingsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+
+		Label label = new Label(settingsComposite, SWT.NONE);
+		label.setText("Backup output folder:"); //$NON-NLS-1$
+		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+		outputFolderText = new Text(settingsComposite, SWT.BORDER | SWT.READ_ONLY);
+		outputFolderText.setText(StringUtils.defaultString(settings.get("outputFolder"))); //$NON-NLS-1$
+		outputFolderText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		
+		Button browseOutputFolderButton = new Button(settingsComposite, SWT.PUSH);
+		browseOutputFolderButton.setText("Browse..."); //$NON-NLS-1$
+		browseOutputFolderButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
+		
+		hourlyCheckbox = new Button(settingsComposite, SWT.CHECK);
+		hourlyCheckbox.setText("Run hourly backups"); //$NON-NLS-1$
+		hourlyCheckbox.setSelection(settings.getBoolean("runHourly")); //$NON-NLS-1$
+		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+		gd.horizontalSpan = 3;
+		hourlyCheckbox.setLayoutData(gd);
+
+		foldersViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			public void selectionChanged(SelectionChangedEvent e) {
+				removeFolderButton.setEnabled(!e.getSelection().isEmpty());
+			}
+		});
+		
+		addFolderButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				addFolder();
+			}
+		});
+		
+		removeFolderButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				removeFolder();
+			}
+		});
+		
+		browseOutputFolderButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				browseOutputFolder();
+			}
+		});
+		
+		return composite;
+	}
+
+	private void addFolder() {
+		DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.OPEN);
+		dlg.setText("Select Folder"); //$NON-NLS-1$
+		String folder = dlg.open();
+		if (folder != null) {
+			@SuppressWarnings("unchecked")
+			Set<String> folders = (Set<String>) foldersViewer.getInput();
+			folders.add(folder);
+			// TODO: consolidate folders with respect to parent folders
+			foldersViewer.add(folder);
+		}
+	}
+
+	private void removeFolder() {
+		String folder = (String) ((IStructuredSelection) foldersViewer.getSelection()).getFirstElement();
+		@SuppressWarnings("unchecked")
+		Set<String> folders = (Set<String>) foldersViewer.getInput();
+		folders.remove(folder);
+		foldersViewer.remove(folder);
+	}
+
+	private void browseOutputFolder() {
+		String folder = outputFolderText.getText();
+		if (StringUtils.isEmpty(folder)) {
+			folder = null;
+		}
+		for (;;) {
+			DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.SAVE);
+			dlg.setText("Select Output Folder"); //$NON-NLS-1$
+			dlg.setFilterPath(folder);
+			folder = dlg.open();
+			if (folder == null) {
+				break;
+			}
+			
+			if (new File(folder).list().length > 0) {
+				MessageDialog.openError(getShell(), "Folder Not Empty", //$NON-NLS-1$
+						NLS.bind("Folder ''{0}'' is not empty. Please select a different folder.", //$NON-NLS-1$
+								new File(folder).getName()));
+				continue;
+			}
+
+			outputFolderText.setText(folder);
+			break;
+		}
+	}
+	
+	@Override
+	protected void buttonPressed(int buttonId) {
+		if (buttonId == IDialogConstants.OK_ID) {
+			IDialogSettings settings = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
+			@SuppressWarnings("unchecked")
+			Set<String> folders = (Set<String>) foldersViewer.getInput();
+			settings.put("folders", folders.toArray(new String[0])); //$NON-NLS-1$
+			String outputFolder = outputFolderText.getText();
+			if ((outputFolder != null) && (outputFolder.length() == 0)) {
+				outputFolder = null;
+			}
+			settings.put("outputFolder", outputFolder); //$NON-NLS-1$
+			settings.put("runHourly", hourlyCheckbox.getSelection()); //$NON-NLS-1$
+		}
+		
+		super.buttonPressed(buttonId);
+	}
+}

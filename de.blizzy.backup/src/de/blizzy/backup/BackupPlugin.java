@@ -17,6 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
@@ -26,6 +29,8 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 public class BackupPlugin extends AbstractUIPlugin {
 	public static final String ID = "de.blizzy.backup"; //$NON-NLS-1$
+	public static final String VERSION = "1.0.0"; //$NON-NLS-1$
+	public static final String COPYRIGHT_YEARS = "2011"; //$NON-NLS-1$
 
 	private static final String ARG_HIDDEN = "-hidden"; //$NON-NLS-1$
 
@@ -67,5 +72,9 @@ public class BackupPlugin extends AbstractUIPlugin {
 	
 	ImageDescriptor getImageDescriptor(String path) {
 		return AbstractUIPlugin.imageDescriptorFromPlugin(ID, path);
+	}
+
+	InputStream openBundleFile(String path) throws IOException {
+		return getBundle().getEntry(path).openStream();
 	}
 }

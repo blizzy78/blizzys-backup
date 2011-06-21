@@ -20,9 +20,12 @@ package de.blizzy.backup;
 import java.text.DateFormat;
 import java.util.Date;
 
+import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.ShellAdapter;
@@ -36,9 +39,11 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 
 class BackupShell {
@@ -68,6 +73,32 @@ class BackupShell {
 		layout.verticalSpacing = 15;
 		shell.setLayout(layout);
 
+		Composite logoAndHeaderComposite = new Composite(shell, SWT.NONE);
+		layout = new GridLayout(2, false);
+		layout.marginWidth = 0;
+		layout.marginHeight = 0;
+		layout.horizontalSpacing = 15;
+		logoAndHeaderComposite.setLayout(layout);
+		
+		Canvas logoCanvas = new Canvas(logoAndHeaderComposite, SWT.DOUBLE_BUFFERED);
+		logoCanvas.addPaintListener(new PaintListener() {
+			public void paintControl(PaintEvent e) {
+				Image image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_48.png") //$NON-NLS-1$
+					.createImage(e.display);
+				e.gc.drawImage(image, 0, 0);
+				image.dispose();
+			}
+		});
+		GridData gd = new GridData(SWT.CENTER, SWT.CENTER, false, false);
+		gd.widthHint = 48;
+		gd.heightHint = 48;
+		logoCanvas.setLayoutData(gd);
+		
+		Link headerText = new Link(logoAndHeaderComposite, SWT.NONE);
+		headerText.setText(NLS.bind("blizzy's Backup - Version {0}\nCopyright {1} by Maik Schreiber\n" + //$NON-NLS-1$
+				"Licensed under the <a href=\"license\">GNU GPL v3</a>", //$NON-NLS-1$
+				BackupPlugin.VERSION, BackupPlugin.COPYRIGHT_YEARS));
+		
 		Composite buttonsComposite = new Composite(shell, SWT.NONE);
 		layout = new GridLayout(2, false);
 		layout.marginWidth = 0;
@@ -88,7 +119,7 @@ class BackupShell {
 		Button settingsButton = new Button(buttonsComposite, SWT.PUSH);
 		settingsButton.setText("Settings"); //$NON-NLS-1$
 		settingsButton.setFont(bigFont);
-		GridData gd = new GridData(SWT.FILL, SWT.FILL, false, true);
+		gd = new GridData(SWT.FILL, SWT.FILL, false, true);
 		gd.widthHint = extent.x * 2;
 		gd.heightHint = extent.y * 2;
 		settingsButton.setLayoutData(gd);
@@ -115,6 +146,13 @@ class BackupShell {
 
 		shell.pack();
 		
+		headerText.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				new LicenseDialog(shell).open();
+			}
+		});
+
 		settingsButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -149,6 +187,8 @@ class BackupShell {
 				BackupApplication.hideShell();
 			}
 		});
+		
+		settingsButton.forceFocus();
 	}
 
 	private void updateStatusLabel() {

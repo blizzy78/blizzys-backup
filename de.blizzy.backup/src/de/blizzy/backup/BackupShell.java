@@ -197,9 +197,13 @@ class BackupShell {
 		display.asyncExec(new Runnable() {
 			public void run() {
 				if (backupRun != null) {
-					String currentFile = backupRun.getCurrentFile();
-					if (StringUtils.isNotBlank(currentFile)) {
-						statusLabel.setText("Status" + ": " + "Running" + " - " + currentFile);
+					if (backupRun.isCleaningUp()) {
+						statusLabel.setText("Status" + ": " + "Cleaning up");
+					} else {
+						String currentFile = backupRun.getCurrentFile();
+						if (StringUtils.isNotBlank(currentFile)) {
+							statusLabel.setText("Status" + ": " + "Running" + " - " + currentFile);
+						}
 					}
 				} else {
 					Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());

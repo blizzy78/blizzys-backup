@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.sql.Connection;
@@ -38,7 +39,9 @@ import java.sql.Types;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -52,6 +55,21 @@ import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 
 class BackupRun implements Runnable {
+	private static final class FileEntry {
+		int id;
+		String backupPath;
+
+		private FileEntry(int id, String backupPath) {
+			this.id = id;
+			this.backupPath = backupPath;
+		}
+		
+		@Override
+		public String toString() {
+			return backupPath + " (" + id + ")"; //$NON-NLS-1$ //$NON-NLS-2$
+		}
+	}
+	
 	private static final DateFormat BACKUP_PATH_FORMAT =
 		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
 	
@@ -68,6 +86,7 @@ class BackupRun implements Runnable {
 	private List<IBackupRunListener> listeners = new ArrayList<IBackupRunListener>();
 	private String currentFile;
 	private boolean running = true;
+	private boolean cleaningUp;
 
 	public BackupRun(Set<String> folders, String outputFolder) {
 		this.folders = folders;
@@ -111,6 +130,8 @@ class BackupRun implements Runnable {
 				")"); //$NON-NLS-1$
 		database.runStatement(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries ON entries " + //$NON-NLS-1$
 				"(id)"); //$NON-NLS-1$
+		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_files ON entries " + //$NON-NLS-1$
+				"(file_id)"); //$NON-NLS-1$
 		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
 				"(backup_id, parent_id)"); //$NON-NLS-1$
 		
@@ -152,6 +173,15 @@ class BackupRun implements Runnable {
 				} catch (IOException e) {
 					// TODO
 				}
+			}
+			
+			cleaningUp = true;
+			fireBackupStatusChanged();
+			try {
+				removeOldBackups();
+				removeUnusedFiles();
+			} finally {
+				cleaningUp = false;
 			}
 			
 			database.runStatement(conn, "ANALYZE"); //$NON-NLS-1$
@@ -373,5 +403,131 @@ class BackupRun implements Runnable {
 		} catch (InterruptedException e) {
 			// ignore
 		}
+	}
+
+	private void removeOldBackups() throws SQLException {
+		Set<Integer> backupsToRemove = new HashSet<Integer>();
+
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		try {
+			// get all days where there are backups (and which are older than 14 days)
+			ps = conn.prepareStatement("SELECT run_time FROM backups " + //$NON-NLS-1$
+					"WHERE run_time < ? ORDER BY run_time"); //$NON-NLS-1$
+			Calendar c = Calendar.getInstance();
+			c.add(Calendar.DAY_OF_YEAR, -14);
+			c.set(Calendar.HOUR_OF_DAY, 0);
+			c.set(Calendar.MINUTE, 0);
+			c.set(Calendar.SECOND, 0);
+			c.set(Calendar.MILLISECOND, 0);
+			ps.setTimestamp(1, new Timestamp(c.getTimeInMillis()));
+			rs = ps.executeQuery();
+			Set<Date> days = new HashSet<Date>();
+			while (rs.next()) {
+				c.setTimeInMillis(rs.getTimestamp("run_time").getTime()); //$NON-NLS-1$
+				c.set(Calendar.HOUR_OF_DAY, 0);
+				c.set(Calendar.MINUTE, 0);
+				c.set(Calendar.SECOND, 0);
+				c.set(Calendar.MILLISECOND, 0);
+				days.add(new Date(c.getTimeInMillis()));
+			}
+			database.closeQuietly(rs);
+			rs = null;
+			database.closeQuietly(ps);
+			ps = null;
+
+			// collect IDs of all but the most recent backup each day
+			ps = conn.prepareStatement("SELECT id FROM backups " + //$NON-NLS-1$
+					"WHERE (run_time >= ?) AND (run_time < ?) ORDER BY run_time DESC"); //$NON-NLS-1$
+			for (Date day : days) {
+				long time = day.getTime();
+				ps.setTimestamp(1, new Timestamp(time));
+				c.setTimeInMillis(time);
+				c.add(Calendar.DAY_OF_YEAR, 1);
+				ps.setTimestamp(2, new Timestamp(c.getTimeInMillis()));
+				rs = ps.executeQuery();
+				// skip first (=most recent) backup
+				if (rs.next()) {
+					// collect all other backups of this day
+					while (rs.next()) {
+						backupsToRemove.add(Integer.valueOf(rs.getInt("id"))); //$NON-NLS-1$
+					}
+				}
+			}
+		} finally {
+			database.closeQuietly(rs);
+			database.closeQuietly(ps);
+		}
+		
+		BackupPlugin.getDefault().logMessage("Removing backups: " + backupsToRemove); //$NON-NLS-1$
+		if (!backupsToRemove.isEmpty()) {
+			removeBackups(backupsToRemove);
+		}
+	}
+
+	private void removeBackups(Set<Integer> backupsToRemove) throws SQLException {
+		PreparedStatement psEntries = null;
+		PreparedStatement psBackup = null;
+		try {
+			psEntries = conn.prepareStatement("DELETE FROM entries WHERE backup_id = ?"); //$NON-NLS-1$
+			psBackup = conn.prepareStatement("DELETE FROM backups WHERE id = ?"); //$NON-NLS-1$
+			for (Integer backupId : backupsToRemove) {
+				psEntries.setInt(1, backupId.intValue());
+				psEntries.executeUpdate();
+				
+				psBackup.setInt(1, backupId.intValue());
+				psBackup.executeUpdate();
+			}
+		} finally {
+			database.closeQuietly(psEntries, psBackup);
+		}
+	}
+
+	private void removeUnusedFiles() throws SQLException {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		Set<FileEntry> filesToRemove = new HashSet<FileEntry>();
+		try {
+			ps = conn.prepareStatement("SELECT files.id AS id, files.backup_path AS backup_path " + //$NON-NLS-1$
+					"FROM files LEFT JOIN entries ON entries.file_id = files.id " + //$NON-NLS-1$
+					"WHERE entries.file_id IS NULL"); //$NON-NLS-1$
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				FileEntry file = new FileEntry(rs.getInt("id"), rs.getString("backup_path")); //$NON-NLS-1$ //$NON-NLS-2$
+				filesToRemove.add(file);
+			}
+		} finally {
+			database.closeQuietly(rs);
+			database.closeQuietly(ps);
+		}
+		
+		BackupPlugin.getDefault().logMessage("Removing unused files: " + filesToRemove); //$NON-NLS-1$
+		if (!filesToRemove.isEmpty()) {
+			removeFiles(filesToRemove);
+		}
+	}
+
+	private void removeFiles(Set<FileEntry> files) throws SQLException {
+		PreparedStatement ps = null;
+		try {
+			ps = conn.prepareStatement("DELETE FROM files WHERE id = ?"); //$NON-NLS-1$
+			for (FileEntry file : files) {
+				Path path = Utils.toBackupFile(file.backupPath, outputFolder).toPath();
+				try {
+					Files.delete(path);
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("Error deleting file: " + file.backupPath, e); //$NON-NLS-1$
+				}
+				
+				ps.setInt(1, file.id);
+				ps.executeUpdate();
+			}
+		} finally {
+			database.closeQuietly(ps);
+		}
+	}
+	
+	boolean isCleaningUp() {
+		return cleaningUp;
 	}
 }

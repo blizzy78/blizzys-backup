@@ -225,27 +225,42 @@ class RestoreDialog extends Dialog {
 
 	@Override
 	public int open() {
+		IRunnableWithProgress runnable = new IRunnableWithProgress() {
+			public void run(IProgressMonitor monitor) throws InvocationTargetException {
+				monitor.beginTask("Opening backup database", IProgressMonitor.UNKNOWN); //$NON-NLS-1$
+				try {
+					conn = database.openDatabaseConnection();
+					
+					psEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
+							"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
+							"FROM entries " + //$NON-NLS-1$
+							"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
+							"WHERE (backup_id = ?) AND (parent_id = ?) " + //$NON-NLS-1$
+							"ORDER BY name"); //$NON-NLS-1$
+					psRootEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
+							"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
+							"FROM entries " + //$NON-NLS-1$
+							"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
+							"WHERE (backup_id = ?) AND (parent_id IS NULL) " + //$NON-NLS-1$
+							"ORDER BY name"); //$NON-NLS-1$
+					psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
+					psNumEntries = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
+							"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+				} catch (SQLException e) {
+					throw new InvocationTargetException(e);
+				} finally {
+					monitor.done();
+				}
+			}
+		};
+		ProgressMonitorDialog dlg = new ProgressMonitorDialog(getParentShell());
 		try {
-			conn = database.openDatabaseConnection();
-			
-			psEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
-					"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
-					"FROM entries " + //$NON-NLS-1$
-					"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
-					"WHERE (backup_id = ?) AND (parent_id = ?) " + //$NON-NLS-1$
-					"ORDER BY name"); //$NON-NLS-1$
-			psRootEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
-					"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
-					"FROM entries " + //$NON-NLS-1$
-					"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
-					"WHERE (backup_id = ?) AND (parent_id IS NULL) " + //$NON-NLS-1$
-					"ORDER BY name"); //$NON-NLS-1$
-			psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
-			psNumEntries = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
-					"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
-		} catch (SQLException e) {
+			dlg.run(true, false, runnable);
+		} catch (InvocationTargetException e) {
 			// TODO
-			e.printStackTrace();
+			BackupPlugin.getDefault().logError("Error while opening backup database", e); //$NON-NLS-1$
+		} catch (InterruptedException e) {
+			// not cancelable
 		}
 		
 		return super.open();
@@ -253,8 +268,26 @@ class RestoreDialog extends Dialog {
 	
 	@Override
 	public boolean close() {
-		database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntries);
-		database.releaseDatabaseConnection(conn);
+		IRunnableWithProgress runnable = new IRunnableWithProgress() {
+			public void run(IProgressMonitor monitor) throws InvocationTargetException {
+				monitor.beginTask("Closing backup database", IProgressMonitor.UNKNOWN); //$NON-NLS-1$
+				try {
+					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntries);
+					database.releaseDatabaseConnection(conn);
+				} finally {
+					monitor.done();
+				}
+			}
+		};
+		ProgressMonitorDialog dlg = new ProgressMonitorDialog(getShell());
+		try {
+			dlg.run(true, false, runnable);
+		} catch (InvocationTargetException e) {
+			// TODO
+			BackupPlugin.getDefault().logError("Error while closing backup database", e); //$NON-NLS-1$
+		} catch (InterruptedException e) {
+			// not cancelable
+		}
 		
 		return super.close();
 	}

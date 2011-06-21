@@ -20,6 +20,7 @@ package de.blizzy.backup;
 import java.text.DateFormat;
 import java.util.Date;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
@@ -196,7 +197,10 @@ class BackupShell {
 		display.asyncExec(new Runnable() {
 			public void run() {
 				if (backupRun != null) {
-					statusLabel.setText("Status" + ": " + "Running" + " - " + backupRun.getCurrentFile());
+					String currentFile = backupRun.getCurrentFile();
+					if (StringUtils.isNotBlank(currentFile)) {
+						statusLabel.setText("Status" + ": " + "Running" + " - " + currentFile);
+					}
 				} else {
 					Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
 					statusLabel.setText("Status" + ": " + "Idle" + " - " + "Next run" + ": " +

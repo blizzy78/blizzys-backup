@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 
 class Database {
 	private File folder;
@@ -50,7 +51,7 @@ class Database {
 			Connection conn = DriverManager.getConnection(
 					"jdbc:h2:" + folder.getAbsolutePath() + "/backup" + //$NON-NLS-1$ //$NON-NLS-2$
 					";LOCK_MODE=0;UNDO_LOG=0;FILE_LOCK=NO;CACHE_SIZE=65536", //$NON-NLS-1$
-					"sa", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					"sa", StringUtils.EMPTY); //$NON-NLS-1$
 			conn.setAutoCommit(true);
 			return conn;
 		} catch (IOException e) {

@@ -18,8 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -36,9 +35,11 @@ public class BackupApplication implements IApplication {
 	private static Display display;
 	private static BackupShell backupShell;
 	private static Timer timer;
+	private static TimerTask backupTimerTask;
 	private static BackupRun backupRun;
 	private static long nextBackupRunTime;
 	private static Image[] windowImages;
+	private static SettingsManager settingsManager;
 
 	public Object start(IApplicationContext context) throws Exception {
 		display = Display.getDefault();
@@ -53,12 +54,20 @@ public class BackupApplication implements IApplication {
 				BackupPlugin.ID, "etc/logo/logo_48.png").createImage(display); //$NON-NLS-1$
 		windowImages = new Image[] { image16, image32, image48 };
 
-		context.applicationRunning();
+		settingsManager = new SettingsManager();
+		settingsManager.addListener(new ISettingsListener() {
+			public void settingsChanged() {
+				scheduleBackupRun();
+			}
+		});
 		
-		TrayIcon trayIcon = new TrayIcon(display);
 		timer = new Timer();
+
+		TrayIcon trayIcon = new TrayIcon(display);
 		
 		scheduleBackupRun();
+
+		context.applicationRunning();
 
 		if (!BackupPlugin.getDefault().isHidden()) {
 			showShell();
@@ -74,10 +83,11 @@ public class BackupApplication implements IApplication {
 			}
 		}
 
-		timer.cancel();
-		timer = null;
 		trayIcon.dispose();
 		
+		timer.cancel();
+		timer = null;
+
 		image16.dispose();
 		image32.dispose();
 		image48.dispose();
@@ -95,49 +105,61 @@ public class BackupApplication implements IApplication {
 			// fake last run as happened 50 min ago
 			backupSection.put("lastRun", System.currentTimeMillis() - 50L * 60L * 1000L); //$NON-NLS-1$
 		}
-		
-		IDialogSettings settingsSection = Utils.getChildSection(backupSection, "settings"); //$NON-NLS-1$
-		if (settingsSection.get("runHourly") == null) { //$NON-NLS-1$
-			settingsSection.put("runHourly", true); //$NON-NLS-1$
-		}
 	}
 
 	private static void scheduleBackupRun() {
 		if (timer != null) {
+			if (backupTimerTask != null) {
+				backupTimerTask.cancel();
+				backupTimerTask = null;
+			}
+			
 			IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
 			long lastRun = backupSection.getLong("lastRun"); //$NON-NLS-1$
-			IDialogSettings settingsSection = Utils.getChildSection(backupSection, "settings"); //$NON-NLS-1$
-			boolean runHourly = settingsSection.getBoolean("runHourly"); //$NON-NLS-1$
+			Settings settings = settingsManager.getSettings();
+			// run hourly: just add 60 min
+			if (settings.isRunHourly()) {
+				nextBackupRunTime = lastRun + 60L * 60L * 1000L;
+			}
+			// daily
+			else {
+				Calendar c = Calendar.getInstance();
+				long now = c.getTimeInMillis();
+				c.set(Calendar.HOUR_OF_DAY, settings.getDailyHours());
+				c.set(Calendar.MINUTE, settings.getDailyMinutes());
+				long then = c.getTimeInMillis();
+				// scheduled time in settings has not arrived on the current day yet
+				if (then > now) {
+					nextBackupRunTime = then;
+				}
+				// scheduled time has passed: schedule timer for next day at that time
+				else {
+					c.add(Calendar.DAY_OF_YEAR, 1);
+					nextBackupRunTime = c.getTimeInMillis();
+				}
+			}
 			
-			nextBackupRunTime = lastRun + (runHourly ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L);
-			TimerTask backupStarterTask = new TimerTask() {
+			backupTimerTask = new TimerTask() {
 				@Override
 				public void run() {
 					runBackup();
 				}
 			};
-			timer.schedule(backupStarterTask, Math.max(nextBackupRunTime - System.currentTimeMillis(), 0));
+			timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - System.currentTimeMillis(), 0));
 		}
 	}
 
 	private static void runBackup() {
-		IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
-		IDialogSettings settingsSection = Utils.getChildSection(backupSection, "settings"); //$NON-NLS-1$
-		long now = System.currentTimeMillis();
-		Set<String> folders = new HashSet<String>();
-		String[] savedFolders = settingsSection.getArray("folders"); //$NON-NLS-1$
-		if (savedFolders != null) {
-			for (String folder : savedFolders) {
-				folders.add(folder);
-			}
-		}
-		String outputFolder = settingsSection.get("outputFolder"); //$NON-NLS-1$
-		if (!folders.isEmpty() && StringUtils.isNotBlank(outputFolder) &&
-			new File(outputFolder).exists()) {
+		Settings settings = settingsManager.getSettings();
+		if (!settings.getFolders().isEmpty() &&
+			StringUtils.isNotBlank(settings.getOutputFolder()) &&
+			new File(settings.getOutputFolder()).exists()) {
 
+			long now = System.currentTimeMillis();
+			IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
 			backupSection.put("lastRun", now); //$NON-NLS-1$
 
-			backupRun = new BackupRun(folders, outputFolder);
+			backupRun = new BackupRun(settings);
 			backupRun.addListener(new BackupRunAdapter() {
 				@Override
 				public void backupEnded(BackupEndedEvent e) {
@@ -187,5 +209,9 @@ public class BackupApplication implements IApplication {
 	
 	static Image[] getWindowImages() {
 		return windowImages;
+	}
+	
+	static SettingsManager getSettingsManager() {
+		return settingsManager;
 	}
 }

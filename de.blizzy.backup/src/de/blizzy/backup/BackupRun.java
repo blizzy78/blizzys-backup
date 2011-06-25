@@ -73,8 +73,7 @@ class BackupRun implements Runnable {
 	private static final DateFormat BACKUP_PATH_FORMAT =
 		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
 	
-	private Set<String> folders;
-	private String outputFolder;
+	private Settings settings;
 	private Thread thread;
 	private Database database;
 	private Connection conn;
@@ -88,9 +87,8 @@ class BackupRun implements Runnable {
 	private boolean running = true;
 	private boolean cleaningUp;
 
-	public BackupRun(Set<String> folders, String outputFolder) {
-		this.folders = folders;
-		this.outputFolder = outputFolder;
+	public BackupRun(Settings settings) {
+		this.settings = settings;
 	}
 
 	void runBackup() {
@@ -141,7 +139,7 @@ class BackupRun implements Runnable {
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
-		File dbFolder = new File(outputFolder, "$blizzysbackup"); //$NON-NLS-1$
+		File dbFolder = new File(settings.getOutputFolder(), "$blizzysbackup"); //$NON-NLS-1$
 		database = new Database(dbFolder);
 		try {
 			conn = database.openDatabaseConnection();
@@ -163,7 +161,7 @@ class BackupRun implements Runnable {
 			database.closeQuietly(ps);
 			backupId = getLastIdentity();
 			
-			for (String folder : folders) {
+			for (String folder : settings.getFolders()) {
 				if (!running) {
 					break;
 				}
@@ -259,7 +257,7 @@ class BackupRun implements Runnable {
 		int fileId = findOldFile(file, checksum);
 		if (fileId <= 0) {
 			String backupFilePath = createBackupFilePath();
-			File backupFile = Utils.toBackupFile(backupFilePath, outputFolder);
+			File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
 			fileId = backupFileContents(file, backupFile, backupFilePath, checksum);
 		}
 
@@ -512,7 +510,7 @@ class BackupRun implements Runnable {
 		try {
 			ps = conn.prepareStatement("DELETE FROM files WHERE id = ?"); //$NON-NLS-1$
 			for (FileEntry file : files) {
-				Path path = Utils.toBackupFile(file.backupPath, outputFolder).toPath();
+				Path path = Utils.toBackupFile(file.backupPath, settings.getOutputFolder()).toPath();
 				try {
 					Files.delete(path);
 				} catch (IOException e) {

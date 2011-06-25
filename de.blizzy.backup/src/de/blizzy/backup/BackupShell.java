@@ -62,6 +62,11 @@ class BackupShell {
 			updateStatusLabel();
 		}
 	};
+	private ISettingsListener settingsListener = new ISettingsListener() {
+		public void settingsChanged() {
+			updateStatusLabel();
+		}
+	};
 
 	BackupShell(Display display) {
 		shell = new Shell(display);
@@ -180,6 +185,7 @@ class BackupShell {
 				if (backupRun != null) {
 					backupRun.removeListener(backupRunListener);
 				}
+				BackupApplication.getSettingsManager().removeListener(settingsListener);
 				BackupApplication.quit();
 			}
 			
@@ -188,6 +194,8 @@ class BackupShell {
 				BackupApplication.hideShell();
 			}
 		});
+		
+		BackupApplication.getSettingsManager().addListener(settingsListener);
 		
 		settingsButton.forceFocus();
 	}

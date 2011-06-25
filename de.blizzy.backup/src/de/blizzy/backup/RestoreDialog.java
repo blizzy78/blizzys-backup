@@ -46,7 +46,6 @@ import org.apache.commons.io.IOUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
@@ -207,8 +206,7 @@ class RestoreDialog extends Dialog {
 	RestoreDialog(Shell parentShell) {
 		super(parentShell);
 
-		IDialogSettings settingsSection = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
-		outputFolder = settingsSection.get("outputFolder"); //$NON-NLS-1$
+		outputFolder = BackupApplication.getSettingsManager().getSettings().getOutputFolder();
 		database = new Database(new File(outputFolder, "$blizzysbackup")); //$NON-NLS-1$
 	}
 	

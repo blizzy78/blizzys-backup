@@ -24,7 +24,6 @@ import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
@@ -42,6 +41,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
@@ -51,7 +51,8 @@ import org.eclipse.swt.widgets.Text;
 class SettingsDialog extends Dialog {
 	private ListViewer foldersViewer;
 	private Text outputFolderText;
-	private Button hourlyCheckbox;
+	private Button runHourlyRadio;
+	private DateTime dailyTime;
 
 	SettingsDialog(Shell parentShell) {
 		super(parentShell);
@@ -70,7 +71,7 @@ class SettingsDialog extends Dialog {
 	
 	@Override
 	protected Control createDialogArea(Composite parent) {
-		IDialogSettings settings = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
+		Settings settings = BackupApplication.getSettingsManager().getSettings();
 
 		Composite composite = (Composite) super.createDialogArea(parent);
 		((GridLayout) composite.getLayout()).numColumns = 1;
@@ -80,14 +81,6 @@ class SettingsDialog extends Dialog {
 		foldersComposite.setText("Folders to Backup"); //$NON-NLS-1$
 		foldersComposite.setLayout(new GridLayout(2, false));
 		foldersComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		
-		Set<String> folders = new HashSet<String>();
-		String[] savedFolders = settings.getArray("folders"); //$NON-NLS-1$
-		if (savedFolders != null) {
-			for (String folder : savedFolders) {
-				folders.add(folder);
-			}
-		}
 		
 		foldersViewer = new ListViewer(foldersComposite, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		foldersViewer.setContentProvider(new ArrayContentProvider());
@@ -101,7 +94,7 @@ class SettingsDialog extends Dialog {
 		gd.widthHint = convertWidthInCharsToPixels(60);
 		gd.heightHint = convertHeightInCharsToPixels(10);
 		foldersViewer.getControl().setLayoutData(gd);
-		foldersViewer.setInput(folders);
+		foldersViewer.setInput(new HashSet<String>(settings.getFolders()));
 		
 		Composite folderButtonsComposite = new Composite(foldersComposite, SWT.NONE);
 		GridLayout layout = new GridLayout(1, false);
@@ -129,20 +122,36 @@ class SettingsDialog extends Dialog {
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
 		outputFolderText = new Text(settingsComposite, SWT.BORDER | SWT.READ_ONLY);
-		outputFolderText.setText(StringUtils.defaultString(settings.get("outputFolder"))); //$NON-NLS-1$
+		outputFolderText.setText(StringUtils.defaultString(settings.getOutputFolder()));
 		outputFolderText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		Button browseOutputFolderButton = new Button(settingsComposite, SWT.PUSH);
 		browseOutputFolderButton.setText("Browse..."); //$NON-NLS-1$
 		browseOutputFolderButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		
-		hourlyCheckbox = new Button(settingsComposite, SWT.CHECK);
-		hourlyCheckbox.setText("Run hourly backups"); //$NON-NLS-1$
-		hourlyCheckbox.setSelection(settings.getBoolean("runHourly")); //$NON-NLS-1$
-		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-		gd.horizontalSpan = 3;
-		hourlyCheckbox.setLayoutData(gd);
+		Group scheduleComposite = new Group(composite, SWT.NONE);
+		scheduleComposite.setText("When to Backup"); //$NON-NLS-1$
+		scheduleComposite.setLayout(new GridLayout(2, false));
+		scheduleComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
+		runHourlyRadio = new Button(scheduleComposite, SWT.RADIO);
+		runHourlyRadio.setText("Run hourly");
+		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+		gd.horizontalSpan = 2;
+		runHourlyRadio.setLayoutData(gd);
+
+		final Button runDailyRadio = new Button(scheduleComposite, SWT.RADIO);
+		runDailyRadio.setText("Run daily at this time" + ":");
+		runDailyRadio.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		
+		dailyTime = new DateTime(scheduleComposite, SWT.TIME | SWT.SHORT);
+
+		runHourlyRadio.setSelection(settings.isRunHourly());
+		runDailyRadio.setSelection(!settings.isRunHourly());
+		dailyTime.setHours(settings.getDailyHours());
+		dailyTime.setMinutes(settings.getDailyMinutes());
+		dailyTime.setEnabled(!settings.isRunHourly());
+		
 		foldersViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			public void selectionChanged(SelectionChangedEvent e) {
 				removeFolderButton.setEnabled(!e.getSelection().isEmpty());
@@ -167,6 +176,13 @@ class SettingsDialog extends Dialog {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				browseOutputFolder();
+			}
+		});
+		
+		runDailyRadio.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				dailyTime.setEnabled(runDailyRadio.getSelection());
 			}
 		});
 		
@@ -223,16 +239,15 @@ class SettingsDialog extends Dialog {
 	@Override
 	protected void buttonPressed(int buttonId) {
 		if (buttonId == IDialogConstants.OK_ID) {
-			IDialogSettings settings = Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
 			@SuppressWarnings("unchecked")
 			Set<String> folders = (Set<String>) foldersViewer.getInput();
-			settings.put("folders", folders.toArray(new String[0])); //$NON-NLS-1$
 			String outputFolder = outputFolderText.getText();
-			if ((outputFolder != null) && (outputFolder.length() == 0)) {
+			if (StringUtils.isBlank(outputFolder)) {
 				outputFolder = null;
 			}
-			settings.put("outputFolder", outputFolder); //$NON-NLS-1$
-			settings.put("runHourly", hourlyCheckbox.getSelection()); //$NON-NLS-1$
+			Settings settings = new Settings(folders, outputFolder, runHourlyRadio.getSelection(),
+					dailyTime.getHours(), dailyTime.getMinutes());
+			BackupApplication.getSettingsManager().setSettings(settings);
 		}
 		
 		super.buttonPressed(buttonId);

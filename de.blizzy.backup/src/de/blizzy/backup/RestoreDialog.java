@@ -34,6 +34,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -86,10 +87,12 @@ class RestoreDialog extends Dialog {
 	private static final class Backup {
 		int id;
 		Date runTime;
+		int numEntries;
 		
-		Backup(int id, Date runTime) {
+		Backup(int id, Date runTime, int numEntries) {
 			this.id = id;
 			this.runTime = runTime;
+			this.numEntries = numEntries;
 		}
 	}
 	
@@ -121,11 +124,13 @@ class RestoreDialog extends Dialog {
 
 	private static final class BackupLabelProvider extends LabelProvider {
 		private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
+		private static final NumberFormat NUMBER_FORMAT = NumberFormat.getIntegerInstance();
 		
 		@Override
 		public String getText(Object element) {
 			Backup backup = (Backup) element;
-			return DATE_FORMAT.format(backup.runTime);
+			return DATE_FORMAT.format(backup.runTime) +
+				" (" + NLS.bind("{0} entries", NUMBER_FORMAT.format(backup.numEntries)) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		}
 	}
 
@@ -201,7 +206,8 @@ class RestoreDialog extends Dialog {
 	private PreparedStatement psEntries;
 	private PreparedStatement psRootEntries;
 	private PreparedStatement psParent;
-	private PreparedStatement psNumEntries;
+	private PreparedStatement psNumEntriesInFolder;
+	private PreparedStatement psNumEntriesInBackup;
 
 	RestoreDialog(Shell parentShell) {
 		super(parentShell);
@@ -242,8 +248,10 @@ class RestoreDialog extends Dialog {
 							"WHERE (backup_id = ?) AND (parent_id IS NULL) " + //$NON-NLS-1$
 							"ORDER BY name"); //$NON-NLS-1$
 					psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
-					psNumEntries = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
+					psNumEntriesInFolder = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
 							"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+					psNumEntriesInBackup = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
+							"WHERE (backup_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 				} catch (SQLException e) {
 					throw new InvocationTargetException(e);
 				} finally {
@@ -270,7 +278,8 @@ class RestoreDialog extends Dialog {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask("Closing backup database", IProgressMonitor.UNKNOWN); //$NON-NLS-1$
 				try {
-					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntries);
+					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntriesInFolder,
+							psNumEntriesInBackup);
 					database.releaseDatabaseConnection(conn);
 				} finally {
 					monitor.done();
@@ -310,18 +319,33 @@ class RestoreDialog extends Dialog {
 		backupsViewer.getControl().setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		
 		List<Backup> backups = new ArrayList<Backup>();
+		PreparedStatement psBackups = null;
+		ResultSet rsBackups = null;
 		try {
-			PreparedStatement ps = conn.prepareStatement("SELECT id, run_time FROM backups ORDER BY run_time DESC"); //$NON-NLS-1$
-			ResultSet rs = ps.executeQuery();
-			while (rs.next()) {
-				int id = rs.getInt("id"); //$NON-NLS-1$
-				Date runTime = new Date(rs.getTimestamp("run_time").getTime()); //$NON-NLS-1$
-				Backup backup = new Backup(id, runTime);
+			psBackups = conn.prepareStatement("SELECT id, run_time FROM backups ORDER BY run_time DESC"); //$NON-NLS-1$
+			rsBackups = psBackups.executeQuery();
+			while (rsBackups.next()) {
+				int id = rsBackups.getInt("id"); //$NON-NLS-1$
+				Date runTime = new Date(rsBackups.getTimestamp("run_time").getTime()); //$NON-NLS-1$
+				psNumEntriesInBackup.setInt(1, id);
+				ResultSet rsNumEntries = null;
+				int numEntries;
+				try {
+					rsNumEntries = psNumEntriesInBackup.executeQuery();
+					rsNumEntries.next();
+					numEntries = rsNumEntries.getInt(1);
+				} finally {
+					database.closeQuietly(rsNumEntries);
+				}
+				Backup backup = new Backup(id, runTime, numEntries);
 				backups.add(backup);
 			}
 		} catch (SQLException e) {
 			// TODO
 			e.printStackTrace();
+		} finally {
+			database.closeQuietly(rsBackups);
+			database.closeQuietly(psBackups);
 		}
 		
 		backupsViewer.setContentProvider(new ArrayContentProvider());

@@ -132,6 +132,8 @@ class BackupRun implements Runnable {
 				"(file_id)"); //$NON-NLS-1$
 		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
 				"(backup_id, parent_id)"); //$NON-NLS-1$
+		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_in_backup ON entries " + //$NON-NLS-1$
+				"(backup_id, type)"); //$NON-NLS-1$
 		
 		database.runStatement(conn, "ANALYZE"); //$NON-NLS-1$
 	}

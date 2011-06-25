@@ -57,7 +57,9 @@ public class BackupApplication implements IApplication {
 		settingsManager = new SettingsManager();
 		settingsManager.addListener(new ISettingsListener() {
 			public void settingsChanged() {
-				scheduleBackupRun();
+				if (backupRun == null) {
+					scheduleBackupRun();
+				}
 			}
 		});
 		

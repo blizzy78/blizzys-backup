@@ -197,6 +197,7 @@ class RestoreDialog extends Dialog {
 		}
 	}
 
+	private List<Backup> backups = new ArrayList<Backup>();
 	private String outputFolder;
 	private Database database;
 	private Connection conn;
@@ -233,6 +234,8 @@ class RestoreDialog extends Dialog {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
+				PreparedStatement psBackups = null;
+				ResultSet rsBackups = null;
 				try {
 					conn = database.openDatabaseConnection();
 					
@@ -253,9 +256,30 @@ class RestoreDialog extends Dialog {
 							"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 					psNumEntriesInBackup = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
 							"WHERE (backup_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+
+					psBackups = conn.prepareStatement("SELECT id, run_time FROM backups ORDER BY run_time DESC"); //$NON-NLS-1$
+					rsBackups = psBackups.executeQuery();
+					while (rsBackups.next()) {
+						int id = rsBackups.getInt("id"); //$NON-NLS-1$
+						Date runTime = new Date(rsBackups.getTimestamp("run_time").getTime()); //$NON-NLS-1$
+						psNumEntriesInBackup.setInt(1, id);
+						ResultSet rsNumEntries = null;
+						int numEntries;
+						try {
+							rsNumEntries = psNumEntriesInBackup.executeQuery();
+							rsNumEntries.next();
+							numEntries = rsNumEntries.getInt(1);
+						} finally {
+							database.closeQuietly(rsNumEntries);
+						}
+						Backup backup = new Backup(id, runTime, numEntries);
+						backups.add(backup);
+					}
 				} catch (SQLException e) {
 					throw new InvocationTargetException(e);
 				} finally {
+					database.closeQuietly(rsBackups);
+					database.closeQuietly(psBackups);
 					monitor.done();
 				}
 			}
@@ -318,36 +342,6 @@ class RestoreDialog extends Dialog {
 		backupsViewer = new ComboViewer(composite);
 		backupsViewer.getCombo().setVisibleItemCount(10);
 		backupsViewer.getControl().setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		
-		List<Backup> backups = new ArrayList<Backup>();
-		PreparedStatement psBackups = null;
-		ResultSet rsBackups = null;
-		try {
-			psBackups = conn.prepareStatement("SELECT id, run_time FROM backups ORDER BY run_time DESC"); //$NON-NLS-1$
-			rsBackups = psBackups.executeQuery();
-			while (rsBackups.next()) {
-				int id = rsBackups.getInt("id"); //$NON-NLS-1$
-				Date runTime = new Date(rsBackups.getTimestamp("run_time").getTime()); //$NON-NLS-1$
-				psNumEntriesInBackup.setInt(1, id);
-				ResultSet rsNumEntries = null;
-				int numEntries;
-				try {
-					rsNumEntries = psNumEntriesInBackup.executeQuery();
-					rsNumEntries.next();
-					numEntries = rsNumEntries.getInt(1);
-				} finally {
-					database.closeQuietly(rsNumEntries);
-				}
-				Backup backup = new Backup(id, runTime, numEntries);
-				backups.add(backup);
-			}
-		} catch (SQLException e) {
-			// TODO
-			e.printStackTrace();
-		} finally {
-			database.closeQuietly(rsBackups);
-			database.closeQuietly(psBackups);
-		}
 		
 		backupsViewer.setContentProvider(new ArrayContentProvider());
 		backupsViewer.setLabelProvider(new BackupLabelProvider());

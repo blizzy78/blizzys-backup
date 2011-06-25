@@ -19,8 +19,10 @@ package de.blizzy.backup;
 
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -83,7 +85,7 @@ class SettingsDialog extends Dialog {
 		foldersComposite.setLayout(new GridLayout(2, false));
 		foldersComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
-		foldersViewer = new ListViewer(foldersComposite, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+		foldersViewer = new ListViewer(foldersComposite, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		foldersViewer.setContentProvider(new ArrayContentProvider());
 		foldersViewer.setSorter(new ViewerSorter() {
 			@Override
@@ -204,11 +206,12 @@ class SettingsDialog extends Dialog {
 	}
 
 	private void removeFolder() {
-		String folder = (String) ((IStructuredSelection) foldersViewer.getSelection()).getFirstElement();
+		@SuppressWarnings("unchecked")
+		List<String> selectedFolders = ((IStructuredSelection) foldersViewer.getSelection()).toList();
 		@SuppressWarnings("unchecked")
 		Set<String> folders = (Set<String>) foldersViewer.getInput();
-		folders.remove(folder);
-		foldersViewer.remove(folder);
+		folders.removeAll(selectedFolders);
+		foldersViewer.remove(selectedFolders.toArray(ArrayUtils.EMPTY_STRING_ARRAY));
 	}
 
 	private void browseOutputFolder() {

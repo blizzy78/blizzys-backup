@@ -23,11 +23,14 @@ public class Messages extends NLS {
 	private static final String BUNDLE_NAME = "de.blizzy.backup.messages"; //$NON-NLS-1$
 	public static String Button_Add;
 	public static String Button_Browse;
+	public static String Button_Exit;
+	public static String Button_MinimizeOnly;
 	public static String Button_MoveUp;
 	public static String Button_Remove;
 	public static String Button_Restore;
 	public static String Button_Settings;
 	public static String CleaningUp;
+	public static String ExitApplication;
 	public static String FolderNotEmpty;
 	public static String Idle;
 	public static String Label_BackupOutputFolder;
@@ -44,6 +47,7 @@ public class Messages extends NLS {
 	public static String Running;
 	public static String Title_BlizzysBackup;
 	public static String Title_CloseBackupDatabase;
+	public static String Title_ExitApplication;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;
 	public static String Title_License;

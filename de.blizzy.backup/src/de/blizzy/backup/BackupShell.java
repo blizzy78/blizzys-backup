@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.util.Date;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
@@ -181,11 +182,19 @@ class BackupShell {
 		shell.addShellListener(new ShellAdapter() {
 			@Override
 			public void shellClosed(ShellEvent e) {
-				if (backupRun != null) {
-					backupRun.removeListener(backupRunListener);
+				MessageDialog dlg = new MessageDialog(shell, Messages.Title_ExitApplication, null,
+						Messages.ExitApplication, MessageDialog.CONFIRM,
+						new String[] { Messages.Button_Exit, Messages.Button_MinimizeOnly }, 1);
+				if (dlg.open() == 0) {
+					if (backupRun != null) {
+						backupRun.removeListener(backupRunListener);
+					}
+					BackupApplication.getSettingsManager().removeListener(settingsListener);
+					BackupApplication.quit();
+				} else {
+					e.doit = false;
+					BackupApplication.hideShell();
 				}
-				BackupApplication.getSettingsManager().removeListener(settingsListener);
-				BackupApplication.quit();
 			}
 			
 			@Override

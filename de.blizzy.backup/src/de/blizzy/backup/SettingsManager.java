@@ -46,12 +46,12 @@ class SettingsManager {
 			runHourly = section.getBoolean("runHourly"); //$NON-NLS-1$
 		}
 		int dailyHours = 12;
-		if (section.get("dailyHours") != null) {
-			dailyHours = section.getInt("dailyHours");
+		if (section.get("dailyHours") != null) { //$NON-NLS-1$
+			dailyHours = section.getInt("dailyHours"); //$NON-NLS-1$
 		}
 		int dailyMinutes = 0;
-		if (section.get("dailyMinutes") != null) {
-			dailyMinutes = section.getInt("dailyMinutes");
+		if (section.get("dailyMinutes") != null) { //$NON-NLS-1$
+			dailyMinutes = section.getInt("dailyMinutes"); //$NON-NLS-1$
 		}
 		return new Settings(folders, outputFolder, runHourly, dailyHours, dailyMinutes);
 	}

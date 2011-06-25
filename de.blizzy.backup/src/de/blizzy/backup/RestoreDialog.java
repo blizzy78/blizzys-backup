@@ -130,7 +130,7 @@ class RestoreDialog extends Dialog {
 		public String getText(Object element) {
 			Backup backup = (Backup) element;
 			return DATE_FORMAT.format(backup.runTime) +
-				" (" + NLS.bind("{0} entries", NUMBER_FORMAT.format(backup.numEntries)) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				" (" + NLS.bind(Messages.XEntries, NUMBER_FORMAT.format(backup.numEntries)) + ")"; //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 
@@ -220,6 +220,7 @@ class RestoreDialog extends Dialog {
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
 		newShell.setImages(BackupApplication.getWindowImages());
+		newShell.setText(Messages.Title_Restore);
 	}
 	
 	@Override
@@ -231,7 +232,7 @@ class RestoreDialog extends Dialog {
 	public int open() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
-				monitor.beginTask("Opening backup database", IProgressMonitor.UNKNOWN); //$NON-NLS-1$
+				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
 					conn = database.openDatabaseConnection();
 					
@@ -276,7 +277,7 @@ class RestoreDialog extends Dialog {
 	public boolean close() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
-				monitor.beginTask("Closing backup database", IProgressMonitor.UNKNOWN); //$NON-NLS-1$
+				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
 					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntriesInFolder,
 							psNumEntriesInBackup);
@@ -311,7 +312,7 @@ class RestoreDialog extends Dialog {
 		((GridLayout) composite.getLayout()).makeColumnsEqualWidth = false;
 		
 		Label label = new Label(composite, SWT.NONE);
-		label.setText("Show backup contents at:"); //$NON-NLS-1$
+		label.setText(Messages.Label_ShowBackupContentsAt + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		
 		backupsViewer = new ComboViewer(composite);
@@ -397,13 +398,13 @@ class RestoreDialog extends Dialog {
 		table.setLinesVisible(false);
 		
 		TableColumn col = new TableColumn(table, SWT.LEFT);
-		col.setText("Name"); //$NON-NLS-1$
+		col.setText(Messages.Label_Name);
 		tableLayout.addColumnData(new ColumnWeightData(50, true));
 		col = new TableColumn(table, SWT.LEFT);
-		col.setText("Size"); //$NON-NLS-1$
+		col.setText(Messages.Label_Size);
 		tableLayout.addColumnData(new ColumnWeightData(20, true));
 		col = new TableColumn(table, SWT.LEFT);
-		col.setText("Modification Date"); //$NON-NLS-1$
+		col.setText(Messages.Label_ModificationDate);
 		tableLayout.addColumnData(new ColumnWeightData(30, true));
 
 		Composite entriesButtonsComposite = new Composite(entriesComposite, SWT.NONE);
@@ -414,12 +415,12 @@ class RestoreDialog extends Dialog {
 		entriesButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, true));
 		
 		moveUpButton = new Button(entriesButtonsComposite, SWT.PUSH);
-		moveUpButton.setText("Move Up"); //$NON-NLS-1$
+		moveUpButton.setText(Messages.Button_MoveUp);
 		moveUpButton.setEnabled(false);
 		moveUpButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		final Button restoreButton = new Button(entriesButtonsComposite, SWT.PUSH);
-		restoreButton.setText("Restore..."); //$NON-NLS-1$
+		restoreButton.setText(Messages.Button_Restore + "..."); //$NON-NLS-1$
 		restoreButton.setEnabled(false);
 		restoreButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
@@ -578,7 +579,7 @@ class RestoreDialog extends Dialog {
 		String folder = null;
 		for (;;) {
 			DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.SAVE);
-			dlg.setText("Select Output Folder"); //$NON-NLS-1$
+			dlg.setText(Messages.Title_SelectOutputFolder);
 			dlg.setFilterPath(folder);
 			folder = dlg.open();
 			if (folder == null) {
@@ -586,8 +587,8 @@ class RestoreDialog extends Dialog {
 			}
 			
 			if (new File(folder).list().length > 0) {
-				MessageDialog.openError(getShell(), "Folder Not Empty", //$NON-NLS-1$
-						NLS.bind("Folder ''{0}'' is not empty. Please select a different folder.", //$NON-NLS-1$
+				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
+						NLS.bind(Messages.FolderNotEmpty,
 								new File(folder).getName()));
 				continue;
 			}
@@ -605,7 +606,7 @@ class RestoreDialog extends Dialog {
 
 					try {
 						int totalNumEntries = getTotalNumEntries(entries, backupId);
-						monitor.beginTask("Restore from backup", totalNumEntries); //$NON-NLS-1$
+						monitor.beginTask(Messages.Title_RestoreFromBackup, totalNumEntries);
 						for (Entry entry : entries) {
 							restoreEntry(entry, new File(myFolder), outputFolder, backupId, monitor);
 						}

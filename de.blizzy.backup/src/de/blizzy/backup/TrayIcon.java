@@ -35,7 +35,7 @@ class TrayIcon {
 			trayItem = new TrayItem(systemTray, SWT.NONE);
 			image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
 			trayItem.setImage(image);
-			trayItem.setToolTipText("blizzy's Backup"); //$NON-NLS-1$
+			trayItem.setToolTipText(Messages.Title_BlizzysBackup);
 			trayItem.addSelectionListener(new SelectionAdapter() {
 				@Override
 				public void widgetSelected(SelectionEvent e) {

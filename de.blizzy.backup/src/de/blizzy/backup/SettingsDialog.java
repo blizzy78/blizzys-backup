@@ -62,6 +62,7 @@ class SettingsDialog extends Dialog {
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
 		newShell.setImages(BackupApplication.getWindowImages());
+		newShell.setText(Messages.Title_Settings);
 	}
 	
 	@Override
@@ -78,7 +79,7 @@ class SettingsDialog extends Dialog {
 		((GridLayout) composite.getLayout()).verticalSpacing = 10;
 
 		Group foldersComposite = new Group(composite, SWT.NONE);
-		foldersComposite.setText("Folders to Backup"); //$NON-NLS-1$
+		foldersComposite.setText(Messages.Title_FoldersToBackup);
 		foldersComposite.setLayout(new GridLayout(2, false));
 		foldersComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
@@ -104,21 +105,21 @@ class SettingsDialog extends Dialog {
 		folderButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, false));
 
 		Button addFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
-		addFolderButton.setText("Add"); //$NON-NLS-1$
+		addFolderButton.setText(Messages.Button_Add);
 		addFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		final Button removeFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
-		removeFolderButton.setText("Remove"); //$NON-NLS-1$
+		removeFolderButton.setText(Messages.Button_Remove);
 		removeFolderButton.setEnabled(false);
 		removeFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		Group settingsComposite = new Group(composite, SWT.NONE);
-		settingsComposite.setText("Settings"); //$NON-NLS-1$
+		settingsComposite.setText(Messages.Title_Settings);
 		settingsComposite.setLayout(new GridLayout(3, false));
 		settingsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
 		Label label = new Label(settingsComposite, SWT.NONE);
-		label.setText("Backup output folder:"); //$NON-NLS-1$
+		label.setText(Messages.Label_BackupOutputFolder + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
 		outputFolderText = new Text(settingsComposite, SWT.BORDER | SWT.READ_ONLY);
@@ -126,22 +127,22 @@ class SettingsDialog extends Dialog {
 		outputFolderText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		Button browseOutputFolderButton = new Button(settingsComposite, SWT.PUSH);
-		browseOutputFolderButton.setText("Browse..."); //$NON-NLS-1$
+		browseOutputFolderButton.setText(Messages.Button_Browse + "..."); //$NON-NLS-1$
 		browseOutputFolderButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		
 		Group scheduleComposite = new Group(composite, SWT.NONE);
-		scheduleComposite.setText("When to Backup"); //$NON-NLS-1$
+		scheduleComposite.setText(Messages.Title_WhenToBackup);
 		scheduleComposite.setLayout(new GridLayout(2, false));
 		scheduleComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
 		runHourlyRadio = new Button(scheduleComposite, SWT.RADIO);
-		runHourlyRadio.setText("Run hourly");
+		runHourlyRadio.setText(Messages.Label_RunHourly);
 		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
 		gd.horizontalSpan = 2;
 		runHourlyRadio.setLayoutData(gd);
 
 		final Button runDailyRadio = new Button(scheduleComposite, SWT.RADIO);
-		runDailyRadio.setText("Run daily at this time" + ":");
+		runDailyRadio.setText(Messages.Label_RunDaily + ":"); //$NON-NLS-1$
 		runDailyRadio.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		
 		dailyTime = new DateTime(scheduleComposite, SWT.TIME | SWT.SHORT);
@@ -191,7 +192,7 @@ class SettingsDialog extends Dialog {
 
 	private void addFolder() {
 		DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.OPEN);
-		dlg.setText("Select Folder"); //$NON-NLS-1$
+		dlg.setText(Messages.Title_SelectFolder);
 		String folder = dlg.open();
 		if (folder != null) {
 			@SuppressWarnings("unchecked")
@@ -217,7 +218,7 @@ class SettingsDialog extends Dialog {
 		}
 		for (;;) {
 			DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.SAVE);
-			dlg.setText("Select Output Folder"); //$NON-NLS-1$
+			dlg.setText(Messages.Title_SelectOutputFolder);
 			dlg.setFilterPath(folder);
 			folder = dlg.open();
 			if (folder == null) {
@@ -225,9 +226,8 @@ class SettingsDialog extends Dialog {
 			}
 			
 			if (new File(folder).list().length > 0) {
-				MessageDialog.openError(getShell(), "Folder Not Empty", //$NON-NLS-1$
-						NLS.bind("Folder ''{0}'' is not empty. Please select a different folder.", //$NON-NLS-1$
-								new File(folder).getName()));
+				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
+						NLS.bind(Messages.FolderNotEmpty, new File(folder).getName()));
 				continue;
 			}
 

@@ -70,7 +70,7 @@ class BackupShell {
 
 	BackupShell(Display display) {
 		shell = new Shell(display);
-		shell.setText("blizzy's Backup"); //$NON-NLS-1$
+		shell.setText(Messages.Title_BlizzysBackup);
 		shell.setImages(BackupApplication.getWindowImages());
 		
 		GridLayout layout = new GridLayout(1, false);
@@ -101,8 +101,7 @@ class BackupShell {
 		logoCanvas.setLayoutData(gd);
 		
 		Link headerText = new Link(logoAndHeaderComposite, SWT.NONE);
-		headerText.setText(NLS.bind("blizzy's Backup - Version {0}\nCopyright {1} by Maik Schreiber\n" + //$NON-NLS-1$
-				"Licensed under the <a href=\"license\">GNU GPL v3</a>", //$NON-NLS-1$
+		headerText.setText(NLS.bind(Messages.Version,
 				BackupPlugin.VERSION, BackupPlugin.COPYRIGHT_YEARS));
 		
 		Composite buttonsComposite = new Composite(shell, SWT.NONE);
@@ -120,30 +119,30 @@ class BackupShell {
 		}
 		final Font bigFont = new Font(display, fontDatas);
 
-		Point extent = getMaxTextExtent(display, bigFont, "Settings", "Restore"); //$NON-NLS-1$ //$NON-NLS-2$
+		Point extent = getMaxTextExtent(display, bigFont, Messages.Button_Settings, Messages.Button_Restore);
 		
 		Button settingsButton = new Button(buttonsComposite, SWT.PUSH);
-		settingsButton.setText("Settings"); //$NON-NLS-1$
+		settingsButton.setText(Messages.Button_Settings);
 		settingsButton.setFont(bigFont);
 		gd = new GridData(SWT.FILL, SWT.FILL, false, true);
-		gd.widthHint = extent.x * 2;
+		gd.widthHint = (int) (extent.x * 1.6d);
 		gd.heightHint = extent.y * 2;
 		settingsButton.setLayoutData(gd);
 		
 		Label label = new Label(buttonsComposite, SWT.NONE);
-		label.setText("Modify backup settings and folders"); //$NON-NLS-1$
+		label.setText(Messages.ModifyBackupSettings);
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		
 		Button restoreButton = new Button(buttonsComposite, SWT.PUSH);
-		restoreButton.setText("Restore"); //$NON-NLS-1$
+		restoreButton.setText(Messages.Button_Restore);
 		restoreButton.setFont(bigFont);
 		gd = new GridData(SWT.FILL, SWT.FILL, false, true);
-		gd.widthHint = extent.x * 2;
+		gd.widthHint = (int) (extent.x * 1.6d);
 		gd.heightHint = extent.y * 2;
 		restoreButton.setLayoutData(gd);
 		
 		label = new Label(buttonsComposite, SWT.NONE);
-		label.setText("View and restore from previous backups"); //$NON-NLS-1$
+		label.setText(Messages.RestoreFromBackup);
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		
 		statusLabel = new Label(shell, SWT.NONE);
@@ -206,16 +205,16 @@ class BackupShell {
 			public void run() {
 				if (backupRun != null) {
 					if (backupRun.isCleaningUp()) {
-						statusLabel.setText("Status" + ": " + "Cleaning up");
+						statusLabel.setText(Messages.Label_Status + ": " + Messages.CleaningUp); //$NON-NLS-1$
 					} else {
 						String currentFile = backupRun.getCurrentFile();
 						if (StringUtils.isNotBlank(currentFile)) {
-							statusLabel.setText("Status" + ": " + "Running" + " - " + currentFile);
+							statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + currentFile); //$NON-NLS-1$ //$NON-NLS-2$
 						}
 					}
 				} else {
 					Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
-					statusLabel.setText("Status" + ": " + "Idle" + " - " + "Next run" + ": " +
+					statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 							DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate));
 				}
 			}

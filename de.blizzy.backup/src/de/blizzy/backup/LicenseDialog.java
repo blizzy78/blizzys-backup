@@ -40,7 +40,7 @@ class LicenseDialog extends Dialog {
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
 		newShell.setImages(BackupApplication.getWindowImages());
-		newShell.setText("License"); //$NON-NLS-1$
+		newShell.setText(Messages.Title_License);
 	}
 	
 	@Override

@@ -53,7 +53,7 @@ public class BackupPlugin extends AbstractUIPlugin {
 		String[] args = Platform.getApplicationArgs();
 		for (String arg : args) {
 			if (arg.equals(argName)) {
-				return ""; //$NON-NLS-1$
+				return StringUtils.EMPTY;
 			}
 			if (arg.startsWith(argName + "=")) { //$NON-NLS-1$
 				return arg.substring(argName.length() + 1);

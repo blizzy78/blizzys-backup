@@ -190,6 +190,7 @@ class BackupShell {
 			
 			@Override
 			public void shellIconified(ShellEvent e) {
+				e.doit = false;
 				BackupApplication.hideShell();
 			}
 		});
@@ -249,7 +250,8 @@ class BackupShell {
 	}
 
 	void forceActive() {
-		shell.forceActive();
+		shell.setMinimized(false);
+		shell.setActive();
 	}
 
 	void setVisible(boolean visible) {

@@ -119,26 +119,17 @@ public class BackupApplication implements IApplication {
 			IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
 			long lastRun = backupSection.getLong("lastRun"); //$NON-NLS-1$
 			Settings settings = settingsManager.getSettings();
-			// run hourly: just add 60 min
 			if (settings.isRunHourly()) {
 				nextBackupRunTime = lastRun + 60L * 60L * 1000L;
-			}
-			// daily
-			else {
+			} else {
 				Calendar c = Calendar.getInstance();
-				long now = c.getTimeInMillis();
 				c.set(Calendar.HOUR_OF_DAY, settings.getDailyHours());
 				c.set(Calendar.MINUTE, settings.getDailyMinutes());
-				long then = c.getTimeInMillis();
-				// scheduled time in settings has not arrived on the current day yet
-				if (then > now) {
-					nextBackupRunTime = then;
-				}
-				// scheduled time has passed: schedule timer for next day at that time
-				else {
-					c.add(Calendar.DAY_OF_YEAR, 1);
-					nextBackupRunTime = c.getTimeInMillis();
-				}
+				nextBackupRunTime = c.getTimeInMillis();
+			}
+			long now = System.currentTimeMillis();
+			while (nextBackupRunTime <= now) {
+				nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
 			}
 			
 			backupTimerTask = new TimerTask() {
@@ -147,7 +138,7 @@ public class BackupApplication implements IApplication {
 					runBackup();
 				}
 			};
-			timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - System.currentTimeMillis(), 0));
+			timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - now, 0));
 		}
 	}
 

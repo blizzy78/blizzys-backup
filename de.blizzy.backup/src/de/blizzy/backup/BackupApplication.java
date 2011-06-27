@@ -40,6 +40,7 @@ public class BackupApplication implements IApplication {
 	private static long nextBackupRunTime;
 	private static Image[] windowImages;
 	private static SettingsManager settingsManager;
+	private static TrayIcon trayIcon;
 
 	public Object start(IApplicationContext context) throws Exception {
 		display = Display.getDefault();
@@ -65,9 +66,9 @@ public class BackupApplication implements IApplication {
 		
 		timer = new Timer();
 
-		TrayIcon trayIcon = new TrayIcon(display);
-		
 		scheduleBackupRun();
+
+		trayIcon = new TrayIcon(display);
 
 		context.applicationRunning();
 
@@ -128,8 +129,10 @@ public class BackupApplication implements IApplication {
 				nextBackupRunTime = c.getTimeInMillis();
 			}
 			long now = System.currentTimeMillis();
+			nextBackupRunTime = clearSeconds(nextBackupRunTime);
 			while (nextBackupRunTime <= now) {
 				nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
+				nextBackupRunTime = clearSeconds(nextBackupRunTime);
 			}
 			
 			backupTimerTask = new TimerTask() {
@@ -140,6 +143,10 @@ public class BackupApplication implements IApplication {
 			};
 			timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - now, 0));
 		}
+	}
+
+	private static long clearSeconds(long time) {
+		return (time / 1000L / 60L) * 60L * 1000L;
 	}
 
 	private static void runBackup() {
@@ -164,6 +171,7 @@ public class BackupApplication implements IApplication {
 			if (backupShell != null) {
 				backupShell.setBackupRun(backupRun);
 			}
+			trayIcon.setBackupRun(backupRun);
 			backupRun.runBackup();
 		}
 	}

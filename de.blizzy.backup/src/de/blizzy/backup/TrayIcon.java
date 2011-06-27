@@ -17,6 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup;
 
+import java.text.DateFormat;
+import java.util.Date;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -25,23 +28,38 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
 
-class TrayIcon {
+class TrayIcon implements IBackupRunListener, ISettingsListener {
 	private TrayItem trayItem;
 	private Image image;
+	private Image progressImage;
+	private BackupRun backupRun;
 
 	TrayIcon(Display display) {
 		Tray systemTray = display.getSystemTray();
 		if (systemTray != null) {
 			trayItem = new TrayItem(systemTray, SWT.NONE);
 			image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
-			trayItem.setImage(image);
-			trayItem.setToolTipText(Messages.Title_BlizzysBackup);
+			progressImage = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_progress_16.png").createImage(display); //$NON-NLS-1$
+			updateStatus();
 			trayItem.addSelectionListener(new SelectionAdapter() {
 				@Override
 				public void widgetSelected(SelectionEvent e) {
 					BackupApplication.showShell();
 				}
 			});
+			
+			BackupApplication.getSettingsManager().addListener(this);
+		}
+	}
+
+	private void updateStatus() {
+		if (trayItem != null) {
+			trayItem.setImage((backupRun != null) ? progressImage : image);
+			Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
+			trayItem.setToolTipText(Messages.Title_BlizzysBackup + " - " + //$NON-NLS-1$
+					((backupRun != null) ? Messages.Running :
+					Messages.Label_NextRun + ": " + //$NON-NLS-1$
+						DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate)));
 		}
 	}
 	
@@ -49,8 +67,48 @@ class TrayIcon {
 		if (image != null) {
 			image.dispose();
 		}
+		if (progressImage != null) {
+			progressImage.dispose();
+		}
 		if (trayItem != null) {
 			trayItem.dispose();
 		}
+		if (backupRun != null) {
+			backupRun.removeListener(this);
+		}
+		BackupApplication.getSettingsManager().removeListener(this);
+	}
+
+	public void backupStatusChanged(BackupStatusEvent e) {
+	}
+
+	public void backupEnded(BackupEndedEvent e) {
+		backupRun.removeListener(this);
+		backupRun = null;
+		trayItem.getDisplay().asyncExec(new Runnable() {
+			public void run() {
+				if (!trayItem.isDisposed()) {
+					updateStatus();
+				}
+			}
+		});
+	}
+	
+	void setBackupRun(BackupRun backupRun) {
+		this.backupRun = backupRun;
+		if (backupRun != null) {
+			backupRun.addListener(this);
+		}
+		trayItem.getDisplay().asyncExec(new Runnable() {
+			public void run() {
+				if (!trayItem.isDisposed()) {
+					updateStatus();
+				}
+			}
+		});
+	}
+	
+	public void settingsChanged() {
+		updateStatus();
 	}
 }

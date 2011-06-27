@@ -186,10 +186,6 @@ class BackupShell {
 						Messages.ExitApplication, MessageDialog.CONFIRM,
 						new String[] { Messages.Button_Exit, Messages.Button_MinimizeOnly }, 1);
 				if (dlg.open() == 0) {
-					if (backupRun != null) {
-						backupRun.removeListener(backupRunListener);
-					}
-					BackupApplication.getSettingsManager().removeListener(settingsListener);
 					BackupApplication.quit();
 				} else {
 					e.doit = false;
@@ -204,9 +200,22 @@ class BackupShell {
 			}
 		});
 		
+		shell.addDisposeListener(new DisposeListener() {
+			public void widgetDisposed(DisposeEvent e) {
+				handleDispose();
+			}
+		});
+		
 		BackupApplication.getSettingsManager().addListener(settingsListener);
 		
 		settingsButton.forceFocus();
+	}
+
+	private void handleDispose() {
+		if (backupRun != null) {
+			backupRun.removeListener(backupRunListener);
+		}
+		BackupApplication.getSettingsManager().removeListener(settingsListener);
 	}
 
 	private void updateStatusLabel() {

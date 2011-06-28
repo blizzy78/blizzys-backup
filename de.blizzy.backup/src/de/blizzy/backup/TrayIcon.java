@@ -85,13 +85,15 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 	public void backupEnded(BackupEndedEvent e) {
 		backupRun.removeListener(this);
 		backupRun = null;
-		trayItem.getDisplay().asyncExec(new Runnable() {
-			public void run() {
-				if (!trayItem.isDisposed()) {
-					updateStatus();
+		if (trayItem != null) {
+			Utils.runAsync(trayItem.getDisplay(), new Runnable() {
+				public void run() {
+					if (!trayItem.isDisposed()) {
+						updateStatus();
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 	
 	void setBackupRun(BackupRun backupRun) {
@@ -99,13 +101,15 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 		if (backupRun != null) {
 			backupRun.addListener(this);
 		}
-		trayItem.getDisplay().asyncExec(new Runnable() {
-			public void run() {
-				if (!trayItem.isDisposed()) {
-					updateStatus();
+		if (trayItem != null) {
+			Utils.runAsync(trayItem.getDisplay(), new Runnable() {
+				public void run() {
+					if (!trayItem.isDisposed()) {
+						updateStatus();
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 	
 	public void settingsChanged() {

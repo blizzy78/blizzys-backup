@@ -50,6 +50,7 @@ import org.eclipse.swt.widgets.Shell;
 
 class BackupShell {
 	private Shell shell;
+	private Button restoreButton;
 	private Label statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
@@ -61,11 +62,13 @@ class BackupShell {
 			backupRun.removeListener(this);
 			backupRun = null;
 			updateStatusLabel();
+			updateRestoreButton();
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
 		public void settingsChanged() {
 			updateStatusLabel();
+			updateRestoreButton();
 		}
 	};
 
@@ -134,13 +137,14 @@ class BackupShell {
 		label.setText(Messages.ModifyBackupSettings);
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		
-		Button restoreButton = new Button(buttonsComposite, SWT.PUSH);
+		restoreButton = new Button(buttonsComposite, SWT.PUSH);
 		restoreButton.setText(Messages.Button_Restore);
 		restoreButton.setFont(bigFont);
 		gd = new GridData(SWT.FILL, SWT.FILL, false, true);
 		gd.widthHint = (int) (extent.x * 1.6d);
 		gd.heightHint = extent.y * 2;
 		restoreButton.setLayoutData(gd);
+		updateRestoreButton();
 		
 		label = new Label(buttonsComposite, SWT.NONE);
 		label.setText(Messages.RestoreFromBackup);
@@ -219,22 +223,34 @@ class BackupShell {
 	}
 
 	private void updateStatusLabel() {
-		Display display = shell.getDisplay();
-		display.asyncExec(new Runnable() {
+		Utils.runAsync(shell.getDisplay(), new Runnable() {
 			public void run() {
-				if (backupRun != null) {
-					if (backupRun.isCleaningUp()) {
-						statusLabel.setText(Messages.Label_Status + ": " + Messages.CleaningUp); //$NON-NLS-1$
-					} else {
-						String currentFile = backupRun.getCurrentFile();
-						if (StringUtils.isNotBlank(currentFile)) {
-							statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + currentFile); //$NON-NLS-1$ //$NON-NLS-2$
+				if (!statusLabel.isDisposed()) {
+					if (backupRun != null) {
+						if (backupRun.isCleaningUp()) {
+							statusLabel.setText(Messages.Label_Status + ": " + Messages.CleaningUp); //$NON-NLS-1$
+						} else {
+							String currentFile = backupRun.getCurrentFile();
+							if (StringUtils.isNotBlank(currentFile)) {
+								statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + currentFile); //$NON-NLS-1$ //$NON-NLS-2$
+							}
 						}
+					} else {
+						Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
+						statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+								DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate));
 					}
-				} else {
-					Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
-					statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-							DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate));
+				}
+			}
+		});
+	}
+	
+	private void updateRestoreButton() {
+		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			public void run() {
+				if (!restoreButton.isDisposed()) {
+					Settings settings = BackupApplication.getSettingsManager().getSettings();
+					restoreButton.setEnabled(Utils.isBackupFolder(settings.getOutputFolder()));
 				}
 			}
 		});

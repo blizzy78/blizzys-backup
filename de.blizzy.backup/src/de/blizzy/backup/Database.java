@@ -30,10 +30,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
 class Database {
+	private static final String DB_FOLDER_NAME = "$blizzysbackup"; //$NON-NLS-1$
+	
 	private File folder;
 
 	Database(Settings settings) {
-		this.folder = new File(new File(settings.getOutputFolder()), "$blizzysbackup"); //$NON-NLS-1$
+		this.folder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
 	}
 	
 	public Connection openDatabaseConnection() throws SQLException {
@@ -115,5 +117,9 @@ class Database {
 				// ignore
 			}
 		}
+	}
+
+	static boolean containsDatabaseFolder(File folder) {
+		return new File(folder, DB_FOLDER_NAME).isDirectory();
 	}
 }

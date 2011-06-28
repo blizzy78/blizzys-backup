@@ -19,7 +19,9 @@ package de.blizzy.backup;
 
 import java.io.File;
 
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
+import org.eclipse.swt.widgets.Display;
 
 final class Utils {
 	private static final String DIALOG_SECTION = BackupPlugin.ID + ".dialog"; //$NON-NLS-1$
@@ -46,5 +48,17 @@ final class Utils {
 			result = new File(result, part);
 		}
 		return result;
+	}
+	
+	static boolean isBackupFolder(String folder) {
+		return StringUtils.isNotBlank(folder) && Database.containsDatabaseFolder(new File(folder));
+	}
+	
+	static void runAsync(Display display, Runnable runnable) {
+		if (Display.findDisplay(Thread.currentThread()) != null) {
+			runnable.run();
+		} else if (!display.isDisposed()) {
+			display.asyncExec(runnable);
+		}
 	}
 }

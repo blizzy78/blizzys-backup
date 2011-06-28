@@ -31,6 +31,7 @@ public class Messages extends NLS {
 	public static String Button_Settings;
 	public static String CleaningUp;
 	public static String ExitApplication;
+	public static String FolderContainsExistingBackup;
 	public static String FolderNotEmpty;
 	public static String Idle;
 	public static String Label_BackupOutputFolder;
@@ -47,6 +48,7 @@ public class Messages extends NLS {
 	public static String Running;
 	public static String Title_BlizzysBackup;
 	public static String Title_CloseBackupDatabase;
+	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;

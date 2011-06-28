@@ -228,14 +228,24 @@ class SettingsDialog extends Dialog {
 				break;
 			}
 			
+			if (Utils.isBackupFolder(folder)) {
+				if (MessageDialog.openConfirm(getShell(), Messages.Title_ExistingBackup,
+						NLS.bind(Messages.FolderContainsExistingBackup, new File(folder).getName()))) {
+
+					break;
+				} else {
+					continue;
+				}
+			}
+			
 			if (new File(folder).list().length > 0) {
 				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
 						NLS.bind(Messages.FolderNotEmpty, new File(folder).getName()));
 				continue;
 			}
-
+		}
+		if (folder != null) {
 			outputFolderText.setText(folder);
-			break;
 		}
 	}
 	

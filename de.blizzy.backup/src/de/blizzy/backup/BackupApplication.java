@@ -121,18 +121,21 @@ public class BackupApplication implements IApplication {
 			long lastRun = backupSection.getLong("lastRun"); //$NON-NLS-1$
 			Settings settings = settingsManager.getSettings();
 			if (settings.isRunHourly()) {
-				nextBackupRunTime = lastRun + 60L * 60L * 1000L;
+				nextBackupRunTime = lastRun;
 			} else {
 				Calendar c = Calendar.getInstance();
+				c.setTimeInMillis(lastRun);
 				c.set(Calendar.HOUR_OF_DAY, settings.getDailyHours());
 				c.set(Calendar.MINUTE, settings.getDailyMinutes());
 				nextBackupRunTime = c.getTimeInMillis();
 			}
 			long now = System.currentTimeMillis();
-			nextBackupRunTime = clearSeconds(nextBackupRunTime);
-			while (nextBackupRunTime <= now) {
-				nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
+			for (;;) {
 				nextBackupRunTime = clearSeconds(nextBackupRunTime);
+				if (nextBackupRunTime > now) {
+					break;
+				}
+				nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
 			}
 			
 			backupTimerTask = new TimerTask() {

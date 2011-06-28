@@ -32,8 +32,8 @@ import org.apache.commons.lang.StringUtils;
 class Database {
 	private File folder;
 
-	Database(File folder) {
-		this.folder = folder;
+	Database(Settings settings) {
+		this.folder = new File(new File(settings.getOutputFolder()), "$blizzysbackup"); //$NON-NLS-1$
 	}
 	
 	public Connection openDatabaseConnection() throws SQLException {

@@ -197,8 +197,8 @@ class RestoreDialog extends Dialog {
 		}
 	}
 
+	private Settings settings;
 	private List<Backup> backups = new ArrayList<Backup>();
-	private String outputFolder;
 	private Database database;
 	private Connection conn;
 	private ComboViewer backupsViewer;
@@ -213,8 +213,8 @@ class RestoreDialog extends Dialog {
 	RestoreDialog(Shell parentShell) {
 		super(parentShell);
 
-		outputFolder = BackupApplication.getSettingsManager().getSettings().getOutputFolder();
-		database = new Database(new File(outputFolder, "$blizzysbackup")); //$NON-NLS-1$
+		settings = BackupApplication.getSettingsManager().getSettings();
+		database = new Database(settings);
 	}
 	
 	@Override
@@ -602,7 +602,7 @@ class RestoreDialog extends Dialog {
 						int totalNumEntries = getTotalNumEntries(entries, backupId);
 						monitor.beginTask(Messages.Title_RestoreFromBackup, totalNumEntries);
 						for (Entry entry : entries) {
-							restoreEntry(entry, new File(myFolder), outputFolder, backupId, monitor);
+							restoreEntry(entry, new File(myFolder), settings.getOutputFolder(), backupId, monitor);
 						}
 					} catch (IOException e) {
 						throw new InvocationTargetException(e);

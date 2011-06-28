@@ -141,8 +141,7 @@ class BackupRun implements Runnable {
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
-		File dbFolder = new File(settings.getOutputFolder(), "$blizzysbackup"); //$NON-NLS-1$
-		database = new Database(dbFolder);
+		database = new Database(settings);
 		try {
 			conn = database.openDatabaseConnection();
 			initDatabase();

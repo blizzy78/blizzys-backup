@@ -254,24 +254,17 @@ class RestoreDialog extends Dialog {
 					psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
 					psNumEntriesInFolder = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
 							"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
-					psNumEntriesInBackup = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
-							"WHERE (backup_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 
-					psBackups = conn.prepareStatement("SELECT id, run_time FROM backups ORDER BY run_time DESC"); //$NON-NLS-1$
+					psBackups = conn.prepareStatement("SELECT backups.id AS id, run_time, COUNT(entries.*) AS num_entries " + //$NON-NLS-1$
+							"FROM backups LEFT JOIN entries ON " + //$NON-NLS-1$
+							"(entries.backup_id = backups.id) AND (entries.type != " + EntryType.FOLDER.getValue() + ") " + //$NON-NLS-1$ //$NON-NLS-2$
+							"GROUP BY backups.id " + //$NON-NLS-1$
+							"ORDER BY run_time DESC"); //$NON-NLS-1$
 					rsBackups = psBackups.executeQuery();
 					while (rsBackups.next()) {
 						int id = rsBackups.getInt("id"); //$NON-NLS-1$
 						Date runTime = new Date(rsBackups.getTimestamp("run_time").getTime()); //$NON-NLS-1$
-						psNumEntriesInBackup.setInt(1, id);
-						ResultSet rsNumEntries = null;
-						int numEntries;
-						try {
-							rsNumEntries = psNumEntriesInBackup.executeQuery();
-							rsNumEntries.next();
-							numEntries = rsNumEntries.getInt(1);
-						} finally {
-							database.closeQuietly(rsNumEntries);
-						}
+						int numEntries = rsBackups.getInt("num_entries"); //$NON-NLS-1$
 						Backup backup = new Backup(id, runTime, numEntries);
 						backups.add(backup);
 					}

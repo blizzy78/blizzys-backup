@@ -243,6 +243,8 @@ class SettingsDialog extends Dialog {
 						NLS.bind(Messages.FolderNotEmpty, new File(folder).getName()));
 				continue;
 			}
+			
+			break;
 		}
 		if (folder != null) {
 			outputFolderText.setText(folder);

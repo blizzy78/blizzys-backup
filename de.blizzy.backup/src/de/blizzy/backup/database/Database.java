@@ -19,6 +19,7 @@ package de.blizzy.backup.database;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -26,7 +27,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
 import de.blizzy.backup.settings.Settings;
@@ -43,7 +43,7 @@ public class Database {
 	public Connection openDatabaseConnection() throws SQLException {
 		try {
 			if (!folder.exists()) {
-				FileUtils.forceMkdir(folder);
+				Files.createDirectory(folder.toPath());
 			}
 			
 			try {

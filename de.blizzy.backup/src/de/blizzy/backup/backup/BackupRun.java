@@ -48,7 +48,6 @@ import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
@@ -300,7 +299,7 @@ public class BackupRun implements Runnable {
 	private int backupFileContents(File file, File backupFile, String backupFilePath, String checksum)
 		throws IOException, SQLException {
 
-		FileUtils.forceMkdir(backupFile.getParentFile());
+		Files.createDirectory(backupFile.getParentFile().toPath());
 		OutputStream out = null;
 		try {
 			out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(backupFile)));

@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -55,7 +56,7 @@ public class Database {
 
 			Connection conn = DriverManager.getConnection(
 					"jdbc:h2:" + folder.getAbsolutePath() + "/backup" + //$NON-NLS-1$ //$NON-NLS-2$
-					";LOCK_MODE=0;UNDO_LOG=0;FILE_LOCK=NO;CACHE_SIZE=65536", //$NON-NLS-1$
+					";CACHE_SIZE=65536", //$NON-NLS-1$
 					"sa", StringUtils.EMPTY); //$NON-NLS-1$
 			conn.setAutoCommit(true);
 			return conn;
@@ -140,5 +141,41 @@ public class Database {
 				Files.copy(file.toPath(), new File(targetFolder, file.getName()).toPath());
 			}
 		}
+	}
+
+	public void initialize(Connection conn, String sampleBackupPath) {
+		runStatement(conn, "CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
+				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+				"run_time DATETIME NOT NULL" + //$NON-NLS-1$
+				")"); //$NON-NLS-1$
+		
+		runStatement(conn, "CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
+				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+				"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+				"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+				"length BIGINT NOT NULL" + //$NON-NLS-1$
+				")"); //$NON-NLS-1$
+		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_old_files ON files " + //$NON-NLS-1$
+				"(checksum, length)"); //$NON-NLS-1$
+		
+		runStatement(conn, "CREATE TABLE IF NOT EXISTS entries (" + //$NON-NLS-1$
+				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+				"parent_id INT NULL, " + //$NON-NLS-1$
+				"backup_id INT NOT NULL, " + //$NON-NLS-1$
+				"type TINYINT NOT NULL, " + //$NON-NLS-1$
+				"creation_time DATETIME NULL, " + //$NON-NLS-1$
+				"modification_time DATETIME NULL, " + //$NON-NLS-1$
+				"hidden BOOLEAN NOT NULL, " + //$NON-NLS-1$
+				"name VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
+				"file_id INT NULL" + //$NON-NLS-1$
+				")"); //$NON-NLS-1$
+		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_files ON entries " + //$NON-NLS-1$
+				"(file_id)"); //$NON-NLS-1$
+		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
+				"(backup_id, parent_id)"); //$NON-NLS-1$
+		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_in_backup ON entries " + //$NON-NLS-1$
+				"(backup_id, type)"); //$NON-NLS-1$
+		
+		runStatement(conn, "ANALYZE"); //$NON-NLS-1$
 	}
 }

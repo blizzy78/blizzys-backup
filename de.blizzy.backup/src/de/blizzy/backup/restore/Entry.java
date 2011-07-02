@@ -29,11 +29,11 @@ class Entry {
 	Date creationTime;
 	Date modificationTime;
 	boolean hidden;
-	int length;
+	long length;
 	String backupPath;
 
 	Entry(int id, int parentId, String name, EntryType type, Date creationTime, Date modificationTime, boolean hidden,
-			int length, String backupPath) {
+			long length, String backupPath) {
 
 		this.id = id;
 		this.parentId = parentId;

@@ -87,55 +87,13 @@ public class BackupRun implements Runnable {
 		thread.start();
 	}
 
-	private void initDatabase() {
-		database.runStatement(conn, "CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT, " + //$NON-NLS-1$
-				"run_time DATETIME NOT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_backups ON backups " + //$NON-NLS-1$
-				"(id)"); //$NON-NLS-1$
-		
-		database.runStatement(conn, "CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT, " + //$NON-NLS-1$
-				"backup_path VARCHAR(" + createBackupFilePath().length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-				"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-				"length INT NOT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_files ON files " + //$NON-NLS-1$
-				"(id)"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_old_files ON files " + //$NON-NLS-1$
-				"(checksum, length)"); //$NON-NLS-1$
-		
-		database.runStatement(conn, "CREATE TABLE IF NOT EXISTS entries (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT, " + //$NON-NLS-1$
-				"parent_id INT NULL, " + //$NON-NLS-1$
-				"backup_id INT NOT NULL, " + //$NON-NLS-1$
-				"type INT NOT NULL, " + //$NON-NLS-1$
-				"creation_time DATETIME NULL, " + //$NON-NLS-1$
-				"modification_time DATETIME NULL, " + //$NON-NLS-1$
-				"hidden INT NOT NULL, " + //$NON-NLS-1$
-				"name VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
-				"file_id INT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries ON entries " + //$NON-NLS-1$
-				"(id)"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_files ON entries " + //$NON-NLS-1$
-				"(file_id)"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
-				"(backup_id, parent_id)"); //$NON-NLS-1$
-		database.runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_in_backup ON entries " + //$NON-NLS-1$
-				"(backup_id, type)"); //$NON-NLS-1$
-		
-		database.runStatement(conn, "ANALYZE"); //$NON-NLS-1$
-	}
-
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
 		database = new Database(settings);
 		try {
 			conn = database.openDatabaseConnection();
-			initDatabase();
+			database.initialize(conn, createBackupFilePath());
 			
 			psIdentity = conn.prepareStatement("SELECT IDENTITY()"); //$NON-NLS-1$
 			psNewEntry = conn.prepareStatement("INSERT INTO entries " + //$NON-NLS-1$
@@ -214,7 +172,7 @@ public class BackupRun implements Runnable {
 		psNewEntry.setInt(3, EntryType.FOLDER.getValue());
 		psNewEntry.setNull(4, Types.TIMESTAMP);
 		psNewEntry.setNull(5, Types.TIMESTAMP);
-		psNewEntry.setInt(6, hidden ? 1 : 0);
+		psNewEntry.setObject(6, Boolean.valueOf(hidden));
 		psNewEntry.setString(7, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName());
 		psNewEntry.setNull(8, Types.INTEGER);
 		psNewEntry.executeUpdate();
@@ -285,7 +243,7 @@ public class BackupRun implements Runnable {
 		} else {
 			psNewEntry.setNull(5, Types.TIMESTAMP);
 		}
-		psNewEntry.setInt(6, hidden ? 1 : 0);
+		psNewEntry.setObject(6, Boolean.valueOf(hidden));
 		psNewEntry.setString(7, file.getName());
 		psNewEntry.setInt(8, fileId);
 		psNewEntry.executeUpdate();

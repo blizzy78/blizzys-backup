@@ -431,12 +431,8 @@ public class RestoreDialog extends Dialog {
 			if (!rs.wasNull()) {
 				modificationTime = new Date(modTime.getTime());
 			}
-			int hiddenInt = rs.getInt("hidden"); //$NON-NLS-1$
-			boolean hidden = (hiddenInt == 1);
-			if (rs.wasNull()) {
-				hidden = false;
-			}
-			int length = rs.getInt("length"); //$NON-NLS-1$
+			boolean hidden = ((Boolean) rs.getObject("hidden")).booleanValue(); //$NON-NLS-1$
+			long length = rs.getLong("length"); //$NON-NLS-1$
 			if (rs.wasNull()) {
 				length = -1;
 			}

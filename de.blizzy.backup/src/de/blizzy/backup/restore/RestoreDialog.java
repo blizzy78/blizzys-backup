@@ -40,6 +40,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.Dialog;
@@ -539,7 +540,7 @@ public class RestoreDialog extends Dialog {
 		
 		if (entry.type == EntryType.FOLDER) {
 			File newFolder = new File(parentFolder, escapeFileName(entry.name));
-			Files.createDirectory(newFolder.toPath());
+			FileUtils.forceMkdir(newFolder);
 			
 			psEntries.setInt(1, backupId);
 			psEntries.setInt(2, entry.id);

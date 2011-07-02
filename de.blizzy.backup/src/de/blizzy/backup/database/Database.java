@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
 import de.blizzy.backup.settings.Settings;
@@ -43,7 +44,7 @@ public class Database {
 	public Connection openDatabaseConnection() throws SQLException {
 		try {
 			if (!folder.exists()) {
-				Files.createDirectory(folder.toPath());
+				FileUtils.forceMkdir(folder);
 			}
 			
 			try {
@@ -123,5 +124,21 @@ public class Database {
 
 	public static boolean containsDatabaseFolder(File folder) {
 		return new File(folder, DB_FOLDER_NAME).isDirectory();
+	}
+
+	public void backupDatabase(File targetFolder) throws IOException {
+		copyFolder(folder, targetFolder);
+	}
+
+	private void copyFolder(File folder, File targetFolder) throws IOException {
+		FileUtils.forceMkdir(targetFolder);
+		
+		for (File file : folder.listFiles()) {
+			if (file.isDirectory()) {
+				copyFolder(file, new File(targetFolder, file.getName()));
+			} else {
+				Files.copy(file.toPath(), new File(targetFolder, file.getName()).toPath());
+			}
+		}
 	}
 }

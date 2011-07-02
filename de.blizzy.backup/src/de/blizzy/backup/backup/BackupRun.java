@@ -48,6 +48,7 @@ import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
@@ -182,6 +183,15 @@ public class BackupRun implements Runnable {
 			database.closeQuietly(psIdentity, psNewEntry, psNewFile, psOldFile);
 			database.releaseDatabaseConnection(conn);
 			
+			try {
+				File outputFolder = new File(settings.getOutputFolder());
+				File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
+				File dbBackupFolder = new File(dbBackupRootFolder, String.valueOf(System.currentTimeMillis()));
+				database.backupDatabase(dbBackupFolder);
+			} catch (IOException e) {
+				BackupPlugin.getDefault().logError("Error while creating database backup", e); //$NON-NLS-1$
+			}
+			
 			fireBackupEnded();
 			
 			BackupPlugin.getDefault().logMessage("Backup done"); //$NON-NLS-1$
@@ -299,7 +309,7 @@ public class BackupRun implements Runnable {
 	private int backupFileContents(File file, File backupFile, String backupFilePath, String checksum)
 		throws IOException, SQLException {
 
-		Files.createDirectory(backupFile.getParentFile().toPath());
+		FileUtils.forceMkdir(backupFile.getParentFile());
 		OutputStream out = null;
 		try {
 			out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(backupFile)));

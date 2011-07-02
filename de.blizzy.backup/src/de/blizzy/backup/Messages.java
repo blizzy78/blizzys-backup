@@ -44,6 +44,7 @@ public class Messages extends NLS {
 	public static String Label_Size;
 	public static String Label_Status;
 	public static String ModifyBackupSettings;
+	public static String ProgramRunning;
 	public static String RestoreFromBackup;
 	public static String Running;
 	public static String Title_BlizzysBackup;
@@ -54,6 +55,7 @@ public class Messages extends NLS {
 	public static String Title_FoldersToBackup;
 	public static String Title_License;
 	public static String Title_OpenBackupDatabase;
+	public static String Title_ProgramRunning;
 	public static String Title_Restore;
 	public static String Title_RestoreFromBackup;
 	public static String Title_SelectFolder;

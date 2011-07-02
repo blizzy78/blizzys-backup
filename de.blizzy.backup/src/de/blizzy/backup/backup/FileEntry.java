@@ -15,29 +15,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.backup;
 
-enum EntryType {
-	FOLDER(1),
-	FILE(2);
-	
-	private int value;
+class FileEntry {
+	int id;
+	String backupPath;
 
-	private EntryType(int value) {
-		this.value = value;
+	FileEntry(int id, String backupPath) {
+		this.id = id;
+		this.backupPath = backupPath;
 	}
 	
-	int getValue() {
-		return value;
-	}
-	
-	static EntryType fromValue(int value) {
-		if (value == FOLDER.value) {
-			return FOLDER;
-		}
-		if (value == FILE.value) {
-			return FILE;
-		}
-		throw new IllegalArgumentException("unknown value: " + value); //$NON-NLS-1$
+	@Override
+	public String toString() {
+		return backupPath + " (" + id + ")"; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 }

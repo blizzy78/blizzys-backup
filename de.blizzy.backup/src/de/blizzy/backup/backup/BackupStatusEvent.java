@@ -15,8 +15,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.backup;
 
-interface ISettingsListener {
-	void settingsChanged();
+import java.util.EventObject;
+
+public class BackupStatusEvent extends EventObject {
+	BackupStatusEvent(Object source) {
+		super(source);
+	}
 }

@@ -48,6 +48,15 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 
+import de.blizzy.backup.backup.BackupEndedEvent;
+import de.blizzy.backup.backup.BackupRun;
+import de.blizzy.backup.backup.BackupStatusEvent;
+import de.blizzy.backup.backup.IBackupRunListener;
+import de.blizzy.backup.restore.RestoreDialog;
+import de.blizzy.backup.settings.ISettingsListener;
+import de.blizzy.backup.settings.Settings;
+import de.blizzy.backup.settings.SettingsDialog;
+
 class BackupShell {
 	private Shell shell;
 	private Button restoreButton;

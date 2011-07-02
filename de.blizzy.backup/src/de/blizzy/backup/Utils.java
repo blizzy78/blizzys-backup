@@ -23,17 +23,19 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.widgets.Display;
 
-final class Utils {
+import de.blizzy.backup.database.Database;
+
+public final class Utils {
 	private static final String DIALOG_SECTION = BackupPlugin.ID + ".dialog"; //$NON-NLS-1$
 
 	private Utils() {}
 
-	static IDialogSettings getSection(String sectionId) {
+	public static IDialogSettings getSection(String sectionId) {
 		IDialogSettings root = BackupPlugin.getDefault().getDialogSettings();
 		return getChildSection(getChildSection(root, DIALOG_SECTION), sectionId);
 	}
 
-	static IDialogSettings getChildSection(IDialogSettings parent, String name) {
+	public static IDialogSettings getChildSection(IDialogSettings parent, String name) {
 		IDialogSettings section = parent.getSection(name);
 		if (section == null) {
 			section = parent.addNewSection(name);
@@ -41,7 +43,7 @@ final class Utils {
 		return section;
 	}
 
-	static File toBackupFile(String backupFilePath, String outputFolder) {
+	public static File toBackupFile(String backupFilePath, String outputFolder) {
 		String[] parts = backupFilePath.split("/"); //$NON-NLS-1$
 		File result = new File(outputFolder);
 		for (String part : parts) {
@@ -50,7 +52,7 @@ final class Utils {
 		return result;
 	}
 	
-	static boolean isBackupFolder(String folder) {
+	public static boolean isBackupFolder(String folder) {
 		return StringUtils.isNotBlank(folder) && Database.containsDatabaseFolder(new File(folder));
 	}
 	

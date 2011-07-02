@@ -15,12 +15,34 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.restore;
 
-import java.util.EventObject;
+import java.util.Date;
 
-class BackupEndedEvent extends EventObject {
-	public BackupEndedEvent(Object source) {
-		super(source);
+import de.blizzy.backup.database.EntryType;
+
+class Entry {
+	int id;
+	int parentId;
+	String name;
+	EntryType type;
+	Date creationTime;
+	Date modificationTime;
+	boolean hidden;
+	int length;
+	String backupPath;
+
+	Entry(int id, int parentId, String name, EntryType type, Date creationTime, Date modificationTime, boolean hidden,
+			int length, String backupPath) {
+
+		this.id = id;
+		this.parentId = parentId;
+		this.name = name;
+		this.type = type;
+		this.creationTime = creationTime;
+		this.modificationTime = modificationTime;
+		this.hidden = hidden;
+		this.length = length;
+		this.backupPath = backupPath;
 	}
 }

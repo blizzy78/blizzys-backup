@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.settings;
 
 import java.io.File;
 import java.util.HashSet;
@@ -50,13 +50,17 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
-class SettingsDialog extends Dialog {
+import de.blizzy.backup.BackupApplication;
+import de.blizzy.backup.Messages;
+import de.blizzy.backup.Utils;
+
+public class SettingsDialog extends Dialog {
 	private ListViewer foldersViewer;
 	private Text outputFolderText;
 	private Button runHourlyRadio;
 	private DateTime dailyTime;
 
-	SettingsDialog(Shell parentShell) {
+	public SettingsDialog(Shell parentShell) {
 		super(parentShell);
 	}
 	

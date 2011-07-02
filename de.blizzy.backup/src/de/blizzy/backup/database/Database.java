@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.database;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,12 +29,14 @@ import java.sql.Statement;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
-class Database {
+import de.blizzy.backup.settings.Settings;
+
+public class Database {
 	private static final String DB_FOLDER_NAME = "$blizzysbackup"; //$NON-NLS-1$
 	
 	private File folder;
 
-	Database(Settings settings) {
+	public Database(Settings settings) {
 		this.folder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
 	}
 	
@@ -71,7 +73,7 @@ class Database {
 		}
 	}
 
-	void runStatement(Connection conn, String sql) {
+	public void runStatement(Connection conn, String sql) {
 		Statement st = null;
 		try {
 			st = conn.createStatement();
@@ -83,7 +85,7 @@ class Database {
 		}
 	}
 
-	void closeQuietly(Statement st) {
+	public void closeQuietly(Statement st) {
 		if (st != null) {
 			try {
 				st.close();
@@ -93,7 +95,7 @@ class Database {
 		}
 	}
 	
-	void closeQuietly(PreparedStatement... pss) {
+	public void closeQuietly(PreparedStatement... pss) {
 		for (PreparedStatement ps : pss) {
 			closeQuietly(ps);
 		}
@@ -109,7 +111,7 @@ class Database {
 		}
 	}
 	
-	void closeQuietly(ResultSet rs) {
+	public void closeQuietly(ResultSet rs) {
 		if (rs != null) {
 			try {
 				rs.close();
@@ -119,7 +121,7 @@ class Database {
 		}
 	}
 
-	static boolean containsDatabaseFolder(File folder) {
+	public static boolean containsDatabaseFolder(File folder) {
 		return new File(folder, DB_FOLDER_NAME).isDirectory();
 	}
 }

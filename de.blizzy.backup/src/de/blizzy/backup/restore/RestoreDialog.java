@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.restore;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -33,8 +33,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,12 +51,9 @@ import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ComboViewer;
-import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IOpenListener;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.ITableLabelProvider;
-import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.OpenEvent;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -70,8 +65,6 @@ import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.graphics.Device;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -83,120 +76,15 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 
-class RestoreDialog extends Dialog {
-	private static final class Backup {
-		int id;
-		Date runTime;
-		int numEntries;
-		
-		Backup(int id, Date runTime, int numEntries) {
-			this.id = id;
-			this.runTime = runTime;
-			this.numEntries = numEntries;
-		}
-	}
-	
-	private static final class Entry {
-		int id;
-		int parentId;
-		String name;
-		EntryType type;
-		Date creationTime;
-		Date modificationTime;
-		boolean hidden;
-		int length;
-		String backupPath;
+import de.blizzy.backup.BackupApplication;
+import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Messages;
+import de.blizzy.backup.Utils;
+import de.blizzy.backup.database.Database;
+import de.blizzy.backup.database.EntryType;
+import de.blizzy.backup.settings.Settings;
 
-		Entry(int id, int parentId, String name, EntryType type, Date creationTime, Date modificationTime, boolean hidden,
-				int length, String backupPath) {
-
-			this.id = id;
-			this.parentId = parentId;
-			this.name = name;
-			this.type = type;
-			this.creationTime = creationTime;
-			this.modificationTime = modificationTime;
-			this.hidden = hidden;
-			this.length = length;
-			this.backupPath = backupPath;
-		}
-	}
-
-	private static final class BackupLabelProvider extends LabelProvider {
-		private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
-		private static final NumberFormat NUMBER_FORMAT = NumberFormat.getIntegerInstance();
-		
-		@Override
-		public String getText(Object element) {
-			Backup backup = (Backup) element;
-			return DATE_FORMAT.format(backup.runTime) +
-				" (" + NLS.bind(Messages.XEntries, NUMBER_FORMAT.format(backup.numEntries)) + ")"; //$NON-NLS-1$ //$NON-NLS-2$
-		}
-	}
-
-	private static final class EntryLabelProvider implements ITableLabelProvider {
-		private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
-
-		private Image rootFolderImage;
-		private Image folderImage;
-		private Image fileImage;
-
-		EntryLabelProvider(Device device) {
-			rootFolderImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/rootFolder.gif").createImage(device); //$NON-NLS-1$
-			folderImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/folder.gif").createImage(device); //$NON-NLS-1$
-			fileImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/file.gif").createImage(device); //$NON-NLS-1$
-		}
-		
-		public void dispose() {
-			rootFolderImage.dispose();
-			folderImage.dispose();
-			fileImage.dispose();
-		}
-
-		public String getColumnText(Object element, int columnIndex) {
-			Entry entry = (Entry) element;
-			switch (columnIndex) {
-				case 0:
-					return entry.name;
-				case 1:
-					if (entry.length >= 0) {
-						return FileUtils.byteCountToDisplaySize(entry.length);
-					}
-					break;
-				case 2:
-					if (entry.modificationTime != null) {
-						return DATE_FORMAT.format(entry.modificationTime);
-					}
-					break;
-			}
-			return null;
-		}
-
-		public Image getColumnImage(Object element, int columnIndex) {
-			if (columnIndex == 0) {
-				Entry entry = (Entry) element;
-				if (entry.parentId <= 0) {
-					return rootFolderImage;
-				}
-				if (entry.type == EntryType.FOLDER) {
-					return folderImage;
-				}
-				return fileImage;
-			}
-			return null;
-		}
-
-		public boolean isLabelProperty(Object element, String property) {
-			return true;
-		}
-
-		public void addListener(ILabelProviderListener listener) {
-		}
-
-		public void removeListener(ILabelProviderListener listener) {
-		}
-	}
-
+public class RestoreDialog extends Dialog {
 	private Settings settings;
 	private List<Backup> backups = new ArrayList<Backup>();
 	private Database database;
@@ -210,7 +98,7 @@ class RestoreDialog extends Dialog {
 	private PreparedStatement psNumEntriesInFolder;
 	private PreparedStatement psNumEntriesInBackup;
 
-	RestoreDialog(Shell parentShell) {
+	public RestoreDialog(Shell parentShell) {
 		super(parentShell);
 
 		settings = BackupApplication.getSettingsManager().getSettings();

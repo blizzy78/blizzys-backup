@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.settings;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,10 +28,13 @@ import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.jface.dialogs.IDialogSettings;
 
-class SettingsManager {
+import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Utils;
+
+public class SettingsManager {
 	private List<ISettingsListener> listeners = new ArrayList<ISettingsListener>();
 	
-	Settings getSettings() {
+	public Settings getSettings() {
 		IDialogSettings section = getSection();
 		Set<String> folders = new HashSet<String>();
 		String[] savedFolders = section.getArray("folders"); //$NON-NLS-1$
@@ -60,7 +63,7 @@ class SettingsManager {
 		return Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 	
-	void setSettings(Settings settings) {
+	public void setSettings(Settings settings) {
 		IDialogSettings section = getSection();
 		section.put("folders", settings.getFolders().toArray(ArrayUtils.EMPTY_STRING_ARRAY)); //$NON-NLS-1$
 		section.put("outputFolder", settings.getOutputFolder()); //$NON-NLS-1$
@@ -71,13 +74,13 @@ class SettingsManager {
 		fireSettingsChanged();
 	}
 	
-	void addListener(ISettingsListener listener) {
+	public void addListener(ISettingsListener listener) {
 		synchronized (listeners) {
 			listeners.add(listener);
 		}
 	}
 
-	void removeListener(ISettingsListener listener) {
+	public void removeListener(ISettingsListener listener) {
 		synchronized (listeners) {
 			listeners.remove(listener);
 		}

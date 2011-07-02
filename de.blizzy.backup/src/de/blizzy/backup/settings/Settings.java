@@ -15,18 +15,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.settings;
 
 import java.util.Set;
 
-class Settings {
+public class Settings {
 	private Set<String> folders;
 	private String outputFolder;
 	private boolean runHourly;
 	private int dailyHours;
 	private int dailyMinutes;
 
-	Settings(Set<String> folders, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes) {
+	public Settings(Set<String> folders, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes) {
 		this.folders = folders;
 		this.outputFolder = outputFolder;
 		this.runHourly = runHourly;
@@ -34,23 +34,23 @@ class Settings {
 		this.dailyMinutes = dailyMinutes;
 	}
 	
-	Set<String> getFolders() {
+	public Set<String> getFolders() {
 		return folders;
 	}
 	
-	String getOutputFolder() {
+	public String getOutputFolder() {
 		return outputFolder;
 	}
 	
-	boolean isRunHourly() {
+	public boolean isRunHourly() {
 		return runHourly;
 	}
 	
-	int getDailyHours() {
+	public int getDailyHours() {
 		return dailyHours;
 	}
 	
-	int getDailyMinutes() {
+	public int getDailyMinutes() {
 		return dailyMinutes;
 	}
 }

@@ -62,15 +62,15 @@ public class BackupPlugin extends AbstractUIPlugin {
 		return null;
 	}
 
-	void logMessage(String msg) {
+	public void logMessage(String msg) {
 		getLog().log(new Status(IStatus.INFO, ID, msg));
 	}
 
-	void logError(String msg, Throwable t) {
+	public void logError(String msg, Throwable t) {
 		getLog().log(new Status(IStatus.ERROR, ID, msg, t));
 	}
 	
-	ImageDescriptor getImageDescriptor(String path) {
+	public ImageDescriptor getImageDescriptor(String path) {
 		return AbstractUIPlugin.imageDescriptorFromPlugin(ID, path);
 	}
 

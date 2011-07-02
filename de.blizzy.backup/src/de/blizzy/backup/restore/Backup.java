@@ -15,12 +15,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.restore;
 
-public class BackupRunAdapter implements IBackupRunListener {
-	public void backupStatusChanged(BackupStatusEvent e) {
-	}
+import java.util.Date;
 
-	public void backupEnded(BackupEndedEvent e) {
+class Backup {
+	int id;
+	Date runTime;
+	int numEntries;
+	
+	Backup(int id, Date runTime, int numEntries) {
+		this.id = id;
+		this.runTime = runTime;
+		this.numEntries = numEntries;
 	}
 }

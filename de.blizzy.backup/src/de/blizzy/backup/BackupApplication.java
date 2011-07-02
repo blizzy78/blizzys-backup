@@ -30,6 +30,13 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
+import de.blizzy.backup.backup.BackupEndedEvent;
+import de.blizzy.backup.backup.BackupRun;
+import de.blizzy.backup.backup.BackupRunAdapter;
+import de.blizzy.backup.settings.ISettingsListener;
+import de.blizzy.backup.settings.Settings;
+import de.blizzy.backup.settings.SettingsManager;
+
 public class BackupApplication implements IApplication {
 	private static boolean running = true;
 	private static Display display;
@@ -211,11 +218,11 @@ public class BackupApplication implements IApplication {
 		return nextBackupRunTime;
 	}
 	
-	static Image[] getWindowImages() {
+	public static Image[] getWindowImages() {
 		return windowImages;
 	}
 	
-	static SettingsManager getSettingsManager() {
+	public static SettingsManager getSettingsManager() {
 		return settingsManager;
 	}
 }

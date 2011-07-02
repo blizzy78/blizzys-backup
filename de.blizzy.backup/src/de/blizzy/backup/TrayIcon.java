@@ -28,6 +28,12 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
 
+import de.blizzy.backup.backup.BackupEndedEvent;
+import de.blizzy.backup.backup.BackupRun;
+import de.blizzy.backup.backup.BackupStatusEvent;
+import de.blizzy.backup.backup.IBackupRunListener;
+import de.blizzy.backup.settings.ISettingsListener;
+
 class TrayIcon implements IBackupRunListener, ISettingsListener {
 	private TrayItem trayItem;
 	private Image image;

@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup;
+package de.blizzy.backup.backup;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -54,22 +54,13 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 
-class BackupRun implements Runnable {
-	private static final class FileEntry {
-		int id;
-		String backupPath;
+import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Utils;
+import de.blizzy.backup.database.Database;
+import de.blizzy.backup.database.EntryType;
+import de.blizzy.backup.settings.Settings;
 
-		private FileEntry(int id, String backupPath) {
-			this.id = id;
-			this.backupPath = backupPath;
-		}
-		
-		@Override
-		public String toString() {
-			return backupPath + " (" + id + ")"; //$NON-NLS-1$ //$NON-NLS-2$
-		}
-	}
-	
+public class BackupRun implements Runnable {
 	private static final DateFormat BACKUP_PATH_FORMAT =
 		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
 	
@@ -91,7 +82,7 @@ class BackupRun implements Runnable {
 		this.settings = settings;
 	}
 
-	void runBackup() {
+	public void runBackup() {
 		thread = new Thread(this, "Backup"); //$NON-NLS-1$
 		thread.start();
 	}
@@ -341,13 +332,13 @@ class BackupRun implements Runnable {
 		return BACKUP_PATH_FORMAT.format(new Date()) + "/" + UUID.randomUUID().toString(); //$NON-NLS-1$
 	}
 	
-	void addListener(IBackupRunListener listener) {
+	public void addListener(IBackupRunListener listener) {
 		synchronized (listeners) {
 			listeners.add(listener);
 		}
 	}
 
-	void removeListener(IBackupRunListener listener) {
+	public void removeListener(IBackupRunListener listener) {
 		synchronized (listeners) {
 			listeners.remove(listener);
 		}
@@ -391,11 +382,11 @@ class BackupRun implements Runnable {
 		}
 	}
 
-	String getCurrentFile() {
+	public String getCurrentFile() {
 		return currentFile;
 	}
 
-	void stopBackupAndWait() {
+	public void stopBackupAndWait() {
 		running = false;
 		try {
 			thread.join();
@@ -526,7 +517,7 @@ class BackupRun implements Runnable {
 		}
 	}
 	
-	boolean isCleaningUp() {
+	public boolean isCleaningUp() {
 		return cleaningUp;
 	}
 }

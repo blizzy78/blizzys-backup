@@ -36,6 +36,12 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.DropTargetListener;
+import org.eclipse.swt.dnd.FileTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
@@ -119,12 +125,18 @@ public class SettingsDialog extends Dialog {
 		removeFolderButton.setEnabled(false);
 		removeFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
+		Label label = new Label(foldersComposite, SWT.NONE);
+		label.setText(Messages.DropFoldersHelp);
+		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+		gd.horizontalSpan = 2;
+		label.setLayoutData(gd);
+		
 		Group settingsComposite = new Group(composite, SWT.NONE);
 		settingsComposite.setText(Messages.Title_Settings);
 		settingsComposite.setLayout(new GridLayout(3, false));
 		settingsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
-		Label label = new Label(settingsComposite, SWT.NONE);
+		label = new Label(settingsComposite, SWT.NONE);
 		label.setText(Messages.Label_BackupOutputFolder + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
@@ -193,6 +205,65 @@ public class SettingsDialog extends Dialog {
 			}
 		});
 		
+		DropTarget dropTarget = new DropTarget(foldersViewer.getControl(), DND.DROP_LINK);
+		dropTarget.setTransfer(new Transfer[] { FileTransfer.getInstance() });
+		dropTarget.addDropListener(new DropTargetListener() {
+			public void dragEnter(DropTargetEvent event) {
+				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
+					event.detail = DND.DROP_LINK;
+					event.feedback = DND.FEEDBACK_SCROLL;
+				} else {
+					event.detail = DND.DROP_NONE;
+				}
+			}
+
+			public void dragLeave(DropTargetEvent event) {
+			}
+
+			public void dragOver(DropTargetEvent event) {
+				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
+					event.detail = DND.DROP_LINK;
+					event.feedback = DND.FEEDBACK_SCROLL;
+				} else {
+					event.detail = DND.DROP_NONE;
+				}
+			}
+
+			public void dropAccept(DropTargetEvent event) {
+				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
+					event.detail = DND.DROP_LINK;
+					event.feedback = DND.FEEDBACK_SCROLL;
+				} else {
+					event.detail = DND.DROP_NONE;
+				}
+			}
+			
+			public void drop(DropTargetEvent event) {
+				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
+					if (event.data != null) {
+						for (String file : (String[]) event.data) {
+							if (new File(file).isDirectory()) {
+								addFolder(file);
+							}
+						}
+					} else {
+						event.detail = DND.DROP_NONE;
+					}
+				} else {
+					event.detail = DND.DROP_NONE;
+				}
+			}
+			
+			public void dragOperationChanged(DropTargetEvent event) {
+				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
+					event.detail = DND.DROP_LINK;
+					event.feedback = DND.FEEDBACK_SCROLL;
+				} else {
+					event.detail = DND.DROP_NONE;
+				}
+			}
+		});
+		
 		return composite;
 	}
 
@@ -201,12 +272,16 @@ public class SettingsDialog extends Dialog {
 		dlg.setText(Messages.Title_SelectFolder);
 		String folder = dlg.open();
 		if (folder != null) {
-			@SuppressWarnings("unchecked")
-			Set<String> folders = (Set<String>) foldersViewer.getInput();
-			folders.add(folder);
-			// TODO: consolidate folders with respect to parent folders
-			foldersViewer.add(folder);
+			addFolder(folder);
 		}
+	}
+
+	private void addFolder(String folder) {
+		@SuppressWarnings("unchecked")
+		Set<String> folders = (Set<String>) foldersViewer.getInput();
+		folders.add(folder);
+		// TODO: consolidate folders with respect to parent folders
+		foldersViewer.add(folder);
 	}
 
 	private void removeFolder() {

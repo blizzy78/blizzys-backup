@@ -30,6 +30,7 @@ public class Messages extends NLS {
 	public static String Button_Restore;
 	public static String Button_Settings;
 	public static String CleaningUp;
+	public static String DropFoldersHelp;
 	public static String ExitApplication;
 	public static String FolderContainsExistingBackup;
 	public static String FolderNotEmpty;

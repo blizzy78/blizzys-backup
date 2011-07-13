@@ -309,7 +309,7 @@ public class SettingsDialog extends Dialog {
 			
 			if (Utils.isBackupFolder(folder)) {
 				if (MessageDialog.openConfirm(getShell(), Messages.Title_ExistingBackup,
-						NLS.bind(Messages.FolderContainsExistingBackup, new File(folder).getName()))) {
+						NLS.bind(Messages.FolderContainsExistingBackup, Utils.getSimpleName(new File(folder))))) {
 
 					break;
 				} else {
@@ -319,7 +319,7 @@ public class SettingsDialog extends Dialog {
 			
 			if (new File(folder).list().length > 0) {
 				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
-						NLS.bind(Messages.FolderNotEmpty, new File(folder).getName()));
+						NLS.bind(Messages.FolderNotEmpty, Utils.getSimpleName(new File(folder))));
 				continue;
 			}
 			

@@ -63,4 +63,12 @@ public final class Utils {
 			display.asyncExec(runnable);
 		}
 	}
+	
+	public static String getSimpleName(File folder) {
+		String result = folder.getName();
+		if (StringUtils.isBlank(result)) {
+			result = folder.getAbsolutePath();
+		}
+		return result;
+	}
 }

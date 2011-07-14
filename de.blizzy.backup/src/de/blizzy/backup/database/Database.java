@@ -146,7 +146,8 @@ public class Database {
 	public void initialize(Connection conn, String sampleBackupPath) {
 		runStatement(conn, "CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
 				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
-				"run_time DATETIME NOT NULL" + //$NON-NLS-1$
+				"run_time DATETIME NOT NULL, " + //$NON-NLS-1$
+				"num_entries INT NULL" + //$NON-NLS-1$
 				")"); //$NON-NLS-1$
 		
 		runStatement(conn, "CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
@@ -173,8 +174,6 @@ public class Database {
 				"(file_id)"); //$NON-NLS-1$
 		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
 				"(backup_id, parent_id)"); //$NON-NLS-1$
-		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_in_backup ON entries " + //$NON-NLS-1$
-				"(backup_id, type)"); //$NON-NLS-1$
 		
 		runStatement(conn, "ANALYZE"); //$NON-NLS-1$
 	}

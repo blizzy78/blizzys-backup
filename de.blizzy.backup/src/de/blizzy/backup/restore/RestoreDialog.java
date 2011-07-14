@@ -95,7 +95,6 @@ public class RestoreDialog extends Dialog {
 	private PreparedStatement psEntries;
 	private PreparedStatement psRootEntries;
 	private PreparedStatement psParent;
-	private PreparedStatement psNumEntriesInFolder;
 	private PreparedStatement psNumEntriesInBackup;
 
 	public RestoreDialog(Shell parentShell) {
@@ -140,14 +139,9 @@ public class RestoreDialog extends Dialog {
 							"WHERE (backup_id = ?) AND (parent_id IS NULL) " + //$NON-NLS-1$
 							"ORDER BY name"); //$NON-NLS-1$
 					psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
-					psNumEntriesInFolder = conn.prepareStatement("SELECT COUNT(*) FROM entries " + //$NON-NLS-1$
-							"WHERE (backup_id = ?) AND (parent_id = ?) AND (type != " + EntryType.FOLDER.getValue() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 
-					psBackups = conn.prepareStatement("SELECT backups.id AS id, run_time, COUNT(entries.*) AS num_entries " + //$NON-NLS-1$
-							"FROM backups LEFT JOIN entries ON " + //$NON-NLS-1$
-							"(entries.backup_id = backups.id) AND (entries.type != " + EntryType.FOLDER.getValue() + ") " + //$NON-NLS-1$ //$NON-NLS-2$
-							"GROUP BY backups.id " + //$NON-NLS-1$
-							"ORDER BY run_time DESC"); //$NON-NLS-1$
+					psBackups = conn.prepareStatement("SELECT id, run_time, num_entries " + //$NON-NLS-1$
+							"FROM backups WHERE num_entries IS NOT NULL ORDER BY run_time DESC"); //$NON-NLS-1$
 					rsBackups = psBackups.executeQuery();
 					while (rsBackups.next()) {
 						int id = rsBackups.getInt("id"); //$NON-NLS-1$
@@ -184,8 +178,7 @@ public class RestoreDialog extends Dialog {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
-					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntriesInFolder,
-							psNumEntriesInBackup);
+					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntriesInBackup);
 					database.releaseDatabaseConnection(conn);
 				} finally {
 					monitor.done();

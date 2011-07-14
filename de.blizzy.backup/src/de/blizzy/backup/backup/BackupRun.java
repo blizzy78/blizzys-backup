@@ -77,6 +77,7 @@ public class BackupRun implements Runnable {
 	private String currentFile;
 	private boolean running = true;
 	private boolean cleaningUp;
+	private int numEntries;
 
 	public BackupRun(Settings settings) {
 		this.settings = settings;
@@ -90,6 +91,7 @@ public class BackupRun implements Runnable {
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
+		PreparedStatement ps = null;
 		database = new Database(settings);
 		try {
 			conn = database.openDatabaseConnection();
@@ -105,10 +107,11 @@ public class BackupRun implements Runnable {
 			psOldFile = conn.prepareStatement("SELECT id FROM files WHERE " + //$NON-NLS-1$
 					"(checksum = ?) AND (length = ?)"); //$NON-NLS-1$
 
-			PreparedStatement ps = conn.prepareStatement("INSERT INTO backups (run_time) VALUES (?)"); //$NON-NLS-1$
+			ps = conn.prepareStatement("INSERT INTO backups (run_time) VALUES (?)"); //$NON-NLS-1$
 			ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
 			ps.executeUpdate();
 			database.closeQuietly(ps);
+			ps = null;
 			backupId = getLastIdentity();
 			
 			for (String folder : settings.getFolders()) {
@@ -122,6 +125,13 @@ public class BackupRun implements Runnable {
 					// TODO
 				}
 			}
+			
+			ps = conn.prepareStatement("UPDATE backups SET num_entries = ? WHERE id = ?"); //$NON-NLS-1$
+			ps.setInt(1, numEntries);
+			ps.setInt(2, backupId);
+			ps.executeUpdate();
+			database.closeQuietly(ps);
+			ps = null;
 			
 			cleaningUp = true;
 			fireBackupStatusChanged();
@@ -138,7 +148,7 @@ public class BackupRun implements Runnable {
 		} catch (RuntimeException e) {
 			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
 		} finally {
-			database.closeQuietly(psIdentity, psNewEntry, psNewFile, psOldFile);
+			database.closeQuietly(ps, psIdentity, psNewEntry, psNewFile, psOldFile);
 			database.releaseDatabaseConnection(conn);
 			
 			try {
@@ -247,6 +257,8 @@ public class BackupRun implements Runnable {
 		psNewEntry.setString(7, file.getName());
 		psNewEntry.setInt(8, fileId);
 		psNewEntry.executeUpdate();
+		
+		numEntries++;
 	}
 	
 	private int findOldFile(File file, String checksum) throws SQLException {

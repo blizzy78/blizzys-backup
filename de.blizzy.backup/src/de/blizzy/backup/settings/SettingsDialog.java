@@ -279,9 +279,49 @@ public class SettingsDialog extends Dialog {
 	private void addFolder(String folder) {
 		@SuppressWarnings("unchecked")
 		Set<String> folders = (Set<String>) foldersViewer.getInput();
-		folders.add(folder);
-		// TODO: consolidate folders with respect to parent folders
-		foldersViewer.add(folder);
+
+		// is the new folder a child of any folder in the backup? if so, display error message
+		for (String oldFolder : folders) {
+			if (Utils.isParent(new File(oldFolder), new File(folder))) {
+				MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
+						NLS.bind(Messages.ParentFolderInBackup, Utils.getSimpleName(new File(folder))));
+				return;
+			}
+		}
+		
+		// is the new folder the parent of the output folder? if so, display error message
+		String outputFolder = StringUtils.defaultString(outputFolderText.getText());
+		if (StringUtils.isNotBlank(outputFolder) && Utils.isParent(new File(folder), new File(outputFolder))) {
+			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
+					NLS.bind(Messages.FolderIsParentOfBackupFolder, Utils.getSimpleName(new File(folder))));
+			return;
+		}
+		
+		// is the new folder the same as the output folder? if so, display error message
+		if (StringUtils.isNotBlank(outputFolder) && new File(folder).equals(new File(outputFolder))) {
+			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
+					NLS.bind(Messages.FolderIsOutputFolder, Utils.getSimpleName(new File(folder))));
+			return;
+		}
+		
+		// is the new folder a child of the output folder? if so, display error message
+		if (StringUtils.isNotBlank(outputFolder) && Utils.isParent(new File(outputFolder), new File(folder))) {
+			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
+					NLS.bind(Messages.FolderIsChildOfOutputFolder, Utils.getSimpleName(new File(folder))));
+			return;
+		}
+		
+		// is the new folder the parent of any folder in the backup? if so, remove those folders
+		for (String oldFolder : new HashSet<String>(folders)) {
+			if (Utils.isParent(new File(folder), new File(oldFolder))) {
+				folders.remove(oldFolder);
+				foldersViewer.remove(oldFolder);
+			}
+		}
+		
+		if (folders.add(folder)) {
+			foldersViewer.add(folder);
+		}
 	}
 
 	private void removeFolder() {
@@ -294,11 +334,13 @@ public class SettingsDialog extends Dialog {
 	}
 
 	private void browseOutputFolder() {
+		@SuppressWarnings("unchecked")
+		Set<String> folders = (Set<String>) foldersViewer.getInput();
 		String folder = outputFolderText.getText();
 		if (StringUtils.isEmpty(folder)) {
 			folder = null;
 		}
-		for (;;) {
+		dialogLoop: for (;;) {
 			DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.SAVE);
 			dlg.setText(Messages.Title_SelectOutputFolder);
 			dlg.setFilterPath(folder);
@@ -316,11 +358,26 @@ public class SettingsDialog extends Dialog {
 					continue;
 				}
 			}
-			
+
+			// does folder contain files? if so, display error message
 			if (new File(folder).list().length > 0) {
-				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
+				MessageDialog.openError(getShell(), Messages.Title_InvalidFolder,
 						NLS.bind(Messages.FolderNotEmpty, Utils.getSimpleName(new File(folder))));
 				continue;
+			}
+
+			// display error message if:
+			// - folder is the same as any folder in the backup
+			// - folder is a child of any folder in the backup
+			for (String oldFolder : folders) {
+				// display error
+				if (new File(folder).equals(new File(oldFolder)) ||
+					Utils.isParent(new File(oldFolder), new File(folder))) {
+
+					MessageDialog.openError(getShell(), Messages.Title_InvalidFolder,
+							NLS.bind(Messages.OutputFolderIsInBackup, Utils.getSimpleName(new File(folder))));
+					continue dialogLoop;
+				}
 			}
 			
 			break;

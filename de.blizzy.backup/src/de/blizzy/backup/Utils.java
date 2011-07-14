@@ -71,4 +71,13 @@ public final class Utils {
 		}
 		return result;
 	}
+	
+	public static boolean isParent(File parent, File child) {
+		for (; child != null; child = child.getParentFile()) {
+			if (parent.equals(child.getParentFile())) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

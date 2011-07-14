@@ -33,6 +33,9 @@ public class Messages extends NLS {
 	public static String DropFoldersHelp;
 	public static String ExitApplication;
 	public static String FolderContainsExistingBackup;
+	public static String FolderIsChildOfOutputFolder;
+	public static String FolderIsOutputFolder;
+	public static String FolderIsParentOfBackupFolder;
 	public static String FolderNotEmpty;
 	public static String Idle;
 	public static String Label_BackupOutputFolder;
@@ -45,6 +48,8 @@ public class Messages extends NLS {
 	public static String Label_Size;
 	public static String Label_Status;
 	public static String ModifyBackupSettings;
+	public static String OutputFolderIsInBackup;
+	public static String ParentFolderInBackup;
 	public static String ProgramRunning;
 	public static String RestoreFromBackup;
 	public static String Running;
@@ -52,8 +57,10 @@ public class Messages extends NLS {
 	public static String Title_CloseBackupDatabase;
 	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
+	public static String Title_FolderCannotBeAdded;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;
+	public static String Title_InvalidFolder;
 	public static String Title_License;
 	public static String Title_OpenBackupDatabase;
 	public static String Title_ProgramRunning;

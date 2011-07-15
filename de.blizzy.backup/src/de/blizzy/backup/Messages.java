@@ -22,6 +22,7 @@ import org.eclipse.osgi.util.NLS;
 public class Messages extends NLS {
 	private static final String BUNDLE_NAME = "de.blizzy.backup.messages"; //$NON-NLS-1$
 	public static String Button_Add;
+	public static String Button_BackupNow;
 	public static String Button_Browse;
 	public static String Button_Exit;
 	public static String Button_MinimizeOnly;
@@ -52,6 +53,7 @@ public class Messages extends NLS {
 	public static String ParentFolderInBackup;
 	public static String ProgramRunning;
 	public static String RestoreFromBackup;
+	public static String RunBackupNow;
 	public static String Running;
 	public static String Title_BlizzysBackup;
 	public static String Title_CloseBackupDatabase;

@@ -60,6 +60,7 @@ import de.blizzy.backup.settings.SettingsDialog;
 class BackupShell {
 	private Shell shell;
 	private Button restoreButton;
+	private Button backupNowButton;
 	private Label statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
@@ -72,12 +73,14 @@ class BackupShell {
 			backupRun = null;
 			updateStatusLabel();
 			updateRestoreButton();
+			updateBackupNowButton();
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
 		public void settingsChanged() {
 			updateStatusLabel();
 			updateRestoreButton();
+			updateBackupNowButton();
 		}
 	};
 
@@ -132,7 +135,8 @@ class BackupShell {
 		}
 		final Font bigFont = new Font(display, fontDatas);
 
-		Point extent = getMaxTextExtent(display, bigFont, Messages.Button_Settings, Messages.Button_Restore);
+		Point extent = getMaxTextExtent(display, bigFont,
+				Messages.Button_Settings, Messages.Button_Restore, Messages.Button_BackupNow);
 		
 		Button settingsButton = new Button(buttonsComposite, SWT.PUSH);
 		settingsButton.setText(Messages.Button_Settings);
@@ -154,11 +158,24 @@ class BackupShell {
 		gd.heightHint = extent.y * 2;
 		restoreButton.setLayoutData(gd);
 		updateRestoreButton();
-		
+
 		label = new Label(buttonsComposite, SWT.NONE);
 		label.setText(Messages.RestoreFromBackup);
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		
+		backupNowButton = new Button(buttonsComposite, SWT.PUSH);
+		backupNowButton.setText(Messages.Button_BackupNow);
+		backupNowButton.setFont(bigFont);
+		gd = new GridData(SWT.FILL, SWT.FILL, false, true);
+		gd.widthHint = (int) (extent.x * 1.6d);
+		gd.heightHint = extent.y * 2;
+		backupNowButton.setLayoutData(gd);
+		updateBackupNowButton();
+
+		label = new Label(buttonsComposite, SWT.NONE);
+		label.setText(Messages.RunBackupNow);
+		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+
 		statusLabel = new Label(shell, SWT.NONE);
 		statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		updateStatusLabel();
@@ -183,6 +200,13 @@ class BackupShell {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				restore();
+			}
+		});
+		
+		backupNowButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				BackupApplication.scheduleBackupRun(true);
 			}
 		});
 		
@@ -265,6 +289,16 @@ class BackupShell {
 		});
 	}
 
+	private void updateBackupNowButton() {
+		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			public void run() {
+				if (!backupNowButton.isDisposed()) {
+					backupNowButton.setEnabled((backupRun == null) && BackupApplication.areSettingsOkayToRunBackup());
+				}
+			}
+		});
+	}
+
 	private void editSettings() {
 		new SettingsDialog(shell).open();
 	}
@@ -304,5 +338,6 @@ class BackupShell {
 	void setBackupRun(BackupRun backupRun) {
 		this.backupRun = backupRun;
 		backupRun.addListener(backupRunListener);
+		updateBackupNowButton();
 	}
 }

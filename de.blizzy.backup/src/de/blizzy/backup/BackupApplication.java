@@ -74,14 +74,14 @@ public class BackupApplication implements IApplication {
 			settingsManager.addListener(new ISettingsListener() {
 				public void settingsChanged() {
 					if (backupRun == null) {
-						scheduleBackupRun();
+						scheduleBackupRun(false);
 					}
 				}
 			});
 			
 			timer = new Timer();
 	
-			scheduleBackupRun();
+			scheduleBackupRun(false);
 	
 			trayIcon = new TrayIcon(display);
 	
@@ -130,32 +130,11 @@ public class BackupApplication implements IApplication {
 		}
 	}
 
-	private static void scheduleBackupRun() {
+	static void scheduleBackupRun(boolean forceRunNow) {
 		if (timer != null) {
 			if (backupTimerTask != null) {
 				backupTimerTask.cancel();
 				backupTimerTask = null;
-			}
-			
-			IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
-			long lastRun = backupSection.getLong("lastRun"); //$NON-NLS-1$
-			Settings settings = settingsManager.getSettings();
-			if (settings.isRunHourly()) {
-				nextBackupRunTime = lastRun;
-			} else {
-				Calendar c = Calendar.getInstance();
-				c.setTimeInMillis(lastRun);
-				c.set(Calendar.HOUR_OF_DAY, settings.getDailyHours());
-				c.set(Calendar.MINUTE, settings.getDailyMinutes());
-				nextBackupRunTime = c.getTimeInMillis();
-			}
-			long now = System.currentTimeMillis();
-			for (;;) {
-				nextBackupRunTime = clearSeconds(nextBackupRunTime);
-				if (nextBackupRunTime > now) {
-					break;
-				}
-				nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
 			}
 			
 			backupTimerTask = new TimerTask() {
@@ -164,7 +143,32 @@ public class BackupApplication implements IApplication {
 					runBackup();
 				}
 			};
-			timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - now, 0));
+
+			if (forceRunNow) {
+				timer.schedule(backupTimerTask, 0);
+			} else {
+				IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
+				long lastRun = backupSection.getLong("lastRun"); //$NON-NLS-1$
+				Settings settings = settingsManager.getSettings();
+				if (settings.isRunHourly()) {
+					nextBackupRunTime = lastRun;
+				} else {
+					Calendar c = Calendar.getInstance();
+					c.setTimeInMillis(lastRun);
+					c.set(Calendar.HOUR_OF_DAY, settings.getDailyHours());
+					c.set(Calendar.MINUTE, settings.getDailyMinutes());
+					nextBackupRunTime = c.getTimeInMillis();
+				}
+				long now = System.currentTimeMillis();
+				for (;;) {
+					nextBackupRunTime = clearSeconds(nextBackupRunTime);
+					if (nextBackupRunTime > now) {
+						break;
+					}
+					nextBackupRunTime += settings.isRunHourly() ? 60L * 60L * 1000L : 24L * 60L * 60L * 1000L;
+				}
+				timer.schedule(backupTimerTask, Math.max(nextBackupRunTime - now, 0));
+			}
 		}
 	}
 
@@ -173,11 +177,8 @@ public class BackupApplication implements IApplication {
 	}
 
 	private static void runBackup() {
-		Settings settings = settingsManager.getSettings();
-		if (!settings.getFolders().isEmpty() &&
-			StringUtils.isNotBlank(settings.getOutputFolder()) &&
-			new File(settings.getOutputFolder()).exists()) {
-
+		if (areSettingsOkayToRunBackup()) {
+			Settings settings = settingsManager.getSettings();
 			long now = System.currentTimeMillis();
 			IDialogSettings backupSection = Utils.getSection("backup"); //$NON-NLS-1$
 			backupSection.put("lastRun", now); //$NON-NLS-1$
@@ -187,7 +188,7 @@ public class BackupApplication implements IApplication {
 				@Override
 				public void backupEnded(BackupEndedEvent e) {
 					backupRun = null;
-					scheduleBackupRun();
+					scheduleBackupRun(false);
 				}
 			});
 			
@@ -199,6 +200,13 @@ public class BackupApplication implements IApplication {
 		}
 	}
 
+	static boolean areSettingsOkayToRunBackup() {
+		Settings settings = settingsManager.getSettings();
+		return !settings.getFolders().isEmpty() &&
+			StringUtils.isNotBlank(settings.getOutputFolder()) &&
+			new File(settings.getOutputFolder()).exists();
+	}
+	
 	public void stop() {
 		quit();
 	}

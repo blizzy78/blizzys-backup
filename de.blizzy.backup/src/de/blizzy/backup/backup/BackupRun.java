@@ -30,12 +30,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -53,11 +49,15 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
+import org.jooq.Cursor;
+import org.jooq.Record;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
+import de.blizzy.backup.database.schema.tables.Backups;
+import de.blizzy.backup.database.schema.tables.Entries;
 import de.blizzy.backup.settings.Settings;
 
 public class BackupRun implements Runnable {
@@ -67,11 +67,6 @@ public class BackupRun implements Runnable {
 	private Settings settings;
 	private Thread thread;
 	private Database database;
-	private Connection conn;
-	private PreparedStatement psIdentity;
-	private PreparedStatement psNewEntry;
-	private PreparedStatement psNewFile;
-	private PreparedStatement psOldFile;
 	private int backupId;
 	private List<IBackupRunListener> listeners = new ArrayList<IBackupRunListener>();
 	private String currentFile;
@@ -91,28 +86,16 @@ public class BackupRun implements Runnable {
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
-		PreparedStatement ps = null;
 		database = new Database(settings);
 		try {
-			conn = database.openDatabaseConnection();
-			database.initialize(conn, createBackupFilePath());
+			database.open();
+			database.initialize(createBackupFilePath());
 			
-			psIdentity = conn.prepareStatement("SELECT IDENTITY()"); //$NON-NLS-1$
-			psNewEntry = conn.prepareStatement("INSERT INTO entries " + //$NON-NLS-1$
-					"(parent_id, backup_id, type, creation_time, modification_time, hidden, " + //$NON-NLS-1$
-					"name, file_id) " + //$NON-NLS-1$
-					"VALUES (?, ?, ?, ?, ?, ?, ?, ?)"); //$NON-NLS-1$
-			psNewFile = conn.prepareStatement("INSERT INTO files " + //$NON-NLS-1$
-					"(backup_path, checksum, length) VALUES (?, ?, ?)"); //$NON-NLS-1$
-			psOldFile = conn.prepareStatement("SELECT id FROM files WHERE " + //$NON-NLS-1$
-					"(checksum = ?) AND (length = ?)"); //$NON-NLS-1$
-
-			ps = conn.prepareStatement("INSERT INTO backups (run_time) VALUES (?)"); //$NON-NLS-1$
-			ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-			ps.executeUpdate();
-			database.closeQuietly(ps);
-			ps = null;
-			backupId = getLastIdentity();
+			database.factory()
+				.insertInto(Backups.BACKUPS)
+				.set(Backups.RUN_TIME, new Timestamp(System.currentTimeMillis()))
+				.execute();
+			backupId = database.factory().lastID().intValue();
 			
 			for (String folder : settings.getFolders()) {
 				if (!running) {
@@ -126,12 +109,11 @@ public class BackupRun implements Runnable {
 				}
 			}
 			
-			ps = conn.prepareStatement("UPDATE backups SET num_entries = ? WHERE id = ?"); //$NON-NLS-1$
-			ps.setInt(1, numEntries);
-			ps.setInt(2, backupId);
-			ps.executeUpdate();
-			database.closeQuietly(ps);
-			ps = null;
+			database.factory()
+				.update(Backups.BACKUPS)
+				.set(Backups.NUM_ENTRIES, Integer.valueOf(numEntries))
+				.where(Backups.ID.equal(Integer.valueOf(backupId)))
+				.execute();
 			
 			cleaningUp = true;
 			fireBackupStatusChanged();
@@ -142,14 +124,13 @@ public class BackupRun implements Runnable {
 				cleaningUp = false;
 			}
 			
-			database.runStatement(conn, "ANALYZE"); //$NON-NLS-1$
+			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 		} catch (SQLException e) {
 			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
 		} catch (RuntimeException e) {
 			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
 		} finally {
-			database.closeQuietly(ps, psIdentity, psNewEntry, psNewFile, psOldFile);
-			database.releaseDatabaseConnection(conn);
+			database.close();
 			
 			try {
 				File outputFolder = new File(settings.getOutputFolder());
@@ -172,22 +153,16 @@ public class BackupRun implements Runnable {
 		if (attrs != null) {
 			hidden = attrs.isHidden();
 		}
-		
-		if (parentFolderId >= 0) {
-			psNewEntry.setLong(1, parentFolderId);
-		} else {
-			psNewEntry.setNull(1, Types.INTEGER);
-		}
-		psNewEntry.setInt(2, backupId);
-		psNewEntry.setInt(3, EntryType.FOLDER.getValue());
-		psNewEntry.setNull(4, Types.TIMESTAMP);
-		psNewEntry.setNull(5, Types.TIMESTAMP);
-		psNewEntry.setObject(6, Boolean.valueOf(hidden));
-		psNewEntry.setString(7, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName());
-		psNewEntry.setNull(8, Types.INTEGER);
-		psNewEntry.executeUpdate();
-		int id = getLastIdentity();
-		
+
+		database.factory()
+			.insertInto(Entries.ENTRIES)
+			.set(Entries.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
+			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
+			.set(Entries.TYPE, Integer.valueOf(EntryType.FOLDER.getValue()))
+			.set(Entries.HIDDEN, Boolean.valueOf(hidden))
+			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
+			.execute();
+		int id = database.factory().lastID().intValue();
 		for (File f : folder.listFiles()) {
 			if (!running) {
 				break;
@@ -207,17 +182,6 @@ public class BackupRun implements Runnable {
 		return id;
 	}
 	
-	private int getLastIdentity() throws SQLException {
-		ResultSet rs = null;
-		try {
-			rs = psIdentity.executeQuery();
-			rs.next();
-			return rs.getInt(1);
-		} finally {
-			database.closeQuietly(rs);
-		}
-	}
-
 	private void backupFile(File file, int parentFolderId) throws SQLException, IOException {
 		currentFile = file.getAbsolutePath();
 		fireBackupStatusChanged();
@@ -240,40 +204,31 @@ public class BackupRun implements Runnable {
 			hidden = attrs.isHidden();
 		}
 
-		psNewEntry.setLong(1, parentFolderId);
-		psNewEntry.setInt(2, backupId);
-		psNewEntry.setInt(3, EntryType.FILE.getValue());
-		if (creationTime != null) {
-			psNewEntry.setTimestamp(4, new Timestamp(creationTime.toMillis()));
-		} else {
-			psNewEntry.setNull(4, Types.TIMESTAMP);
-		}
-		if (lastModifiedTime != null) {
-			psNewEntry.setTimestamp(5, new Timestamp(lastModifiedTime.toMillis()));
-		} else {
-			psNewEntry.setNull(5, Types.TIMESTAMP);
-		}
-		psNewEntry.setObject(6, Boolean.valueOf(hidden));
-		psNewEntry.setString(7, file.getName());
-		psNewEntry.setInt(8, fileId);
-		psNewEntry.executeUpdate();
+		database.factory()
+			.insertInto(Entries.ENTRIES)
+			.set(Entries.PARENT_ID, Integer.valueOf(parentFolderId))
+			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
+			.set(Entries.TYPE, Integer.valueOf(EntryType.FILE.getValue()))
+			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+			.set(Entries.MODIFICATION_TIME, (lastModifiedTime != null) ? new Timestamp(lastModifiedTime.toMillis()) : null)
+			.set(Entries.HIDDEN, Boolean.valueOf(hidden))
+			.set(Entries.NAME, file.getName())
+			.set(Entries.FILE_ID, Integer.valueOf(fileId))
+			.execute();
 		
 		numEntries++;
 	}
 	
 	private int findOldFile(File file, String checksum) throws SQLException {
-		psOldFile.setString(1, checksum);
-		psOldFile.setLong(2, file.length());
-		ResultSet rs = null;
-		try {
-			rs = psOldFile.executeQuery();
-			if (rs.next()) {
-				return rs.getInt("id"); //$NON-NLS-1$
-			}
-		} finally {
-			database.closeQuietly(rs);
-		}
-		return -1;
+		Record record = database.factory()
+			.select(de.blizzy.backup.database.schema.tables.Files.ID)
+			.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+			.where(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.equal(checksum),
+					de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(file.length())))
+			.fetchAny();
+		return (record != null) ?
+				record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.ID).intValue() :
+				-1;
 	}
 
 	private int backupFileContents(File file, File backupFile, String backupFilePath, String checksum)
@@ -289,12 +244,13 @@ public class BackupRun implements Runnable {
 			IOUtils.closeQuietly(out);
 		}
 		
-		psNewFile.setString(1, backupFilePath);
-		psNewFile.setString(2, checksum);
-		psNewFile.setLong(3, file.length());
-		psNewFile.executeUpdate();
-		
-		return getLastIdentity();
+		database.factory()
+			.insertInto(de.blizzy.backup.database.schema.tables.Files.FILES)
+			.set(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH, backupFilePath)
+			.set(de.blizzy.backup.database.schema.tables.Files.CHECKSUM, checksum)
+			.set(de.blizzy.backup.database.schema.tables.Files.LENGTH, Long.valueOf(file.length()))
+			.execute();
+		return database.factory().lastID().intValue();
 	}
 	
 	private String getChecksum(File file) throws IOException {
@@ -377,55 +333,58 @@ public class BackupRun implements Runnable {
 	private void removeOldBackups() throws SQLException {
 		Set<Integer> backupsToRemove = new HashSet<Integer>();
 
-		PreparedStatement ps = null;
-		ResultSet rs = null;
+		Cursor<Record> cursor = null;
 		try {
 			// get all days where there are backups (and which are older than 14 days)
-			ps = conn.prepareStatement("SELECT run_time FROM backups " + //$NON-NLS-1$
-					"WHERE run_time < ? ORDER BY run_time"); //$NON-NLS-1$
 			Calendar c = Calendar.getInstance();
 			c.add(Calendar.DAY_OF_YEAR, -14);
 			c.set(Calendar.HOUR_OF_DAY, 0);
 			c.set(Calendar.MINUTE, 0);
 			c.set(Calendar.SECOND, 0);
 			c.set(Calendar.MILLISECOND, 0);
-			ps.setTimestamp(1, new Timestamp(c.getTimeInMillis()));
-			rs = ps.executeQuery();
+			cursor = database.factory()
+				.select(Backups.RUN_TIME)
+				.from(Backups.BACKUPS)
+				.where(Backups.RUN_TIME.lessThan(new Timestamp(c.getTimeInMillis())))
+				.orderBy(Backups.RUN_TIME)
+				.fetchLazy();
 			Set<Date> days = new HashSet<Date>();
-			while (rs.next()) {
-				c.setTimeInMillis(rs.getTimestamp("run_time").getTime()); //$NON-NLS-1$
+			while (cursor.hasNext()) {
+				Record record = cursor.fetchOne();
+				c.setTimeInMillis(record.getValueAsTimestamp(Backups.RUN_TIME).getTime());
 				c.set(Calendar.HOUR_OF_DAY, 0);
 				c.set(Calendar.MINUTE, 0);
 				c.set(Calendar.SECOND, 0);
 				c.set(Calendar.MILLISECOND, 0);
 				days.add(new Date(c.getTimeInMillis()));
 			}
-			database.closeQuietly(rs);
-			rs = null;
-			database.closeQuietly(ps);
-			ps = null;
+			database.closeQuietly(cursor);
+			cursor = null;
 
 			// collect IDs of all but the most recent backup each day
-			ps = conn.prepareStatement("SELECT id FROM backups " + //$NON-NLS-1$
-					"WHERE (run_time >= ?) AND (run_time < ?) ORDER BY run_time DESC"); //$NON-NLS-1$
 			for (Date day : days) {
-				long time = day.getTime();
-				ps.setTimestamp(1, new Timestamp(time));
-				c.setTimeInMillis(time);
+				long start = day.getTime();
+				c.setTimeInMillis(start);
 				c.add(Calendar.DAY_OF_YEAR, 1);
-				ps.setTimestamp(2, new Timestamp(c.getTimeInMillis()));
-				rs = ps.executeQuery();
-				// skip first (=most recent) backup
-				if (rs.next()) {
-					// collect all other backups of this day
-					while (rs.next()) {
-						backupsToRemove.add(Integer.valueOf(rs.getInt("id"))); //$NON-NLS-1$
+				long end = c.getTimeInMillis();
+				cursor = database.factory()
+					.select(Backups.ID)
+					.from(Backups.BACKUPS)
+					.where(Backups.RUN_TIME.greaterOrEqual(new Timestamp(start)),
+							Backups.RUN_TIME.lessThan(new Timestamp(end)))
+					.orderBy(Backups.RUN_TIME.desc())
+					.fetchLazy();
+				if (cursor.hasNext()) {
+					// skip first (=most recent) backup
+					cursor.fetchOne();
+					while (cursor.hasNext()) {
+						Record record = cursor.fetchOne();
+						backupsToRemove.add(record.getValueAsInteger(Backups.ID));
 					}
 				}
 			}
 		} finally {
-			database.closeQuietly(rs);
-			database.closeQuietly(ps);
+			database.closeQuietly(cursor);
 		}
 		
 		BackupPlugin.getDefault().logMessage("Removing backups: " + backupsToRemove); //$NON-NLS-1$
@@ -435,39 +394,39 @@ public class BackupRun implements Runnable {
 	}
 
 	private void removeBackups(Set<Integer> backupsToRemove) throws SQLException {
-		PreparedStatement psEntries = null;
-		PreparedStatement psBackup = null;
-		try {
-			psEntries = conn.prepareStatement("DELETE FROM entries WHERE backup_id = ?"); //$NON-NLS-1$
-			psBackup = conn.prepareStatement("DELETE FROM backups WHERE id = ?"); //$NON-NLS-1$
-			for (Integer backupId : backupsToRemove) {
-				psEntries.setInt(1, backupId.intValue());
-				psEntries.executeUpdate();
-				
-				psBackup.setInt(1, backupId.intValue());
-				psBackup.executeUpdate();
-			}
-		} finally {
-			database.closeQuietly(psEntries, psBackup);
+		for (Integer backupId : backupsToRemove) {
+			database.factory()
+				.delete(Entries.ENTRIES)
+				.where(Entries.BACKUP_ID.equal(backupId))
+				.execute();
+			database.factory()
+				.delete(Backups.BACKUPS)
+				.where(Backups.ID.equal(backupId))
+				.execute();
 		}
 	}
 
 	private void removeUnusedFiles() throws SQLException {
-		PreparedStatement ps = null;
-		ResultSet rs = null;
+		Cursor<Record> cursor = null;
 		Set<FileEntry> filesToRemove = new HashSet<FileEntry>();
 		try {
-			ps = conn.prepareStatement("SELECT files.id AS id, files.backup_path AS backup_path " + //$NON-NLS-1$
-					"FROM files LEFT JOIN entries ON entries.file_id = files.id " + //$NON-NLS-1$
-					"WHERE entries.file_id IS NULL"); //$NON-NLS-1$
-			rs = ps.executeQuery();
-			while (rs.next()) {
-				FileEntry file = new FileEntry(rs.getInt("id"), rs.getString("backup_path")); //$NON-NLS-1$ //$NON-NLS-2$
+			cursor = database.factory()
+				.select(de.blizzy.backup.database.schema.tables.Files.ID,
+						de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH)
+				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.leftOuterJoin(Entries.ENTRIES)
+					.on(Entries.FILE_ID.equal(de.blizzy.backup.database.schema.tables.Files.ID))
+				.where(Entries.FILE_ID.isNull())
+				.fetchLazy();
+			while (cursor.hasNext()) {
+				Record record = cursor.fetchOne();
+				FileEntry file = new FileEntry(
+						record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.ID).intValue(),
+						record.getValueAsString(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH));
 				filesToRemove.add(file);
 			}
 		} finally {
-			database.closeQuietly(rs);
-			database.closeQuietly(ps);
+			database.closeQuietly(cursor);
 		}
 		
 		BackupPlugin.getDefault().logMessage("Removing unused files: " + filesToRemove); //$NON-NLS-1$
@@ -477,22 +436,18 @@ public class BackupRun implements Runnable {
 	}
 
 	private void removeFiles(Set<FileEntry> files) throws SQLException {
-		PreparedStatement ps = null;
-		try {
-			ps = conn.prepareStatement("DELETE FROM files WHERE id = ?"); //$NON-NLS-1$
-			for (FileEntry file : files) {
-				Path path = Utils.toBackupFile(file.backupPath, settings.getOutputFolder()).toPath();
-				try {
-					Files.delete(path);
-				} catch (IOException e) {
-					BackupPlugin.getDefault().logError("Error deleting file: " + file.backupPath, e); //$NON-NLS-1$
-				}
-				
-				ps.setInt(1, file.id);
-				ps.executeUpdate();
+		for (FileEntry file : files) {
+			Path path = Utils.toBackupFile(file.backupPath, settings.getOutputFolder()).toPath();
+			try {
+				Files.delete(path);
+			} catch (IOException e) {
+				BackupPlugin.getDefault().logError("Error deleting file: " + file.backupPath, e); //$NON-NLS-1$
 			}
-		} finally {
-			database.closeQuietly(ps);
+			
+			database.factory()
+				.delete(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.where(de.blizzy.backup.database.schema.tables.Files.ID.equal(Integer.valueOf(file.id)))
+				.execute();
 		}
 	}
 	

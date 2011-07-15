@@ -28,9 +28,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.FileTime;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -75,6 +72,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
+import org.jooq.Cursor;
+import org.jooq.Record;
 
 import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
@@ -82,20 +81,18 @@ import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
+import de.blizzy.backup.database.schema.tables.Backups;
+import de.blizzy.backup.database.schema.tables.Entries;
+import de.blizzy.backup.database.schema.tables.records.BackupsRecord;
 import de.blizzy.backup.settings.Settings;
 
 public class RestoreDialog extends Dialog {
 	private Settings settings;
 	private List<Backup> backups = new ArrayList<Backup>();
 	private Database database;
-	private Connection conn;
 	private ComboViewer backupsViewer;
 	private TableViewer entriesViewer;
 	private Button moveUpButton;
-	private PreparedStatement psEntries;
-	private PreparedStatement psRootEntries;
-	private PreparedStatement psParent;
-	private PreparedStatement psNumEntriesInBackup;
 
 	public RestoreDialog(Shell parentShell) {
 		super(parentShell);
@@ -121,40 +118,22 @@ public class RestoreDialog extends Dialog {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
-				PreparedStatement psBackups = null;
-				ResultSet rsBackups = null;
+				Cursor<BackupsRecord> cursor = null;
 				try {
-					conn = database.openDatabaseConnection();
+					database.open();
 					
-					psEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
-							"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
-							"FROM entries " + //$NON-NLS-1$
-							"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
-							"WHERE (backup_id = ?) AND (parent_id = ?) " + //$NON-NLS-1$
-							"ORDER BY name"); //$NON-NLS-1$
-					psRootEntries = conn.prepareStatement("SELECT entries.id AS id, parent_id, name, type, creation_time, " + //$NON-NLS-1$
-							"modification_time, hidden, files.length AS length, files.backup_path AS backup_path " + //$NON-NLS-1$
-							"FROM entries " + //$NON-NLS-1$
-							"LEFT JOIN files ON files.id = entries.file_id " + //$NON-NLS-1$
-							"WHERE (backup_id = ?) AND (parent_id IS NULL) " + //$NON-NLS-1$
-							"ORDER BY name"); //$NON-NLS-1$
-					psParent = conn.prepareStatement("SELECT parent_id FROM entries WHERE id = ?"); //$NON-NLS-1$
-
-					psBackups = conn.prepareStatement("SELECT id, run_time, num_entries " + //$NON-NLS-1$
-							"FROM backups WHERE num_entries IS NOT NULL ORDER BY run_time DESC"); //$NON-NLS-1$
-					rsBackups = psBackups.executeQuery();
-					while (rsBackups.next()) {
-						int id = rsBackups.getInt("id"); //$NON-NLS-1$
-						Date runTime = new Date(rsBackups.getTimestamp("run_time").getTime()); //$NON-NLS-1$
-						int numEntries = rsBackups.getInt("num_entries"); //$NON-NLS-1$
-						Backup backup = new Backup(id, runTime, numEntries);
+					cursor = database.factory()
+						.selectFrom(Backups.BACKUPS).where(Backups.NUM_ENTRIES.isNotNull()).orderBy(Backups.RUN_TIME.desc())
+						.fetchLazy();
+					while (cursor.hasNext()) {
+						BackupsRecord record = cursor.fetchOne();
+						Backup backup = new Backup(record.getId().intValue(), new Date(record.getRunTime().getTime()), record.getNumEntries().intValue());
 						backups.add(backup);
 					}
 				} catch (SQLException e) {
 					throw new InvocationTargetException(e);
 				} finally {
-					database.closeQuietly(rsBackups);
-					database.closeQuietly(psBackups);
+					database.closeQuietly(cursor);
 					monitor.done();
 				}
 			}
@@ -178,8 +157,7 @@ public class RestoreDialog extends Dialog {
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
-					database.closeQuietly(psEntries, psRootEntries, psParent, psNumEntriesInBackup);
-					database.releaseDatabaseConnection(conn);
+					database.close();
 				} finally {
 					monitor.done();
 				}
@@ -359,80 +337,67 @@ public class RestoreDialog extends Dialog {
 		} else {
 			int folderId = ((Integer) moveUpButton.getData()).intValue();
 			Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
-			ResultSet rs = null;
 			try {
-				psParent.setInt(1, folderId);
-				rs = psParent.executeQuery();
-				rs.next();
-				int parentId = rs.getInt("parent_id"); //$NON-NLS-1$
-				if (rs.wasNull()) {
-					parentId = -1;
-				}
+				Integer parentIdInt = database.factory()
+					.select(Entries.PARENT_ID).from(Entries.ENTRIES).where(Entries.ID.equal(Integer.valueOf(folderId)))
+					.fetchOne(Entries.PARENT_ID);
 				showEntries(backup, folderId);
 				moveUpButton.setEnabled(true);
-				moveUpButton.setData((parentId > 0) ? Integer.valueOf(parentId) : backup);
+				moveUpButton.setData((parentIdInt != null) ? parentIdInt : backup);
 			} catch (SQLException e) {
-				// TODO
-				e.printStackTrace();
-			} finally {
-				database.closeQuietly(rs);
+				BackupPlugin.getDefault().logError("error while getting parent ID", e); //$NON-NLS-1$
 			}
 		}
 	}
 
 	private void showEntries(Backup backup, int parentFolderId) {
 		List<Entry> entries = Collections.emptyList();
-		ResultSet rs = null;
+		Cursor<Record> cursor = null;
 		try {
-			if (parentFolderId > 0) {
-				psEntries.setInt(1, backup.id);
-				psEntries.setInt(2, parentFolderId);
-				rs = psEntries.executeQuery();
-			} else {
-				psRootEntries.setInt(1, backup.id);
-				rs = psRootEntries.executeQuery();
-			}
-			entries = getEntries(rs);
+			cursor = getEntriesCursor(backup.id, parentFolderId);
+			entries = getEntries(cursor);
 		} catch (SQLException e) {
-			// TODO
-			e.printStackTrace();
+			BackupPlugin.getDefault().logError("error while loading entries", e); //$NON-NLS-1$
 		} finally {
-			database.closeQuietly(rs);
+			database.closeQuietly(cursor);
 		}
 		
 		entriesViewer.setInput(entries);
 		entriesViewer.getControl().setData(Integer.valueOf(parentFolderId));
 	}
+
+	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId) throws SQLException {
+		return database.factory()
+			.select(Entries.ID, Entries.PARENT_ID, Entries.NAME, Entries.TYPE, Entries.CREATION_TIME, Entries.MODIFICATION_TIME,
+					Entries.HIDDEN, de.blizzy.backup.database.schema.tables.Files.LENGTH,
+					de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH)
+			.from(Entries.ENTRIES)
+			.leftOuterJoin(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
+			.where(Entries.BACKUP_ID.equal(Integer.valueOf(backupId)),
+					(parentFolderId > 0) ? Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)) :
+						Entries.PARENT_ID.isNull())
+			.orderBy(Entries.NAME)
+			.fetchLazy();
+	}
 	
-	private List<Entry> getEntries(ResultSet rs) throws SQLException {
+	private List<Entry> getEntries(Cursor<Record> cursor) throws SQLException {
 		List<Entry> entries = new ArrayList<Entry>();
-		while (rs.next()) {
-			int id = rs.getInt("id"); //$NON-NLS-1$
-			int parentId = rs.getInt("parent_id"); //$NON-NLS-1$
-			if (rs.wasNull()) {
-				parentId = -1;
-			}
-			String name = rs.getString("name"); //$NON-NLS-1$
-			EntryType type = EntryType.fromValue(rs.getInt("type")); //$NON-NLS-1$
-			Timestamp createTime = rs.getTimestamp("creation_time"); //$NON-NLS-1$
-			Date creationTime = null;
-			if (!rs.wasNull()) {
-				creationTime = new Date(createTime.getTime());
-			}
-			Timestamp modTime = rs.getTimestamp("modification_time"); //$NON-NLS-1$
-			Date modificationTime = null;
-			if (!rs.wasNull()) {
-				modificationTime = new Date(modTime.getTime());
-			}
-			boolean hidden = ((Boolean) rs.getObject("hidden")).booleanValue(); //$NON-NLS-1$
-			long length = rs.getLong("length"); //$NON-NLS-1$
-			if (rs.wasNull()) {
-				length = -1;
-			}
-			String backupPath = rs.getString("backup_path"); //$NON-NLS-1$
-			if (rs.wasNull()) {
-				backupPath = null;
-			}
+		while (cursor.hasNext()) {
+			Record record = cursor.fetchOne();
+			int id = record.getValueAsInteger(Entries.ID).intValue();
+			Integer parentIdInt = record.getValueAsInteger(Entries.PARENT_ID);
+			int parentId = (parentIdInt != null) ? parentIdInt.intValue() : -1;
+			String name = record.getValueAsString(Entries.NAME);
+			EntryType type = EntryType.fromValue(record.getValueAsInteger(Entries.TYPE).intValue());
+			Timestamp createTime = record.getValueAsTimestamp(Entries.CREATION_TIME);
+			Date creationTime = (createTime != null) ? new Date(createTime.getTime()) : null;
+			Timestamp modTime = record.getValueAsTimestamp(Entries.MODIFICATION_TIME);
+			Date modificationTime = (modTime != null) ? new Date(modTime.getTime()) : null;
+			boolean hidden = record.getValueAsBoolean(Entries.HIDDEN).booleanValue();
+			Long lengthLong = record.getValueAsLong(de.blizzy.backup.database.schema.tables.Files.LENGTH);
+			long length = (lengthLong != null) ? lengthLong.longValue() : -1;
+			String backupPath = record.getValueAsString(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
 			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath);
 			entries.add(entry);
 		}
@@ -464,13 +429,13 @@ public class RestoreDialog extends Dialog {
 			final String myFolder = folder;
 			Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 			final int backupId = backup.id;
+			final int numEntries = backup.numEntries;
 			IRunnableWithProgress runnable = new IRunnableWithProgress() {
 				public void run(IProgressMonitor monitor) throws InvocationTargetException,
 						InterruptedException {
 
 					try {
-						int totalNumEntries = getTotalNumEntries(entries, backupId);
-						monitor.beginTask(Messages.Title_RestoreFromBackup, totalNumEntries);
+						monitor.beginTask(Messages.Title_RestoreFromBackup, numEntries);
 						for (Entry entry : entries) {
 							restoreEntry(entry, new File(myFolder), settings.getOutputFolder(), backupId, monitor);
 						}
@@ -495,31 +460,6 @@ public class RestoreDialog extends Dialog {
 		}
 	}
 
-	private int getTotalNumEntries(Collection<Entry> entries, int backupId) throws SQLException {
-		int num = 0;
-		for (Entry entry : entries) {
-			if (entry.type == EntryType.FOLDER) {
-				num += getTotalNumEntries(entry, backupId);
-			} else {
-				num++;
-			}
-		}
-		return num;
-	}
-
-	private int getTotalNumEntries(Entry folderEntry, int backupId) throws SQLException {
-		psEntries.setInt(1, backupId);
-		psEntries.setInt(2, folderEntry.id);
-		ResultSet rs = null;
-		try {
-			rs = psEntries.executeQuery();
-			List<Entry> entries = getEntries(rs);
-			return getTotalNumEntries(entries, backupId);
-		} finally {
-			database.closeQuietly(rs);
-		}
-	}
-
 	private void restoreEntry(Entry entry, File parentFolder, String outputFolder, int backupId, IProgressMonitor monitor)
 		throws IOException, SQLException, InterruptedException {
 
@@ -531,16 +471,13 @@ public class RestoreDialog extends Dialog {
 			File newFolder = new File(parentFolder, escapeFileName(entry.name));
 			FileUtils.forceMkdir(newFolder);
 			
-			psEntries.setInt(1, backupId);
-			psEntries.setInt(2, entry.id);
-			ResultSet rs = null;
+			Cursor<Record> cursor = getEntriesCursor(backupId, entry.id);
 			try {
-				rs = psEntries.executeQuery();
-				for (Entry e : getEntries(rs)) {
+				for (Entry e : getEntries(cursor)) {
 					restoreEntry(e, newFolder, outputFolder, backupId, monitor);
 				}
 			} finally {
-				database.closeQuietly(rs);
+				database.closeQuietly(cursor);
 			}
 		} else {
 			File inputFile = Utils.toBackupFile(entry.backupPath, outputFolder);

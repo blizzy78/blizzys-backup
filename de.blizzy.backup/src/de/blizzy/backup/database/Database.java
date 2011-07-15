@@ -22,105 +22,68 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jooq.Cursor;
+import org.jooq.impl.Factory;
 
+import de.blizzy.backup.database.schema.PublicFactory;
 import de.blizzy.backup.settings.Settings;
 
 public class Database {
 	private static final String DB_FOLDER_NAME = "$blizzysbackup"; //$NON-NLS-1$
 	
 	private File folder;
+	private Connection conn;
+	private Factory factory;
 
 	public Database(Settings settings) {
 		this.folder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
 	}
 	
-	public Connection openDatabaseConnection() throws SQLException {
-		try {
-			if (!folder.exists()) {
-				FileUtils.forceMkdir(folder);
-			}
-			
+	public void open() throws SQLException {
+		if (conn == null) {
 			try {
-				Class.forName("org.h2.Driver"); //$NON-NLS-1$
-			} catch (ClassNotFoundException e) {
+				if (!folder.exists()) {
+					FileUtils.forceMkdir(folder);
+				}
+				
+				try {
+					Class.forName("org.h2.Driver"); //$NON-NLS-1$
+				} catch (ClassNotFoundException e) {
+					throw new RuntimeException(e);
+				}
+	
+				conn = DriverManager.getConnection(
+						"jdbc:h2:" + folder.getAbsolutePath() + "/backup" + //$NON-NLS-1$ //$NON-NLS-2$
+						";CACHE_SIZE=65536", //$NON-NLS-1$
+						"sa", StringUtils.EMPTY); //$NON-NLS-1$
+				conn.setAutoCommit(true);
+				factory = new PublicFactory(conn);
+			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-
-			Connection conn = DriverManager.getConnection(
-					"jdbc:h2:" + folder.getAbsolutePath() + "/backup" + //$NON-NLS-1$ //$NON-NLS-2$
-					";CACHE_SIZE=65536", //$NON-NLS-1$
-					"sa", StringUtils.EMPTY); //$NON-NLS-1$
-			conn.setAutoCommit(true);
-			return conn;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
-	public void releaseDatabaseConnection(Connection conn) {
+	public void close() {
 		if (conn != null) {
 			try {
 				conn.close();
 			} catch (SQLException e) {
 				// ignore
-			}
-		}
-	}
-
-	public void runStatement(Connection conn, String sql) {
-		Statement st = null;
-		try {
-			st = conn.createStatement();
-			st.executeUpdate(sql);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		} finally {
-			closeQuietly(st);
-		}
-	}
-
-	public void closeQuietly(Statement st) {
-		if (st != null) {
-			try {
-				st.close();
-			} catch (SQLException e) {
-				// ignore
+			} finally {
+				conn = null;
+				factory = null;
 			}
 		}
 	}
 	
-	public void closeQuietly(PreparedStatement... pss) {
-		for (PreparedStatement ps : pss) {
-			closeQuietly(ps);
-		}
-	}
-	
-	private void closeQuietly(PreparedStatement ps) {
-		if (ps != null) {
-			try {
-				ps.close();
-			} catch (SQLException e) {
-				// ignore
-			}
-		}
-	}
-	
-	public void closeQuietly(ResultSet rs) {
-		if (rs != null) {
-			try {
-				rs.close();
-			} catch (SQLException e) {
-				// ignore
-			}
-		}
+	public Factory factory() {
+		return factory;
 	}
 
 	public static boolean containsDatabaseFolder(File folder) {
@@ -143,38 +106,58 @@ public class Database {
 		}
 	}
 
-	public void initialize(Connection conn, String sampleBackupPath) {
-		runStatement(conn, "CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
-				"run_time DATETIME NOT NULL, " + //$NON-NLS-1$
-				"num_entries INT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		
-		runStatement(conn, "CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
-				"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-				"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-				"length BIGINT NOT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_old_files ON files " + //$NON-NLS-1$
-				"(checksum, length)"); //$NON-NLS-1$
-		
-		runStatement(conn, "CREATE TABLE IF NOT EXISTS entries (" + //$NON-NLS-1$
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
-				"parent_id INT NULL, " + //$NON-NLS-1$
-				"backup_id INT NOT NULL, " + //$NON-NLS-1$
-				"type TINYINT NOT NULL, " + //$NON-NLS-1$
-				"creation_time DATETIME NULL, " + //$NON-NLS-1$
-				"modification_time DATETIME NULL, " + //$NON-NLS-1$
-				"hidden BOOLEAN NOT NULL, " + //$NON-NLS-1$
-				"name VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
-				"file_id INT NULL" + //$NON-NLS-1$
-				")"); //$NON-NLS-1$
-		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_entries_files ON entries " + //$NON-NLS-1$
-				"(file_id)"); //$NON-NLS-1$
-		runStatement(conn, "CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
-				"(backup_id, parent_id)"); //$NON-NLS-1$
-		
-		runStatement(conn, "ANALYZE"); //$NON-NLS-1$
+	public void initialize(String sampleBackupPath) {
+		try {
+			factory.query("CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
+					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+					"run_time DATETIME NOT NULL, " + //$NON-NLS-1$
+					"num_entries INT NULL" + //$NON-NLS-1$
+					")") //$NON-NLS-1$
+					.execute();
+			
+			factory.query("CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
+					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+					"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+					"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+					"length BIGINT NOT NULL" + //$NON-NLS-1$
+					")") //$NON-NLS-1$
+					.execute();
+			factory.query("CREATE INDEX IF NOT EXISTS idx_old_files ON files " + //$NON-NLS-1$
+					"(checksum, length)") //$NON-NLS-1$
+					.execute();
+			
+			factory.query("CREATE TABLE IF NOT EXISTS entries (" + //$NON-NLS-1$
+					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
+					"parent_id INT NULL, " + //$NON-NLS-1$
+					"backup_id INT NOT NULL, " + //$NON-NLS-1$
+					"type TINYINT NOT NULL, " + //$NON-NLS-1$
+					"creation_time DATETIME NULL, " + //$NON-NLS-1$
+					"modification_time DATETIME NULL, " + //$NON-NLS-1$
+					"hidden BOOLEAN NOT NULL, " + //$NON-NLS-1$
+					"name VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
+					"file_id INT NULL" + //$NON-NLS-1$
+					")") //$NON-NLS-1$
+					.execute();
+			factory.query("CREATE INDEX IF NOT EXISTS idx_entries_files ON entries " + //$NON-NLS-1$
+					"(file_id)") //$NON-NLS-1$
+					.execute();
+			factory.query("CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
+					"(backup_id, parent_id)") //$NON-NLS-1$
+					.execute();
+			
+			factory.query("ANALYZE") //$NON-NLS-1$
+					.execute();
+		} catch (SQLException e) {
+		}
+	}
+
+	public void closeQuietly(Cursor<?> cursor) {
+		if (cursor != null) {
+			try {
+				cursor.close();
+			} catch (SQLException e) {
+				// ignore
+			}
+		}
 	}
 }

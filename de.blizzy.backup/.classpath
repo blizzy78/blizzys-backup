@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry exported="true" kind="lib" path="lib/jooq-1.6.2.jar" sourcepath="C:/Users/Maik/.m2/repository/org/jooq/jooq/1.6.2/jooq-1.6.2-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/h2-1.3.157.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/commons-codec-1.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/commons-io-2.0.1.jar"/>

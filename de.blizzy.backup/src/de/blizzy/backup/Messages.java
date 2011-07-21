@@ -30,6 +30,7 @@ public class Messages extends NLS {
 	public static String Button_Remove;
 	public static String Button_Restore;
 	public static String Button_Settings;
+	public static String CheckingForNewVersion;
 	public static String CleaningUp;
 	public static String DropFoldersHelp;
 	public static String ExitApplication;
@@ -40,6 +41,7 @@ public class Messages extends NLS {
 	public static String FolderNotEmpty;
 	public static String Idle;
 	public static String Label_BackupOutputFolder;
+	public static String Label_CurrentFolder;
 	public static String Label_ModificationDate;
 	public static String Label_Name;
 	public static String Label_NextRun;
@@ -49,14 +51,16 @@ public class Messages extends NLS {
 	public static String Label_Size;
 	public static String Label_Status;
 	public static String ModifyBackupSettings;
+	public static String NewVersionAvailable;
+	public static String NoNewVersionAvailable;
 	public static String OutputFolderIsInBackup;
 	public static String ParentFolderInBackup;
-	public static String ProgramRunning;
 	public static String RestoreFromBackup;
 	public static String RunBackupNow;
 	public static String Running;
 	public static String Title_BlizzysBackup;
 	public static String Title_CloseBackupDatabase;
+	public static String Title_Error;
 	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
 	public static String Title_FolderCannotBeAdded;
@@ -64,8 +68,9 @@ public class Messages extends NLS {
 	public static String Title_FoldersToBackup;
 	public static String Title_InvalidFolder;
 	public static String Title_License;
+	public static String Title_NewVersionAvailable;
+	public static String Title_NoNewVersionAvailable;
 	public static String Title_OpenBackupDatabase;
-	public static String Title_ProgramRunning;
 	public static String Title_Restore;
 	public static String Title_RestoreFromBackup;
 	public static String Title_SelectFolder;

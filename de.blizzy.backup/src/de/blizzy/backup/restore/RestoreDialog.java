@@ -39,6 +39,7 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -69,6 +70,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -93,6 +95,7 @@ public class RestoreDialog extends Dialog {
 	private ComboViewer backupsViewer;
 	private TableViewer entriesViewer;
 	private Button moveUpButton;
+	private Link currentFolderLink;
 
 	public RestoreDialog(Shell parentShell) {
 		super(parentShell);
@@ -270,10 +273,19 @@ public class RestoreDialog extends Dialog {
 		restoreButton.setEnabled(false);
 		restoreButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
+		currentFolderLink = new Link(composite, SWT.NONE);
+		gd = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		gd.horizontalSpan = 2;
+		currentFolderLink.setLayoutData(gd);
+		
 		backupsViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			public void selectionChanged(SelectionChangedEvent e) {
-				Backup backup = (Backup) ((IStructuredSelection) e.getSelection()).getFirstElement();
-				showBackup(backup);
+				try {
+					Backup backup = (Backup) ((IStructuredSelection) e.getSelection()).getFirstElement();
+					showBackup(backup);
+				} catch (SQLException ex) {
+					BackupPlugin.getDefault().logError("error while showing backup", ex); //$NON-NLS-1$
+				}
 			}
 		});
 		
@@ -283,8 +295,12 @@ public class RestoreDialog extends Dialog {
 				if (selection.size() == 1) {
 					Entry entry = (Entry) selection.getFirstElement();
 					if (entry.type == EntryType.FOLDER) {
-						Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
-						showFolder(backup, entry);
+						try {
+							Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
+							showFolder(backup, entry);
+						} catch (SQLException ex) {
+							BackupPlugin.getDefault().logError("error while showing folder", ex); //$NON-NLS-1$
+						}
 					}
 				}
 			}
@@ -299,7 +315,11 @@ public class RestoreDialog extends Dialog {
 		moveUpButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				moveUp();
+				try {
+					moveUp();
+				} catch (SQLException ex) {
+					BackupPlugin.getDefault().logError("error while moving up", ex); //$NON-NLS-1$
+				}
 			}
 		});
 		
@@ -312,6 +332,19 @@ public class RestoreDialog extends Dialog {
 			}
 		});
 		
+		currentFolderLink.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				try {
+					Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
+					int folderId = Integer.parseInt(e.text);
+					showEntries(backup, folderId);
+				} catch (SQLException ex) {
+					BackupPlugin.getDefault().logError("error while showing folder", ex); //$NON-NLS-1$
+				}
+			}
+		});
+		
 		if (!backups.isEmpty()) {
 			backupsViewer.setSelection(new StructuredSelection(backups.get(0)), true);
 		}
@@ -319,18 +352,18 @@ public class RestoreDialog extends Dialog {
 		return composite;
 	}
 
-	protected void showBackup(Backup backup) {
+	protected void showBackup(Backup backup) throws SQLException {
 		showEntries(backup, -1);
 		moveUpButton.setEnabled(false);
 	}
 
-	private void showFolder(Backup backup, Entry entry) {
+	private void showFolder(Backup backup, Entry entry) throws SQLException {
 		showEntries(backup, entry.id);
 		moveUpButton.setEnabled(true);
 		moveUpButton.setData((entry.parentId > 0) ? Integer.valueOf(entry.parentId) : backup);
 	}
 
-	private void moveUp() {
+	private void moveUp() throws SQLException {
 		Object data = moveUpButton.getData();
 		if (data instanceof Backup) {
 			showBackup((Backup) data);
@@ -350,7 +383,7 @@ public class RestoreDialog extends Dialog {
 		}
 	}
 
-	private void showEntries(Backup backup, int parentFolderId) {
+	private void showEntries(Backup backup, int parentFolderId) throws SQLException {
 		List<Entry> entries = Collections.emptyList();
 		Cursor<Record> cursor = null;
 		try {
@@ -364,6 +397,28 @@ public class RestoreDialog extends Dialog {
 		
 		entriesViewer.setInput(entries);
 		entriesViewer.getControl().setData(Integer.valueOf(parentFolderId));
+		
+		String folder = getFolderLink(backup, parentFolderId);
+		currentFolderLink.setText(StringUtils.isNotBlank(folder) ?
+				Messages.Label_CurrentFolder + ": " + getFolderLink(backup, parentFolderId) : //$NON-NLS-1$
+				StringUtils.EMPTY);
+	}
+
+	private String getFolderLink(Backup backup, int folderId) throws SQLException {
+		if (folderId <= 0) {
+			return null;
+		}
+		
+		Record record = database.factory()
+			.select(Entries.NAME, Entries.PARENT_ID)
+			.from(Entries.ENTRIES)
+			.where(Entries.ID.equal(Integer.valueOf(folderId)))
+			.fetchOne();
+		String name = record.getValue(Entries.NAME);
+		Integer parentFolderId = record.getValueAsInteger(Entries.PARENT_ID);
+		String parentFolder = getFolderLink(backup, (parentFolderId != null) ? parentFolderId.intValue() : -1);
+		String part = "<a href=\"" + folderId + "\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		return (parentFolder != null) ? parentFolder + File.separator + part : part;
 	}
 
 	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId) throws SQLException {

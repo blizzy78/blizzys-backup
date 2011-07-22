@@ -331,8 +331,81 @@ public class BackupRun implements Runnable {
 	}
 
 	private void removeOldBackups() throws SQLException {
+		removeOldBackupsDaily();
+		removeOldBackupsWeekly();
+	}
+	
+	private void removeOldBackupsDaily() throws SQLException {
+		// collect IDs of all but the most recent backup each day
 		Set<Integer> backupsToRemove = new HashSet<Integer>();
+		List<Date> days = getBackupRunsDays();
+		Calendar c = Calendar.getInstance();
+		for (Date day : days) {
+			long start = day.getTime();
+			c.setTimeInMillis(start);
+			c.add(Calendar.DAY_OF_YEAR, 1);
+			long end = c.getTimeInMillis();
+			List<Integer> ids = getBackupIds(start, end);
+			if (ids.size() >= 2) {
+				ids.remove(0);
+				backupsToRemove.addAll(ids);
+			}
+		}
 
+		BackupPlugin.getDefault().logMessage("removing backups (daily): " + backupsToRemove); //$NON-NLS-1$
+		if (!backupsToRemove.isEmpty()) {
+			removeBackups(backupsToRemove);
+		}
+	}
+
+	private List<Integer> getBackupIds(long start, long end) throws SQLException {
+		return database.factory()
+			.select(Backups.ID)
+			.from(Backups.BACKUPS)
+			.where(Backups.RUN_TIME.greaterOrEqual(new Timestamp(start)),
+					Backups.RUN_TIME.lessThan(new Timestamp(end)))
+			.orderBy(Backups.RUN_TIME.desc())
+			.fetch(Backups.ID);
+	}
+	
+	private void removeOldBackupsWeekly() throws SQLException {
+		// collect IDs of all but the most recent backup each day
+		Set<Integer> backupsToRemove = new HashSet<Integer>();
+		List<Date> days = getBackupRunsDays();
+		Calendar c = Calendar.getInstance();
+		for (Date day : days) {
+			long start = getWeekStart(day).getTime();
+			c.setTimeInMillis(start);
+			c.add(Calendar.DAY_OF_YEAR, 7);
+			long end = c.getTimeInMillis();
+			List<Integer> ids = getBackupIds(start, end);
+			if (ids.size() >= 2) {
+				ids.remove(0);
+				backupsToRemove.addAll(ids);
+			}
+		}
+
+		BackupPlugin.getDefault().logMessage("removing backups (weekly): " + backupsToRemove); //$NON-NLS-1$
+		if (!backupsToRemove.isEmpty()) {
+			removeBackups(backupsToRemove);
+		}
+	}
+
+	private Date getWeekStart(Date date) {
+		int firstWeekday = Calendar.getInstance().getActualMinimum(Calendar.DAY_OF_WEEK);
+		Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(date.getTime());
+		for (;;) {
+			int weekday = c.get(Calendar.DAY_OF_WEEK);
+			if (weekday == firstWeekday) {
+				break;
+			}
+			c.add(Calendar.DAY_OF_YEAR, -1);
+		}
+		return new Date(c.getTimeInMillis());
+	}
+
+	private List<Date> getBackupRunsDays() throws SQLException {
 		Cursor<Record> cursor = null;
 		try {
 			// get all days where there are backups (and which are older than 14 days)
@@ -348,7 +421,7 @@ public class BackupRun implements Runnable {
 				.where(Backups.RUN_TIME.lessThan(new Timestamp(c.getTimeInMillis())))
 				.orderBy(Backups.RUN_TIME)
 				.fetchLazy();
-			Set<Date> days = new HashSet<Date>();
+			List<Date> days = new ArrayList<Date>();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
 				c.setTimeInMillis(record.getValueAsTimestamp(Backups.RUN_TIME).getTime());
@@ -358,38 +431,9 @@ public class BackupRun implements Runnable {
 				c.set(Calendar.MILLISECOND, 0);
 				days.add(new Date(c.getTimeInMillis()));
 			}
-			database.closeQuietly(cursor);
-			cursor = null;
-
-			// collect IDs of all but the most recent backup each day
-			for (Date day : days) {
-				long start = day.getTime();
-				c.setTimeInMillis(start);
-				c.add(Calendar.DAY_OF_YEAR, 1);
-				long end = c.getTimeInMillis();
-				cursor = database.factory()
-					.select(Backups.ID)
-					.from(Backups.BACKUPS)
-					.where(Backups.RUN_TIME.greaterOrEqual(new Timestamp(start)),
-							Backups.RUN_TIME.lessThan(new Timestamp(end)))
-					.orderBy(Backups.RUN_TIME.desc())
-					.fetchLazy();
-				if (cursor.hasNext()) {
-					// skip first (=most recent) backup
-					cursor.fetchOne();
-					while (cursor.hasNext()) {
-						Record record = cursor.fetchOne();
-						backupsToRemove.add(record.getValueAsInteger(Backups.ID));
-					}
-				}
-			}
+			return days;
 		} finally {
 			database.closeQuietly(cursor);
-		}
-		
-		BackupPlugin.getDefault().logMessage("Removing backups: " + backupsToRemove); //$NON-NLS-1$
-		if (!backupsToRemove.isEmpty()) {
-			removeBackups(backupsToRemove);
 		}
 	}
 

@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -36,6 +37,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -183,6 +185,10 @@ public class BackupRun implements Runnable {
 	}
 	
 	private void backupFile(File file, int parentFolderId) throws SQLException, IOException {
+		if ((numEntries % 50) == 0) {
+			checkDiskSpaceAndRemoveOldBackups();
+		}
+
 		currentFile = file.getAbsolutePath();
 		fireBackupStatusChanged();
 		
@@ -495,6 +501,49 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
+	private void checkDiskSpaceAndRemoveOldBackups() {
+		try {
+			FileStore store = Files.getFileStore(new File(settings.getOutputFolder()).toPath());
+			long total = store.getTotalSpace();
+			if (total > 0) {
+				for (;;) {
+					long available = store.getUsableSpace();
+					if (available <= 0) {
+						break;
+					}
+					
+					double avail = (double) available / (double) total * 100d;
+					if (avail >= 20d) {
+						break;
+					}
+					
+					if (!removeOldestBackup()) {
+						break;
+					}
+				}
+			}
+		} catch (IOException e) {
+			// ignore
+		} catch (SQLException e) {
+			BackupPlugin.getDefault().logError("error removing oldest backup", e); //$NON-NLS-1$
+		}
+	}
+	
+	private boolean removeOldestBackup() throws SQLException {
+		Record record = database.factory()
+			.select(Backups.ID)
+			.from(Backups.BACKUPS)
+			.where(Backups.NUM_ENTRIES.isNotNull())
+			.orderBy(Backups.RUN_TIME)
+			.fetchAny();
+		if (record != null) {
+			Integer id = record.getValueAsInteger(Backups.ID);
+			BackupPlugin.getDefault().logMessage("removing backup: " + id); //$NON-NLS-1$
+			removeBackups(Collections.singleton(id));
+		}
+		return record != null;
+	}
+
 	public boolean isCleaningUp() {
 		return cleaningUp;
 	}

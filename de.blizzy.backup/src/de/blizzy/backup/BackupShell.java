@@ -85,7 +85,7 @@ class BackupShell {
 	};
 
 	BackupShell(Display display) {
-		shell = new Shell(display);
+		shell = new Shell(display, SWT.SHELL_TRIM ^ SWT.MAX);
 		shell.setText(Messages.Title_BlizzysBackup);
 		shell.setImages(BackupApplication.getWindowImages());
 		

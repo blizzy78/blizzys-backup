@@ -13,7 +13,7 @@
 
    <windowImages/>
 
-   <launcher name="backup.exe">
+   <launcher name="blizzysbackup.exe">
       <solaris/>
       <win useIco="false">
          <bmp

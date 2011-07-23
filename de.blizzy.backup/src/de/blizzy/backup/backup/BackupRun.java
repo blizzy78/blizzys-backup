@@ -122,6 +122,7 @@ public class BackupRun implements Runnable {
 			try {
 				removeOldBackups();
 				removeUnusedFiles();
+				removeOldDatabaseBackups();
 			} finally {
 				cleaningUp = false;
 			}
@@ -133,19 +134,50 @@ public class BackupRun implements Runnable {
 			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
 		} finally {
 			database.close();
-			
-			try {
-				File outputFolder = new File(settings.getOutputFolder());
-				File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
-				File dbBackupFolder = new File(dbBackupRootFolder, String.valueOf(System.currentTimeMillis()));
-				database.backupDatabase(dbBackupFolder);
-			} catch (IOException e) {
-				BackupPlugin.getDefault().logError("Error while creating database backup", e); //$NON-NLS-1$
-			}
+
+			backupDatabase();
 			
 			fireBackupEnded();
 			
 			BackupPlugin.getDefault().logMessage("Backup done"); //$NON-NLS-1$
+		}
+	}
+
+	private void backupDatabase() {
+		try {
+			File outputFolder = new File(settings.getOutputFolder());
+			File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
+			File dbBackupFolder = new File(dbBackupRootFolder, String.valueOf(System.currentTimeMillis()));
+			database.backupDatabase(dbBackupFolder);
+		} catch (IOException e) {
+			BackupPlugin.getDefault().logError("Error while creating database backup", e); //$NON-NLS-1$
+		}
+	}
+	
+	private void removeOldDatabaseBackups() {
+		File outputFolder = new File(settings.getOutputFolder());
+		File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
+		if (dbBackupRootFolder.isDirectory()) {
+			List<Long> timestamps = new ArrayList<Long>();
+			for (File f : dbBackupRootFolder.listFiles()) {
+				if (f.isDirectory()) {
+					timestamps.add(Long.valueOf(f.getName()));
+				}
+			}
+			if (timestamps.size() > 9) {
+				Collections.sort(timestamps);
+				Collections.reverse(timestamps);
+				for (int i = 9; i < timestamps.size(); i++) {
+					long timestamp = timestamps.get(i).longValue();
+					File folder = new File(dbBackupRootFolder, String.valueOf(timestamp));
+					try {
+						FileUtils.forceDelete(folder);
+					} catch (IOException e) {
+						BackupPlugin.getDefault().logError("error while deleting old database backup folder: " + //$NON-NLS-1$
+								folder.getAbsolutePath(), e);
+					}
+				}
+			}
 		}
 	}
 

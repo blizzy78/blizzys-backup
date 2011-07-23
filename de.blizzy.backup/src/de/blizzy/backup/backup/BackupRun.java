@@ -487,12 +487,15 @@ public class BackupRun implements Runnable {
 
 	private void removeFiles(Set<FileEntry> files) throws SQLException {
 		for (FileEntry file : files) {
-			Path path = Utils.toBackupFile(file.backupPath, settings.getOutputFolder()).toPath();
+			File f = Utils.toBackupFile(file.backupPath, settings.getOutputFolder());
+			Path path = f.toPath();
 			try {
 				Files.delete(path);
 			} catch (IOException e) {
-				BackupPlugin.getDefault().logError("Error deleting file: " + file.backupPath, e); //$NON-NLS-1$
+				BackupPlugin.getDefault().logError("error deleting file: " + file.backupPath, e); //$NON-NLS-1$
 			}
+			
+			removeFoldersIfEmpty(f.getParentFile());
 			
 			database.factory()
 				.delete(de.blizzy.backup.database.schema.tables.Files.FILES)
@@ -501,6 +504,19 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
+	private void removeFoldersIfEmpty(File folder) {
+		File outputFolder = new File(settings.getOutputFolder());
+		if (Utils.isParent(outputFolder, folder) && (folder.list().length == 0)) {
+			try {
+				Files.delete(folder.toPath());
+				File parentFolder = folder.getParentFile();
+				removeFoldersIfEmpty(parentFolder);
+			} catch (IOException e) {
+				BackupPlugin.getDefault().logError("error deleting folder: " + folder.getAbsolutePath(), e); //$NON-NLS-1$
+			}
+		}
+	}
+
 	private void checkDiskSpaceAndRemoveOldBackups() {
 		try {
 			FileStore store = Files.getFileStore(new File(settings.getOutputFolder()).toPath());

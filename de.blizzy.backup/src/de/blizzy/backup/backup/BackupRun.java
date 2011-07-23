@@ -164,10 +164,10 @@ public class BackupRun implements Runnable {
 					timestamps.add(Long.valueOf(f.getName()));
 				}
 			}
-			if (timestamps.size() > 9) {
+			if (timestamps.size() > 19) {
 				Collections.sort(timestamps);
 				Collections.reverse(timestamps);
-				for (int i = 9; i < timestamps.size(); i++) {
+				for (int i = 19; i < timestamps.size(); i++) {
 					long timestamp = timestamps.get(i).longValue();
 					File folder = new File(dbBackupRootFolder, String.valueOf(timestamp));
 					try {

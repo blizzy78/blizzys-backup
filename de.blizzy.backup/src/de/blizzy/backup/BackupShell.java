@@ -340,4 +340,8 @@ class BackupShell {
 		backupRun.addListener(backupRunListener);
 		updateBackupNowButton();
 	}
+
+	Shell getShell() {
+		return shell;
+	}
 }

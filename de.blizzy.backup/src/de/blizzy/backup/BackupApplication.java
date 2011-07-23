@@ -29,6 +29,7 @@ import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 import de.blizzy.backup.backup.BackupEndedEvent;
@@ -84,13 +85,24 @@ public class BackupApplication implements IApplication {
 			showShell();
 		}
 		
+		boolean restartNecessary = false;
+		try {
+			Shell shell = (backupShell != null) ? backupShell.getShell() : null;
+			if (new Updater(false, false).update(shell)) {
+				running = false;
+				restartNecessary = true;
+			}
+		} catch (Throwable e) {
+			BackupPlugin.getDefault().logError("error while updating application", e); //$NON-NLS-1$
+		}
+		
 		while (running && !display.isDisposed()) {
 			try {
 				if (!display.readAndDispatch()) {
 					display.sleep();
 				}
 			} catch (RuntimeException e) {
-				e.printStackTrace();
+				BackupPlugin.getDefault().logError("error in event loop", e); //$NON-NLS-1$
 			}
 		}
 
@@ -107,7 +119,7 @@ public class BackupApplication implements IApplication {
 			backupRun.stopBackupAndWait();
 		}
 		
-		return EXIT_OK;
+		return restartNecessary ? EXIT_RESTART : EXIT_OK;
 	}
 
 	private void setupDefaultPreferences() {

@@ -26,7 +26,9 @@ import java.util.TimerTask;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.IDialogSettings;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -54,69 +56,77 @@ public class BackupApplication implements IApplication {
 	public Object start(IApplicationContext context) throws IOException {
 		display = Display.getDefault();
 
-		setupDefaultPreferences();
-
-		Image image16 = AbstractUIPlugin.imageDescriptorFromPlugin(
-				BackupPlugin.ID, "etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
-		Image image32 = AbstractUIPlugin.imageDescriptorFromPlugin(
-				BackupPlugin.ID, "etc/logo/logo_32.png").createImage(display); //$NON-NLS-1$
-		Image image48 = AbstractUIPlugin.imageDescriptorFromPlugin(
-				BackupPlugin.ID, "etc/logo/logo_48.png").createImage(display); //$NON-NLS-1$
-		windowImages = new Image[] { image16, image32, image48 };
-
-		settingsManager = new SettingsManager();
-		settingsManager.addListener(new ISettingsListener() {
-			public void settingsChanged() {
-				if (backupRun == null) {
-					scheduleBackupRun(false);
-				}
-			}
-		});
-		
-		timer = new Timer();
-
-		scheduleBackupRun(false);
-
-		trayIcon = new TrayIcon(display);
-
-		context.applicationRunning();
-
-		if (!BackupPlugin.getDefault().isHidden()) {
-			showShell();
-		}
-		
 		boolean restartNecessary = false;
-		try {
-			Shell shell = (backupShell != null) ? backupShell.getShell() : null;
-			if (new Updater(false, false).update(shell)) {
-				running = false;
-				restartNecessary = true;
-			}
-		} catch (Throwable e) {
-			BackupPlugin.getDefault().logError("error while updating application", e); //$NON-NLS-1$
-		}
-		
-		while (running && !display.isDisposed()) {
-			try {
-				if (!display.readAndDispatch()) {
-					display.sleep();
+
+		File runLockFile = new File(BackupPlugin.getDefault().getStateLocation().toFile(), "runLock"); //$NON-NLS-1$
+		RunLock runLock = new RunLock(runLockFile);
+		if (runLock.tryLock()) {
+			setupDefaultPreferences();
+			
+			Image image16 = AbstractUIPlugin.imageDescriptorFromPlugin(
+					BackupPlugin.ID, "etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
+			Image image32 = AbstractUIPlugin.imageDescriptorFromPlugin(
+					BackupPlugin.ID, "etc/logo/logo_32.png").createImage(display); //$NON-NLS-1$
+			Image image48 = AbstractUIPlugin.imageDescriptorFromPlugin(
+					BackupPlugin.ID, "etc/logo/logo_48.png").createImage(display); //$NON-NLS-1$
+			windowImages = new Image[] { image16, image32, image48 };
+	
+			settingsManager = new SettingsManager();
+			settingsManager.addListener(new ISettingsListener() {
+				public void settingsChanged() {
+					if (backupRun == null) {
+						scheduleBackupRun(false);
+					}
 				}
-			} catch (RuntimeException e) {
-				BackupPlugin.getDefault().logError("error in event loop", e); //$NON-NLS-1$
+			});
+			
+			timer = new Timer();
+	
+			scheduleBackupRun(false);
+	
+			trayIcon = new TrayIcon(display);
+	
+			context.applicationRunning();
+	
+			if (!BackupPlugin.getDefault().isHidden()) {
+				showShell();
 			}
-		}
-
-		trayIcon.dispose();
-		
-		timer.cancel();
-		timer = null;
-
-		image16.dispose();
-		image32.dispose();
-		image48.dispose();
-
-		if (backupRun != null) {
-			backupRun.stopBackupAndWait();
+			
+			try {
+				Shell shell = (backupShell != null) ? backupShell.getShell() : null;
+				if (new Updater(false, false).update(shell)) {
+					running = false;
+					restartNecessary = true;
+				}
+			} catch (Throwable e) {
+				BackupPlugin.getDefault().logError("error while updating application", e); //$NON-NLS-1$
+			}
+			
+			while (running && !display.isDisposed()) {
+				try {
+					if (!display.readAndDispatch()) {
+						display.sleep();
+					}
+				} catch (RuntimeException e) {
+					BackupPlugin.getDefault().logError("error in event loop", e); //$NON-NLS-1$
+				}
+			}
+	
+			trayIcon.dispose();
+			
+			timer.cancel();
+			timer = null;
+	
+			image16.dispose();
+			image32.dispose();
+			image48.dispose();
+	
+			if (backupRun != null) {
+				backupRun.stopBackupAndWait();
+			}
+		} else {
+			new MessageDialog(null, Messages.Title_ProgramRunning, null, Messages.ProgramRunning,
+					MessageDialog.ERROR, new String[] { IDialogConstants.CLOSE_LABEL }, 0).open();
 		}
 		
 		return restartNecessary ? EXIT_RESTART : EXIT_OK;

@@ -55,6 +55,7 @@ public class Messages extends NLS {
 	public static String NoNewVersionAvailable;
 	public static String OutputFolderIsInBackup;
 	public static String ParentFolderInBackup;
+	public static String ProgramRunning;
 	public static String RestoreFromBackup;
 	public static String RunBackupNow;
 	public static String Running;
@@ -71,6 +72,7 @@ public class Messages extends NLS {
 	public static String Title_NewVersionAvailable;
 	public static String Title_NoNewVersionAvailable;
 	public static String Title_OpenBackupDatabase;
+	public static String Title_ProgramRunning;
 	public static String Title_Restore;
 	public static String Title_RestoreFromBackup;
 	public static String Title_SelectFolder;

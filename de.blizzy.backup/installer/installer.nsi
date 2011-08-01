@@ -4,7 +4,7 @@ SetCompressor /SOLID lzma
 
 Name "blizzy's Backup"
 
-OutFile "setup.exe"
+OutFile "blizzysbackup-setup.exe"
 InstallDir "$PROGRAMFILES\blizzysbackup"
 RequestExecutionLevel admin
 

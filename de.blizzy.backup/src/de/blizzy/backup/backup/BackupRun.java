@@ -430,7 +430,7 @@ public class BackupRun implements Runnable {
 	}
 
 	private Date getWeekStart(Date date) {
-		int firstWeekday = Calendar.getInstance().getActualMinimum(Calendar.DAY_OF_WEEK);
+		int firstWeekday = Calendar.getInstance().getFirstDayOfWeek();
 		Calendar c = Calendar.getInstance();
 		c.setTimeInMillis(date.getTime());
 		for (;;) {

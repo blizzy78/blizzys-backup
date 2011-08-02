@@ -107,9 +107,8 @@ Section "$(TXT_COMPONENT_TITLE_AUTOSTART)" SEC_AUTOSTART
 SectionEnd
 
 Section "Uninstall"
-	SetRegView 64
-
 	Delete "$SMSTARTUP\blizzy's Backup.lnk"
+	Delete "$SMPROGRAMS\blizzy's Backup.lnk"
 	RMDir /r "$INSTDIR"
 	RMDir /r "$LOCALAPPDATA\blizzysbackup"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\blizzy's Backup"

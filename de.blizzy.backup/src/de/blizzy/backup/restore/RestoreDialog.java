@@ -337,8 +337,10 @@ public class RestoreDialog extends Dialog {
 			public void widgetSelected(SelectionEvent e) {
 				try {
 					Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
-					int folderId = Integer.parseInt(e.text);
-					showEntries(backup, folderId);
+					int pos = e.text.indexOf('_');
+					int folderId = Integer.parseInt(e.text.substring(0, pos));
+					int parentFolderId = Integer.parseInt(e.text.substring(pos + 1));
+					showFolder(backup, folderId, parentFolderId);
 				} catch (SQLException ex) {
 					BackupPlugin.getDefault().logError("error while showing folder", ex); //$NON-NLS-1$
 				}
@@ -358,9 +360,13 @@ public class RestoreDialog extends Dialog {
 	}
 
 	private void showFolder(Backup backup, Entry entry) throws SQLException {
-		showEntries(backup, entry.id);
+		showFolder(backup, entry.id, entry.parentId);
+	}
+
+	private void showFolder(Backup backup, int entryId, int parentFolderId) throws SQLException {
+		showEntries(backup, entryId);
 		moveUpButton.setEnabled(true);
-		moveUpButton.setData((entry.parentId > 0) ? Integer.valueOf(entry.parentId) : backup);
+		moveUpButton.setData((parentFolderId > 0) ? Integer.valueOf(parentFolderId) : backup);
 	}
 
 	private void moveUp() throws SQLException {
@@ -417,7 +423,8 @@ public class RestoreDialog extends Dialog {
 		String name = record.getValue(Entries.NAME);
 		Integer parentFolderId = record.getValueAsInteger(Entries.PARENT_ID);
 		String parentFolder = getFolderLink(backup, (parentFolderId != null) ? parentFolderId.intValue() : -1);
-		String part = "<a href=\"" + folderId + "\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		String part = "<a href=\"" + folderId + "_" + ((parentFolderId != null) ? parentFolderId.intValue() : -1) + //$NON-NLS-1$ //$NON-NLS-2$
+			"\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$
 		return (parentFolder != null) ? parentFolder + File.separator + part : part;
 	}
 

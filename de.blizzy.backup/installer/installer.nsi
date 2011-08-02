@@ -1,3 +1,22 @@
+/*
+blizzy's Backup - Easy to use personal file backup application
+Copyright (C) 2011 Maik Schreiber
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
 SetCompressor /SOLID lzma
 
 !include MUI2.nsh
@@ -14,7 +33,14 @@ ShowInstDetails nevershow
 ShowUninstDetails nevershow
 
 !define MUI_ABORTWARNING
+!define MUI_UNABORTWARNING
 !define MUI_LICENSEPAGE_RADIOBUTTONS
+!define MUI_ICON "logo.ico"
+!define MUI_UNICON "logo.ico"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "logo.bmp"
+!define MUI_HEADERIMAGE_BITMAP_NOSTRETCH
+!define MUI_HEADERIMAGE_RIGHT
 
 !insertmacro MUI_PAGE_LICENSE "license.txt"
 !insertmacro MUI_PAGE_COMPONENTS

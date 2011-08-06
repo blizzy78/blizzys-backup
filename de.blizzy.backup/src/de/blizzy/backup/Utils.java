@@ -17,8 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.widgets.Display;
@@ -79,5 +87,21 @@ public final class Utils {
 			}
 		}
 		return false;
+	}
+	
+	public static void zipFile(File source, File target) throws IOException {
+		ZipOutputStream out = null;
+		try {
+			out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(target)));
+			out.setLevel(Deflater.BEST_COMPRESSION);
+			
+			ZipEntry entry = new ZipEntry(source.getName());
+			entry.setTime(source.lastModified());
+			out.putNextEntry(entry);
+			
+			Files.copy(source.toPath(), out);
+		} finally {
+			IOUtils.closeQuietly(out);
+		}
 	}
 }

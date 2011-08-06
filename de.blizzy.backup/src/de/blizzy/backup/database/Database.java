@@ -19,7 +19,6 @@ package de.blizzy.backup.database;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -30,6 +29,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jooq.Cursor;
 import org.jooq.impl.Factory;
 
+import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
 import de.blizzy.backup.settings.Settings;
 
@@ -101,7 +101,7 @@ public class Database {
 			if (file.isDirectory()) {
 				copyFolder(file, new File(targetFolder, file.getName()));
 			} else {
-				Files.copy(file.toPath(), new File(targetFolder, file.getName()).toPath());
+				Utils.zipFile(file, new File(targetFolder, file.getName() + ".zip")); //$NON-NLS-1$
 			}
 		}
 	}

@@ -183,8 +183,12 @@ public class BackupRun implements Runnable {
 
 	private int backupFolder(File folder, int parentFolderId, String overrideName) throws SQLException, IOException {
 		DosFileAttributes attrs = Files.readAttributes(folder.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+		FileTime creationTime = null;
+		FileTime lastModifiedTime = null;
 		boolean hidden = false;
 		if (attrs != null) {
+			creationTime = attrs.creationTime();
+			lastModifiedTime = attrs.lastModifiedTime();
 			hidden = attrs.isHidden();
 		}
 
@@ -193,6 +197,8 @@ public class BackupRun implements Runnable {
 			.set(Entries.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
 			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
 			.set(Entries.TYPE, Integer.valueOf(EntryType.FOLDER.getValue()))
+			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+			.set(Entries.MODIFICATION_TIME, (lastModifiedTime != null) ? new Timestamp(lastModifiedTime.toMillis()) : null)
 			.set(Entries.HIDDEN, Boolean.valueOf(hidden))
 			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
 			.execute();

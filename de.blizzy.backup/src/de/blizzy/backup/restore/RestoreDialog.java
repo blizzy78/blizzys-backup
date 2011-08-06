@@ -529,6 +529,7 @@ public class RestoreDialog extends Dialog {
 			throw new InterruptedException();
 		}
 		
+		Path outputPath;
 		if (entry.type == EntryType.FOLDER) {
 			File newFolder = new File(parentFolder, escapeFileName(entry.name));
 			FileUtils.forceMkdir(newFolder);
@@ -541,26 +542,33 @@ public class RestoreDialog extends Dialog {
 			} finally {
 				database.closeQuietly(cursor);
 			}
+
+			outputPath = newFolder.toPath();
 		} else {
 			File inputFile = Utils.toBackupFile(entry.backupPath, outputFolder);
 			File outputFile = new File(parentFolder, escapeFileName(entry.name));
-			Path outputPath = outputFile.toPath();
+			outputPath = outputFile.toPath();
 			InputStream in = null;
 			try {
 				in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(inputFile)));
 				Files.copy(in, outputPath);
 			} finally {
 				IOUtils.closeQuietly(in);
-				monitor.worked(1);
 			}
-			DosFileAttributeView view = Files.getFileAttributeView(outputPath, DosFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-			if (view != null) {
-				if (entry.hidden) {
-					view.setHidden(entry.hidden);
-				}
-				view.setTimes(FileTime.fromMillis(entry.modificationTime.getTime()), null,
-						FileTime.fromMillis(entry.creationTime.getTime()));
+		}
+
+		DosFileAttributeView view = Files.getFileAttributeView(outputPath, DosFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+		if (view != null) {
+			if (entry.hidden) {
+				view.setHidden(entry.hidden);
 			}
+			FileTime modTime = (entry.modificationTime != null) ? FileTime.fromMillis(entry.modificationTime.getTime()) : null;
+			FileTime createTime = (entry.creationTime != null) ? FileTime.fromMillis(entry.creationTime.getTime()) : null;
+			view.setTimes(modTime, null, createTime);
+		}
+		
+		if (entry.type != EntryType.FOLDER) {
+			monitor.worked(1);
 		}
 	}
 

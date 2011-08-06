@@ -72,6 +72,7 @@ public class Messages extends NLS {
 	public static String Title_NewVersionAvailable;
 	public static String Title_NoNewVersionAvailable;
 	public static String Title_OpenBackupDatabase;
+	public static String Title_OutputFolder;
 	public static String Title_ProgramRunning;
 	public static String Title_Restore;
 	public static String Title_RestoreFromBackup;

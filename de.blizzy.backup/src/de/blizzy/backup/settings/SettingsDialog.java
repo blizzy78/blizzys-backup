@@ -131,20 +131,20 @@ public class SettingsDialog extends Dialog {
 		gd.horizontalSpan = 2;
 		label.setLayoutData(gd);
 		
-		Group settingsComposite = new Group(composite, SWT.NONE);
-		settingsComposite.setText(Messages.Title_Settings);
-		settingsComposite.setLayout(new GridLayout(3, false));
-		settingsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		Group outputFolderComposite = new Group(composite, SWT.NONE);
+		outputFolderComposite.setText(Messages.Title_OutputFolder);
+		outputFolderComposite.setLayout(new GridLayout(3, false));
+		outputFolderComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
-		label = new Label(settingsComposite, SWT.NONE);
+		label = new Label(outputFolderComposite, SWT.NONE);
 		label.setText(Messages.Label_BackupOutputFolder + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
-		outputFolderText = new Text(settingsComposite, SWT.BORDER | SWT.READ_ONLY);
+		outputFolderText = new Text(outputFolderComposite, SWT.BORDER | SWT.READ_ONLY);
 		outputFolderText.setText(StringUtils.defaultString(settings.getOutputFolder()));
 		outputFolderText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
-		Button browseOutputFolderButton = new Button(settingsComposite, SWT.PUSH);
+		Button browseOutputFolderButton = new Button(outputFolderComposite, SWT.PUSH);
 		browseOutputFolderButton.setText(Messages.Button_Browse + "..."); //$NON-NLS-1$
 		browseOutputFolderButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		

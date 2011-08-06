@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="%product.name" uid="de.blizzy.backup.backup" id="de.blizzy.backup.backup" application="de.blizzy.backup.backup" version="1.0.0" useFeatures="true" includeLaunchers="true">
+<product name="%product.name" uid="de.blizzy.backup.backup" id="de.blizzy.backup.backup" application="de.blizzy.backup.backup" version="1.1.0" useFeatures="true" includeLaunchers="true">
 
    <configIni use="default">
    </configIni>
@@ -34,7 +34,7 @@
    </plugins>
 
    <features>
-      <feature id="de.blizzy.backup" version="1.0.0"/>
+      <feature id="de.blizzy.backup" version="1.1.0"/>
       <feature id="de.blizzy.backup.rcp" version="1.0.0"/>
    </features>
 

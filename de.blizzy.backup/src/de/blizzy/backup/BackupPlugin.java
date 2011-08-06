@@ -29,7 +29,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 public class BackupPlugin extends AbstractUIPlugin {
 	public static final String ID = "de.blizzy.backup"; //$NON-NLS-1$
-	public static final String VERSION = "1.0.0"; //$NON-NLS-1$
+	public static final String VERSION = "1.1.0"; //$NON-NLS-1$
 	public static final String COPYRIGHT_YEARS = "2011"; //$NON-NLS-1$
 
 	private static final String ARG_HIDDEN = "-hidden"; //$NON-NLS-1$

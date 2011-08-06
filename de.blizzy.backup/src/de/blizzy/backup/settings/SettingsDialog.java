@@ -65,6 +65,8 @@ public class SettingsDialog extends Dialog {
 	private Text outputFolderText;
 	private Button runHourlyRadio;
 	private DateTime dailyTime;
+	private Button fileCompareMetadataRadio;
+	private Button fileCompareChecksumRadio;
 
 	public SettingsDialog(Shell parentShell) {
 		super(parentShell);
@@ -170,6 +172,22 @@ public class SettingsDialog extends Dialog {
 		dailyTime.setHours(settings.getDailyHours());
 		dailyTime.setMinutes(settings.getDailyMinutes());
 		dailyTime.setEnabled(!settings.isRunHourly());
+		
+		Group fileComparisonComposite = new Group(composite, SWT.NONE);
+		fileComparisonComposite.setText(Messages.Title_FileComparison);
+		fileComparisonComposite.setLayout(new GridLayout(1, false));
+		fileComparisonComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		
+		fileCompareMetadataRadio = new Button(fileComparisonComposite, SWT.RADIO);
+		fileCompareMetadataRadio.setText(Messages.CompareFilesMetadata);
+		fileCompareMetadataRadio.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+		fileCompareChecksumRadio = new Button(fileComparisonComposite, SWT.RADIO);
+		fileCompareChecksumRadio.setText(Messages.CompareFilesChecksum);
+		fileCompareChecksumRadio.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+		fileCompareMetadataRadio.setSelection(!settings.isUseChecksums());
+		fileCompareChecksumRadio.setSelection(settings.isUseChecksums());
 		
 		foldersViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			public void selectionChanged(SelectionChangedEvent e) {
@@ -397,7 +415,7 @@ public class SettingsDialog extends Dialog {
 				outputFolder = null;
 			}
 			Settings settings = new Settings(folders, outputFolder, runHourlyRadio.getSelection(),
-					dailyTime.getHours(), dailyTime.getMinutes());
+					dailyTime.getHours(), dailyTime.getMinutes(), fileCompareChecksumRadio.getSelection());
 			BackupApplication.getSettingsManager().setSettings(settings);
 		}
 		

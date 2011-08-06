@@ -25,13 +25,17 @@ public class Settings {
 	private boolean runHourly;
 	private int dailyHours;
 	private int dailyMinutes;
+	private boolean useChecksums;
 
-	public Settings(Set<String> folders, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes) {
+	public Settings(Set<String> folders, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes,
+			boolean useChecksums) {
+		
 		this.folders = folders;
 		this.outputFolder = outputFolder;
 		this.runHourly = runHourly;
 		this.dailyHours = dailyHours;
 		this.dailyMinutes = dailyMinutes;
+		this.useChecksums = useChecksums;
 	}
 	
 	public Set<String> getFolders() {
@@ -52,5 +56,9 @@ public class Settings {
 	
 	public int getDailyMinutes() {
 		return dailyMinutes;
+	}
+	
+	public boolean isUseChecksums() {
+		return useChecksums;
 	}
 }

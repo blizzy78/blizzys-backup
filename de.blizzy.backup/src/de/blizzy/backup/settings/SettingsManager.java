@@ -56,7 +56,11 @@ public class SettingsManager {
 		if (section.get("dailyMinutes") != null) { //$NON-NLS-1$
 			dailyMinutes = section.getInt("dailyMinutes"); //$NON-NLS-1$
 		}
-		return new Settings(folders, outputFolder, runHourly, dailyHours, dailyMinutes);
+		boolean useChecksums = false;
+		if (section.get("useChecksums") != null) { //$NON-NLS-1$
+			useChecksums = section.getBoolean("useChecksums"); //$NON-NLS-1$
+		}
+		return new Settings(folders, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums);
 	}
 
 	private IDialogSettings getSection() {
@@ -70,6 +74,7 @@ public class SettingsManager {
 		section.put("runHourly", settings.isRunHourly()); //$NON-NLS-1$
 		section.put("dailyHours", settings.getDailyHours()); //$NON-NLS-1$
 		section.put("dailyMinutes", settings.getDailyMinutes()); //$NON-NLS-1$
+		section.put("useChecksums", settings.isUseChecksums()); //$NON-NLS-1$
 		
 		fireSettingsChanged();
 	}

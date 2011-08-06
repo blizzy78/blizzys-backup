@@ -32,6 +32,8 @@ public class Messages extends NLS {
 	public static String Button_Settings;
 	public static String CheckingForNewVersion;
 	public static String CleaningUp;
+	public static String CompareFilesChecksum;
+	public static String CompareFilesMetadata;
 	public static String DropFoldersHelp;
 	public static String ExitApplication;
 	public static String FolderContainsExistingBackup;
@@ -64,6 +66,7 @@ public class Messages extends NLS {
 	public static String Title_Error;
 	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
+	public static String Title_FileComparison;
 	public static String Title_FolderCannotBeAdded;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;

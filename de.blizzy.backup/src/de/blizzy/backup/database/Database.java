@@ -144,6 +144,9 @@ public class Database {
 			factory.query("CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
 					"(backup_id, parent_id)") //$NON-NLS-1$
 					.execute();
+			factory.query("CREATE INDEX IF NOT EXISTS idx_entries_names ON entries " + //$NON-NLS-1$
+					"(name)") //$NON-NLS-1$
+					.execute();
 			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();

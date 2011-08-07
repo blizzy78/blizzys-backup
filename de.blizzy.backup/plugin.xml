@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin>
+   <extension-point id="locationProviders" name="Location Providers" schema="schema/locationProviders.exsd"/>
    <extension
          id="backup"
          point="org.eclipse.core.runtime.applications">
@@ -22,5 +23,16 @@
                value="%product.name">
          </property>
       </product>
+   </extension>
+   <extension
+         point="de.blizzy.backup.locationProviders">
+      <locationProvider
+            class="de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider"
+            name="%locationProvider.filesystem.name">
+      </locationProvider>
+      <locationProvider
+            class="de.blizzy.backup.vfs.sftp.SftpLocationProvider"
+            name="%locationProvider.sftp.name">
+      </locationProvider>
    </extension>
 </plugin>

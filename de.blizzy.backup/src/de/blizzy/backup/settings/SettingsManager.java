@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.settings;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,19 +31,42 @@ import org.eclipse.jface.dialogs.IDialogSettings;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Utils;
+import de.blizzy.backup.vfs.ILocation;
+import de.blizzy.backup.vfs.LocationProviderDescriptor;
+import de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider;
 
 public class SettingsManager {
 	private List<ISettingsListener> listeners = new ArrayList<ISettingsListener>();
 	
 	public Settings getSettings() {
 		IDialogSettings section = getSection();
-		Set<String> folders = new HashSet<String>();
-		String[] savedFolders = section.getArray("folders"); //$NON-NLS-1$
-		if (savedFolders != null) {
-			for (String folder : savedFolders) {
-				folders.add(folder);
+		Set<ILocation> locations = new HashSet<ILocation>();
+
+		IDialogSettings locationsSection = section.getSection("locations"); //$NON-NLS-1$
+		if (locationsSection != null) {
+			IDialogSettings[] locationSections = locationsSection.getSections();
+			if (locationSections != null) {
+				List<LocationProviderDescriptor> descriptors = BackupPlugin.getDefault().getLocationProviders();
+				for (IDialogSettings locationSection : locationSections) {
+					String type = locationSection.get("__type"); //$NON-NLS-1$
+					for (LocationProviderDescriptor desc : descriptors) {
+						if (desc.getLocationProvider().getId().equals(type)) {
+							locations.add(desc.getLocationProvider().getLocation(locationSection));
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			// old folders
+			String[] savedFolders = section.getArray("folders"); //$NON-NLS-1$
+			if (savedFolders != null) {
+				for (String folder : savedFolders) {
+					locations.add(FileSystemLocationProvider.location(new File(folder)));
+				}
 			}
 		}
+		
 		String outputFolder = section.get("outputFolder"); //$NON-NLS-1$
 		boolean runHourly = true;
 		if (section.get("runHourly") != null) { //$NON-NLS-1$
@@ -60,7 +84,7 @@ public class SettingsManager {
 		if (section.get("useChecksums") != null) { //$NON-NLS-1$
 			useChecksums = section.getBoolean("useChecksums"); //$NON-NLS-1$
 		}
-		return new Settings(folders, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums);
+		return new Settings(locations, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums);
 	}
 
 	private IDialogSettings getSection() {
@@ -69,7 +93,18 @@ public class SettingsManager {
 	
 	public void setSettings(Settings settings) {
 		IDialogSettings section = getSection();
-		section.put("folders", settings.getFolders().toArray(ArrayUtils.EMPTY_STRING_ARRAY)); //$NON-NLS-1$
+
+		IDialogSettings locationsSection = section.addNewSection("locations"); //$NON-NLS-1$
+		int idx = 1;
+		for (ILocation location : settings.getLocations()) {
+			IDialogSettings locationSection = locationsSection.addNewSection("location." + idx++); //$NON-NLS-1$
+			locationSection.put("__type", location.getProvider().getId()); //$NON-NLS-1$
+			location.getProvider().saveSettings(location, locationSection);
+		}
+		
+		// clean out old folders section
+		section.put("folders", ArrayUtils.EMPTY_STRING_ARRAY); //$NON-NLS-1$
+		
 		section.put("outputFolder", settings.getOutputFolder()); //$NON-NLS-1$
 		section.put("runHourly", settings.isRunHourly()); //$NON-NLS-1$
 		section.put("dailyHours", settings.getDailyHours()); //$NON-NLS-1$

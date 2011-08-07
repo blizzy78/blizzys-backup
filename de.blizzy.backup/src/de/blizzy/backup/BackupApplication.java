@@ -212,7 +212,7 @@ public class BackupApplication implements IApplication {
 
 	static boolean areSettingsOkayToRunBackup() {
 		Settings settings = settingsManager.getSettings();
-		return !settings.getFolders().isEmpty() &&
+		return !settings.getLocations().isEmpty() &&
 			StringUtils.isNotBlank(settings.getOutputFolder()) &&
 			new File(settings.getOutputFolder()).exists();
 	}

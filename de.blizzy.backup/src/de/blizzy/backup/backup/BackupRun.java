@@ -20,16 +20,13 @@ package de.blizzy.backup.backup;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -61,6 +58,11 @@ import de.blizzy.backup.database.EntryType;
 import de.blizzy.backup.database.schema.tables.Backups;
 import de.blizzy.backup.database.schema.tables.Entries;
 import de.blizzy.backup.settings.Settings;
+import de.blizzy.backup.vfs.IFile;
+import de.blizzy.backup.vfs.IFileSystemEntry;
+import de.blizzy.backup.vfs.IFolder;
+import de.blizzy.backup.vfs.ILocation;
+import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 
 public class BackupRun implements Runnable {
 	private static final DateFormat BACKUP_PATH_FORMAT =
@@ -109,15 +111,15 @@ public class BackupRun implements Runnable {
 				.execute();
 			backupId = database.factory().lastID().intValue();
 			
-			for (String folder : settings.getFolders()) {
+			for (ILocation location : settings.getLocations()) {
 				if (!running) {
 					break;
 				}
 
 				try {
-					backupFolder(new File(folder), -1, folder);
+					backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
 				} catch (IOException e) {
-					// TODO
+					BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 				}
 			}
 			
@@ -139,9 +141,9 @@ public class BackupRun implements Runnable {
 			
 			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 		} catch (SQLException e) {
-			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
+			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} catch (RuntimeException e) {
-			BackupPlugin.getDefault().logError("Error while running backup", e); //$NON-NLS-1$
+			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} finally {
 			database.close();
 
@@ -191,48 +193,41 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private int backupFolder(File folder, int parentFolderId, String overrideName) throws SQLException, IOException {
-		DosFileAttributes attrs = Files.readAttributes(folder.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-		FileTime creationTime = null;
-		FileTime lastModifiedTime = null;
-		boolean hidden = false;
-		if (attrs != null) {
-			creationTime = attrs.creationTime();
-			lastModifiedTime = attrs.lastModifiedTime();
-			hidden = attrs.isHidden();
-		}
-
+	private int backupFolder(IFolder folder, int parentFolderId, String overrideName) throws SQLException, IOException {
+		FileTime creationTime = folder.getCreationTime();
+		FileTime lastModificationTime = folder.getLastModificationTime();
 		database.factory()
 			.insertInto(Entries.ENTRIES)
 			.set(Entries.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
 			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
 			.set(Entries.TYPE, Integer.valueOf(EntryType.FOLDER.getValue()))
 			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Entries.MODIFICATION_TIME, (lastModifiedTime != null) ? new Timestamp(lastModifiedTime.toMillis()) : null)
-			.set(Entries.HIDDEN, Boolean.valueOf(hidden))
+			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+			.set(Entries.HIDDEN, Boolean.valueOf(folder.isHidden()))
 			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
 			.execute();
 		int id = database.factory().lastID().intValue();
-		for (File f : folder.listFiles()) {
+		for (IFileSystemEntry entry : folder.list()) {
 			if (!running) {
 				break;
 			}
 			
 			try {
-				if (f.isDirectory()) {
-					backupFolder(f, id, null);
+				if (entry.isFolder()) {
+					backupFolder((IFolder) entry, id, null);
 				} else {
-					backupFile(f, id);
+					backupFile((IFile) entry, id);
 				}
 			} catch (IOException e) {
-				// TODO
+				BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
+						folder.getAbsolutePath(), e);
 			}
 		}
 		
 		return id;
 	}
 	
-	private void backupFile(File file, int parentFolderId) throws SQLException, IOException {
+	private void backupFile(IFile file, int parentFolderId) throws SQLException, IOException {
 		if ((numEntries % 50) == 0) {
 			checkDiskSpaceAndRemoveOldBackups();
 		}
@@ -240,15 +235,8 @@ public class BackupRun implements Runnable {
 		currentFile = file.getAbsolutePath();
 		fireBackupStatusChanged();
 		
-		DosFileAttributes attrs = Files.readAttributes(file.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-		FileTime creationTime = null;
-		FileTime lastModifiedTime = null;
-		boolean hidden = false;
-		if (attrs != null) {
-			creationTime = attrs.creationTime();
-			lastModifiedTime = attrs.lastModifiedTime();
-			hidden = attrs.isHidden();
-		}
+		FileTime creationTime = file.getCreationTime();
+		FileTime lastModificationTime = file.getLastModificationTime();
 
 		int fileId = -1;
 		String checksum = null;
@@ -259,26 +247,27 @@ public class BackupRun implements Runnable {
 			int entryId = findFileOrFolderEntryInPreviousBackup(file);
 			if (entryId > 0) {
 				Record record = database.factory()
-					.select(Entries.CREATION_TIME, Entries.MODIFICATION_TIME,
+					.select(Entries.MODIFICATION_TIME,
 							de.blizzy.backup.database.schema.tables.Files.ID,
 							de.blizzy.backup.database.schema.tables.Files.LENGTH,
 							de.blizzy.backup.database.schema.tables.Files.CHECKSUM)
 					.from(Entries.ENTRIES)
 					.join(de.blizzy.backup.database.schema.tables.Files.FILES)
 						.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
-					.where(Entries.ID.equal(Integer.valueOf(entryId)))
-					.fetchOne();
-				Timestamp entryCreateTime = record.getValue(Entries.CREATION_TIME);
-				long entryCreationTime = (entryCreateTime != null) ? entryCreateTime.getTime() : -1;
-				Timestamp entryModTime = record.getValue(Entries.MODIFICATION_TIME);
-				long entryModificationTime = (entryModTime != null) ? entryModTime.getTime() : -1;
-				long entryLength = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
-				if ((entryCreationTime > 0) && (creationTime != null) && (entryCreationTime == creationTime.toMillis()) &&
-					(entryModificationTime > 0) && (lastModifiedTime != null) && (entryModificationTime == lastModifiedTime.toMillis()) &&
-					(entryLength == file.length())) {
-					
-					fileId = record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
-					checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
+					.where(Entries.ID.equal(Integer.valueOf(entryId)),
+							Entries.TYPE.equal(Byte.valueOf((byte) EntryType.FILE.getValue())))
+					.fetchAny();
+				if (record != null) {
+					Timestamp entryModTime = record.getValue(Entries.MODIFICATION_TIME);
+					long entryModificationTime = (entryModTime != null) ? entryModTime.getTime() : -1;
+					long entryLength = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
+					if ((entryModificationTime > 0) &&
+						(lastModificationTime != null) && (entryModificationTime == lastModificationTime.toMillis()) &&
+						(entryLength == file.getLength())) {
+						
+						fileId = record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
+						checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
+					}
 				}
 			}
 		}
@@ -297,8 +286,8 @@ public class BackupRun implements Runnable {
 			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
 			.set(Entries.TYPE, Integer.valueOf(EntryType.FILE.getValue()))
 			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Entries.MODIFICATION_TIME, (lastModifiedTime != null) ? new Timestamp(lastModifiedTime.toMillis()) : null)
-			.set(Entries.HIDDEN, Boolean.valueOf(hidden))
+			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+			.set(Entries.HIDDEN, Boolean.valueOf(file.isHidden()))
 			.set(Entries.NAME, file.getName())
 			.set(Entries.FILE_ID, Integer.valueOf(fileId))
 			.execute();
@@ -306,9 +295,9 @@ public class BackupRun implements Runnable {
 		numEntries++;
 	}
 	
-	private int findFileOrFolderEntryInPreviousBackup(File file) throws SQLException {
+	private int findFileOrFolderEntryInPreviousBackup(IFileSystemEntry file) throws SQLException, IOException {
 		if (previousBackupId > 0) {
-			if (file.isDirectory()) {
+			if (file.isFolder()) {
 				// try to find folder as root folder
 				Record record = database.factory()
 					.select(Entries.ID)
@@ -322,16 +311,19 @@ public class BackupRun implements Runnable {
 			}
 			
 			// find folder in parent folder
-			int parentFolderId = findFileOrFolderEntryInPreviousBackup(file.getParentFile());
-			if (parentFolderId > 0) {
-				Record record = database.factory()
-					.select(Entries.ID)
-					.from(Entries.ENTRIES)
-					.where(Entries.NAME.equal(file.getName()), Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
-							Entries.BACKUP_ID.equal(Integer.valueOf(previousBackupId)))
-					.fetchAny();
-				if (record != null) {
-					return record.getValue(Entries.ID).intValue();
+			IFolder parentFolder = file.getParentFolder();
+			if (parentFolder != null) {
+				int parentFolderId = findFileOrFolderEntryInPreviousBackup(parentFolder);
+				if (parentFolderId > 0) {
+					Record record = database.factory()
+						.select(Entries.ID)
+						.from(Entries.ENTRIES)
+						.where(Entries.NAME.equal(file.getName()), Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
+								Entries.BACKUP_ID.equal(Integer.valueOf(previousBackupId)))
+						.fetchAny();
+					if (record != null) {
+						return record.getValue(Entries.ID).intValue();
+					}
 				}
 			}
 		}
@@ -339,28 +331,31 @@ public class BackupRun implements Runnable {
 		return -1;
 	}
 
-	private int findOldFile(File file, String checksum) throws SQLException {
+	private int findOldFile(IFile file, String checksum) throws SQLException, IOException {
 		Record record = database.factory()
 			.select(de.blizzy.backup.database.schema.tables.Files.ID)
 			.from(de.blizzy.backup.database.schema.tables.Files.FILES)
 			.where(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.equal(checksum),
-					de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(file.length())))
+					de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(file.getLength())))
 			.fetchAny();
 		return (record != null) ?
 				record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.ID).intValue() :
 				-1;
 	}
 
-	private int backupFileContents(File file, File backupFile, String backupFilePath, String checksum)
+	private int backupFileContents(IFile file, File backupFile, String backupFilePath, String checksum)
 		throws IOException, SQLException {
 
 		FileUtils.forceMkdir(backupFile.getParentFile());
+		InputStream in = null;
 		OutputStream out = null;
 		try {
+			in = new BufferedInputStream(file.getInputStream());
 			out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(backupFile)));
-			Files.copy(file.toPath(), out);
+			IOUtils.copy(in, out);
 			out.flush();
 		} finally {
+			IOUtils.closeQuietly(in);
 			IOUtils.closeQuietly(out);
 		}
 		
@@ -368,15 +363,15 @@ public class BackupRun implements Runnable {
 			.insertInto(de.blizzy.backup.database.schema.tables.Files.FILES)
 			.set(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH, backupFilePath)
 			.set(de.blizzy.backup.database.schema.tables.Files.CHECKSUM, checksum)
-			.set(de.blizzy.backup.database.schema.tables.Files.LENGTH, Long.valueOf(file.length()))
+			.set(de.blizzy.backup.database.schema.tables.Files.LENGTH, Long.valueOf(file.getLength()))
 			.execute();
 		return database.factory().lastID().intValue();
 	}
 	
-	private String getChecksum(File file) throws IOException {
+	private String getChecksum(IFile file) throws IOException {
 		InputStream in = null;
 		try {
-			in = new BufferedInputStream(new FileInputStream(file));
+			in = new BufferedInputStream(file.getInputStream());
 			return DigestUtils.md5Hex(in);
 		} finally {
 			IOUtils.closeQuietly(in);
@@ -620,7 +615,9 @@ public class BackupRun implements Runnable {
 	
 	private void removeFoldersIfEmpty(File folder) {
 		File outputFolder = new File(settings.getOutputFolder());
-		if (Utils.isParent(outputFolder, folder) && (folder.list().length == 0)) {
+		if (Utils.isParent(new FileSystemFileOrFolder(outputFolder), new FileSystemFileOrFolder(folder)) &&
+			(folder.list().length == 0)) {
+
 			try {
 				Files.delete(folder.toPath());
 				File parentFolder = folder.getParentFile();

@@ -87,6 +87,7 @@ import de.blizzy.backup.database.schema.tables.Backups;
 import de.blizzy.backup.database.schema.tables.Entries;
 import de.blizzy.backup.database.schema.tables.records.BackupsRecord;
 import de.blizzy.backup.settings.Settings;
+import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 
 public class RestoreDialog extends Dialog {
 	private Settings settings;
@@ -480,7 +481,7 @@ public class RestoreDialog extends Dialog {
 			if (new File(folder).list().length > 0) {
 				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
 						NLS.bind(Messages.FolderNotEmpty,
-								Utils.getSimpleName(new File(folder))));
+								Utils.getSimpleName(new FileSystemFileOrFolder(new File(folder)))));
 				continue;
 			}
 

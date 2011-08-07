@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -57,8 +56,14 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 import de.blizzy.backup.BackupApplication;
+import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
+import de.blizzy.backup.vfs.ILocation;
+import de.blizzy.backup.vfs.ILocationProvider;
+import de.blizzy.backup.vfs.LocationProviderDescriptor;
+import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
+import de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider;
 
 public class SettingsDialog extends Dialog {
 	private ListViewer foldersViewer;
@@ -99,17 +104,18 @@ public class SettingsDialog extends Dialog {
 		
 		foldersViewer = new ListViewer(foldersComposite, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		foldersViewer.setContentProvider(new ArrayContentProvider());
+		foldersViewer.setLabelProvider(new FoldersLabelProvider());
 		foldersViewer.setSorter(new ViewerSorter() {
 			@Override
 			public int compare(Viewer viewer, Object e1, Object e2) {
-				return ((String) e1).compareToIgnoreCase((String) e2);
+				return ((ILocation) e1).getDisplayName().compareToIgnoreCase(((ILocation) e2).getDisplayName());
 			}
 		});
 		GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
 		gd.widthHint = convertWidthInCharsToPixels(60);
 		gd.heightHint = convertHeightInCharsToPixels(10);
 		foldersViewer.getControl().setLayoutData(gd);
-		foldersViewer.setInput(new HashSet<String>(settings.getFolders()));
+		foldersViewer.setInput(new HashSet<ILocation>(settings.getLocations()));
 		
 		Composite folderButtonsComposite = new Composite(foldersComposite, SWT.NONE);
 		GridLayout layout = new GridLayout(1, false);
@@ -118,9 +124,17 @@ public class SettingsDialog extends Dialog {
 		folderButtonsComposite.setLayout(layout);
 		folderButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, false));
 
-		Button addFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
-		addFolderButton.setText(Messages.Button_Add);
-		addFolderButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		for (final LocationProviderDescriptor descriptor : BackupPlugin.getDefault().getLocationProviders()) {
+			Button button = new Button(folderButtonsComposite, SWT.PUSH);
+			button.setText(NLS.bind(Messages.Button_AddX, descriptor.getName()));
+			button.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+			button.addSelectionListener(new SelectionAdapter() {
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					addFolder(descriptor.getLocationProvider());
+				}
+			});
+		}
 		
 		final Button removeFolderButton = new Button(folderButtonsComposite, SWT.PUSH);
 		removeFolderButton.setText(Messages.Button_Remove);
@@ -195,13 +209,6 @@ public class SettingsDialog extends Dialog {
 			}
 		});
 		
-		addFolderButton.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				addFolder();
-			}
-		});
-		
 		removeFolderButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -261,7 +268,7 @@ public class SettingsDialog extends Dialog {
 					if (event.data != null) {
 						for (String file : (String[]) event.data) {
 							if (new File(file).isDirectory()) {
-								addFolder(file);
+								addFolder(FileSystemLocationProvider.location(new File(file)));
 							}
 						}
 					} else {
@@ -285,60 +292,64 @@ public class SettingsDialog extends Dialog {
 		return composite;
 	}
 
-	private void addFolder() {
-		DirectoryDialog dlg = new DirectoryDialog(getShell(), SWT.OPEN);
-		dlg.setText(Messages.Title_SelectFolder);
-		String folder = dlg.open();
-		if (folder != null) {
-			addFolder(folder);
+	private void addFolder(ILocationProvider provider) {
+		ILocation newLocation = provider.promptLocation(getShell());
+		if (newLocation != null) {
+			addFolder(newLocation);
 		}
 	}
-
-	private void addFolder(String folder) {
+	
+	private void addFolder(ILocation location) {
 		@SuppressWarnings("unchecked")
-		Set<String> folders = (Set<String>) foldersViewer.getInput();
+		Set<ILocation> locations = (Set<ILocation>) foldersViewer.getInput();
 
 		// is the new folder a child of any folder in the backup? if so, display error message
-		for (String oldFolder : folders) {
-			if (Utils.isParent(new File(oldFolder), new File(folder))) {
+		for (ILocation oldLocation : locations) {
+			if (Utils.isParent(oldLocation.getRootFolder(), location.getRootFolder())) {
 				MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
-						NLS.bind(Messages.ParentFolderInBackup, Utils.getSimpleName(new File(folder))));
+						NLS.bind(Messages.ParentFolderInBackup, Utils.getSimpleName(location.getRootFolder())));
 				return;
 			}
 		}
 		
 		// is the new folder the parent of the output folder? if so, display error message
 		String outputFolder = StringUtils.defaultString(outputFolderText.getText());
-		if (StringUtils.isNotBlank(outputFolder) && Utils.isParent(new File(folder), new File(outputFolder))) {
+		if (StringUtils.isNotBlank(outputFolder) &&
+			Utils.isParent(location.getRootFolder(), new FileSystemFileOrFolder(new File(outputFolder)))) {
+
 			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
-					NLS.bind(Messages.FolderIsParentOfBackupFolder, Utils.getSimpleName(new File(folder))));
+					NLS.bind(Messages.FolderIsParentOfBackupFolder, Utils.getSimpleName(location.getRootFolder())));
 			return;
 		}
 		
 		// is the new folder the same as the output folder? if so, display error message
-		if (StringUtils.isNotBlank(outputFolder) && new File(folder).equals(new File(outputFolder))) {
+		if (StringUtils.isNotBlank(outputFolder) &&
+			location.getRootFolder().equals(new FileSystemFileOrFolder(new File(outputFolder)))) {
+			
 			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
-					NLS.bind(Messages.FolderIsOutputFolder, Utils.getSimpleName(new File(folder))));
+					NLS.bind(Messages.FolderIsOutputFolder, Utils.getSimpleName(location.getRootFolder())));
 			return;
 		}
 		
 		// is the new folder a child of the output folder? if so, display error message
-		if (StringUtils.isNotBlank(outputFolder) && Utils.isParent(new File(outputFolder), new File(folder))) {
+		if (StringUtils.isNotBlank(outputFolder) &&
+			Utils.isParent(new FileSystemFileOrFolder(new File(outputFolder)), location.getRootFolder())) {
+
 			MessageDialog.openError(getShell(), Messages.Title_FolderCannotBeAdded,
-					NLS.bind(Messages.FolderIsChildOfOutputFolder, Utils.getSimpleName(new File(folder))));
+					NLS.bind(Messages.FolderIsChildOfOutputFolder, Utils.getSimpleName(location.getRootFolder())));
 			return;
 		}
 		
 		// is the new folder the parent of any folder in the backup? if so, remove those folders
-		for (String oldFolder : new HashSet<String>(folders)) {
-			if (Utils.isParent(new File(folder), new File(oldFolder))) {
-				folders.remove(oldFolder);
-				foldersViewer.remove(oldFolder);
+		for (ILocation oldLocation : new HashSet<ILocation>(locations)) {
+			if (Utils.isParent(location.getRootFolder(), oldLocation.getRootFolder())) {
+				locations.remove(oldLocation);
+				foldersViewer.remove(oldLocation);
 			}
 		}
 		
-		if (folders.add(folder)) {
-			foldersViewer.add(folder);
+		if (locations.add(location)) {
+			foldersViewer.add(location);
 		}
 	}
 
@@ -346,14 +357,14 @@ public class SettingsDialog extends Dialog {
 		@SuppressWarnings("unchecked")
 		List<String> selectedFolders = ((IStructuredSelection) foldersViewer.getSelection()).toList();
 		@SuppressWarnings("unchecked")
-		Set<String> folders = (Set<String>) foldersViewer.getInput();
+		Set<ILocation> folders = (Set<ILocation>) foldersViewer.getInput();
 		folders.removeAll(selectedFolders);
-		foldersViewer.remove(selectedFolders.toArray(ArrayUtils.EMPTY_STRING_ARRAY));
+		foldersViewer.remove(selectedFolders.toArray(new ILocation[0]));
 	}
 
 	private void browseOutputFolder() {
 		@SuppressWarnings("unchecked")
-		Set<String> folders = (Set<String>) foldersViewer.getInput();
+		Set<ILocation> locations = (Set<ILocation>) foldersViewer.getInput();
 		String folder = outputFolderText.getText();
 		if (StringUtils.isEmpty(folder)) {
 			folder = null;
@@ -369,7 +380,8 @@ public class SettingsDialog extends Dialog {
 			
 			if (Utils.isBackupFolder(folder)) {
 				if (MessageDialog.openConfirm(getShell(), Messages.Title_ExistingBackup,
-						NLS.bind(Messages.FolderContainsExistingBackup, Utils.getSimpleName(new File(folder))))) {
+						NLS.bind(Messages.FolderContainsExistingBackup,
+								Utils.getSimpleName(new FileSystemFileOrFolder(new File(folder)))))) {
 
 					break;
 				} else {
@@ -380,20 +392,21 @@ public class SettingsDialog extends Dialog {
 			// does folder contain files? if so, display error message
 			if (new File(folder).list().length > 0) {
 				MessageDialog.openError(getShell(), Messages.Title_InvalidFolder,
-						NLS.bind(Messages.FolderNotEmpty, Utils.getSimpleName(new File(folder))));
+						NLS.bind(Messages.FolderNotEmpty,
+								Utils.getSimpleName(new FileSystemFileOrFolder(new File(folder)))));
 				continue;
 			}
 
 			// display error message if:
 			// - folder is the same as any folder in the backup
 			// - folder is a child of any folder in the backup
-			for (String oldFolder : folders) {
-				// display error
-				if (new File(folder).equals(new File(oldFolder)) ||
-					Utils.isParent(new File(oldFolder), new File(folder))) {
+			for (ILocation oldLocation : locations) {
+				if (new FileSystemFileOrFolder(new File(folder)).equals(oldLocation.getRootFolder()) ||
+					Utils.isParent(oldLocation.getRootFolder(), new FileSystemFileOrFolder(new File(folder)))) {
 
 					MessageDialog.openError(getShell(), Messages.Title_InvalidFolder,
-							NLS.bind(Messages.OutputFolderIsInBackup, Utils.getSimpleName(new File(folder))));
+							NLS.bind(Messages.OutputFolderIsInBackup,
+									Utils.getSimpleName(new FileSystemFileOrFolder(new File(folder)))));
 					continue dialogLoop;
 				}
 			}
@@ -409,7 +422,7 @@ public class SettingsDialog extends Dialog {
 	protected void buttonPressed(int buttonId) {
 		if (buttonId == IDialogConstants.OK_ID) {
 			@SuppressWarnings("unchecked")
-			Set<String> folders = (Set<String>) foldersViewer.getInput();
+			Set<ILocation> folders = (Set<ILocation>) foldersViewer.getInput();
 			String outputFolder = outputFolderText.getText();
 			if (StringUtils.isBlank(outputFolder)) {
 				outputFolder = null;

@@ -22,6 +22,7 @@ import org.eclipse.osgi.util.NLS;
 public class Messages extends NLS {
 	private static final String BUNDLE_NAME = "de.blizzy.backup.messages"; //$NON-NLS-1$
 	public static String Button_Add;
+	public static String Button_AddX;
 	public static String Button_BackupNow;
 	public static String Button_Browse;
 	public static String Button_Exit;
@@ -44,9 +45,14 @@ public class Messages extends NLS {
 	public static String Idle;
 	public static String Label_BackupOutputFolder;
 	public static String Label_CurrentFolder;
+	public static String Label_Folder;
+	public static String Label_Host;
+	public static String Label_Login;
 	public static String Label_ModificationDate;
 	public static String Label_Name;
 	public static String Label_NextRun;
+	public static String Label_Password;
+	public static String Label_Port;
 	public static String Label_RunDaily;
 	public static String Label_RunHourly;
 	public static String Label_ShowBackupContentsAt;
@@ -82,6 +88,7 @@ public class Messages extends NLS {
 	public static String Title_SelectFolder;
 	public static String Title_SelectOutputFolder;
 	public static String Title_Settings;
+	public static String Title_SFTP;
 	public static String Title_WhenToBackup;
 	public static String Version;
 	public static String XEntries;

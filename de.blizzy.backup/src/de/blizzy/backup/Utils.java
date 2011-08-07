@@ -32,6 +32,7 @@ import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.widgets.Display;
 
 import de.blizzy.backup.database.Database;
+import de.blizzy.backup.vfs.IFolder;
 
 public final class Utils {
 	private static final String DIALOG_SECTION = BackupPlugin.ID + ".dialog"; //$NON-NLS-1$
@@ -72,7 +73,7 @@ public final class Utils {
 		}
 	}
 	
-	public static String getSimpleName(File folder) {
+	public static String getSimpleName(IFolder folder) {
 		String result = folder.getName();
 		if (StringUtils.isBlank(result)) {
 			result = folder.getAbsolutePath();
@@ -80,9 +81,9 @@ public final class Utils {
 		return result;
 	}
 	
-	public static boolean isParent(File parent, File child) {
-		for (; child != null; child = child.getParentFile()) {
-			if (parent.equals(child.getParentFile())) {
+	public static boolean isParent(IFolder parent, IFolder child) {
+		for (; child != null; child = child.getParentFolder()) {
+			if (parent.equals(child.getParentFolder())) {
 				return true;
 			}
 		}

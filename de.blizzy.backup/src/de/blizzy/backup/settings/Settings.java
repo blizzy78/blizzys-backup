@@ -19,18 +19,20 @@ package de.blizzy.backup.settings;
 
 import java.util.Set;
 
+import de.blizzy.backup.vfs.ILocation;
+
 public class Settings {
-	private Set<String> folders;
+	private Set<ILocation> locations;
 	private String outputFolder;
 	private boolean runHourly;
 	private int dailyHours;
 	private int dailyMinutes;
 	private boolean useChecksums;
 
-	public Settings(Set<String> folders, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes,
+	public Settings(Set<ILocation> locations, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes,
 			boolean useChecksums) {
 		
-		this.folders = folders;
+		this.locations = locations;
 		this.outputFolder = outputFolder;
 		this.runHourly = runHourly;
 		this.dailyHours = dailyHours;
@@ -38,8 +40,8 @@ public class Settings {
 		this.useChecksums = useChecksums;
 	}
 	
-	public Set<String> getFolders() {
-		return folders;
+	public Set<ILocation> getLocations() {
+		return locations;
 	}
 	
 	public String getOutputFolder() {

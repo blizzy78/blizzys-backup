@@ -15,25 +15,25 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs.sftp;
+package de.blizzy.backup.vfs.ftp;
 
 import de.blizzy.backup.vfs.IFolder;
 import de.blizzy.backup.vfs.RemoteFileOrFolder;
 
-class SftpFileOrFolder extends RemoteFileOrFolder<SftpLocation> {
-	SftpFileOrFolder(String file, SftpLocation location) {
+class FtpFileOrFolder extends RemoteFileOrFolder<FtpLocation> {
+	FtpFileOrFolder(String file, FtpLocation location) {
 		super(file, location);
 	}
 	
 	@Override
 	protected IFolder getFolder(String folder) {
-		SftpFileOrFolder result = new SftpFileOrFolder(folder, getLocation());
+		FtpFileOrFolder result = new FtpFileOrFolder(folder, getLocation());
 		result.setIsFolder();
 		return result;
 	}
 	
 	@Override
 	protected IFolder getFileOrFolder(String file) {
-		return new SftpFileOrFolder(file, getLocation());
+		return new FtpFileOrFolder(file, getLocation());
 	}
 }

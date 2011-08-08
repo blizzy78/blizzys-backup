@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs.sftp;
+package de.blizzy.backup.vfs;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.Dialog;
@@ -35,30 +35,43 @@ import org.eclipse.swt.widgets.Text;
 
 import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.Messages;
-import de.blizzy.backup.vfs.ILocation;
 
-class SftpLocationDialog extends Dialog {
-	private Text hostText;
-	private Text portText;
-	private Text loginText;
-	private Text passwordText;
-	private Text folderText;
-	private SftpLocationProvider provider;
+public abstract class RemoteLocationDialog extends Dialog {
+	private String title;
+	protected Text hostText;
+	protected Text portText;
+	protected Text loginText;
+	protected Text passwordText;
+	protected Text folderText;
 	private ILocation location;
+	private boolean credentialsOptional;
+	private int port = -1;
 
-	SftpLocationDialog(Shell parentShell, SftpLocationProvider provider) {
+	public RemoteLocationDialog(Shell parentShell) {
 		super(parentShell);
-
-		this.provider = provider;
 	}
 
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
 		newShell.setImages(BackupApplication.getWindowImages());
-		newShell.setText(Messages.Title_SFTP);
+		if (StringUtils.isNotBlank(title)) {
+			newShell.setText(title);
+		}
 	}
 	
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	
+	public void setCredentialsOptional(boolean credentialsOptional) {
+		this.credentialsOptional = credentialsOptional;
+	}
+	
+	public void setPort(int port) {
+		this.port = port;
+	}
+
 	@Override
 	protected boolean isResizable() {
 		return true;
@@ -87,6 +100,9 @@ class SftpLocationDialog extends Dialog {
 		gd = new GridData(SWT.FILL, SWT.CENTER, false, false);
 		gd.widthHint = convertWidthInCharsToPixels(4);
 		portText.setLayoutData(gd);
+		if ((port > 0) && (port < 65535)) {
+			portText.setText(String.valueOf(port));
+		}
 		
 		label = new Label(composite, SWT.NONE);
 		label.setText(Messages.Label_Login + ":"); //$NON-NLS-1$
@@ -166,8 +182,9 @@ class SftpLocationDialog extends Dialog {
 		String portStr = portText.getText();
 		boolean ok = StringUtils.isNotBlank(hostText.getText()) &&
 			StringUtils.isNotBlank(portStr) &&
-			StringUtils.isNotBlank(loginText.getText()) &&
-			StringUtils.isNotBlank(passwordText.getText()) &&
+			(credentialsOptional ||
+					(StringUtils.isNotBlank(loginText.getText()) &&
+							StringUtils.isNotBlank(passwordText.getText()))) &&
 			StringUtils.isNotBlank(folderText.getText());
 		if (ok) {
 			try {
@@ -183,13 +200,14 @@ class SftpLocationDialog extends Dialog {
 	@Override
 	protected void buttonPressed(int buttonId) {
 		if (buttonId == IDialogConstants.OK_ID) {
-			location = new SftpLocation(hostText.getText(), Integer.parseInt(portText.getText()),
-					loginText.getText(), passwordText.getText(), folderText.getText(), provider);
+			location = createLocation();
 		}
 		super.buttonPressed(buttonId);
 	}
 
-	ILocation getLocation() {
+	protected abstract ILocation createLocation();
+
+	public ILocation getLocation() {
 		return location;
 	}
 }

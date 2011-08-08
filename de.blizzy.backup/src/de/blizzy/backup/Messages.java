@@ -76,6 +76,7 @@ public class Messages extends NLS {
 	public static String Title_FolderCannotBeAdded;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;
+	public static String Title_FTP;
 	public static String Title_InvalidFolder;
 	public static String Title_License;
 	public static String Title_NewVersionAvailable;

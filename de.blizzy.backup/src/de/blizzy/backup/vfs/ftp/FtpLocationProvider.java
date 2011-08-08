@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs.sftp;
+package de.blizzy.backup.vfs.ftp;
 
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.window.Window;
@@ -28,26 +28,27 @@ import de.blizzy.backup.vfs.ILocationProvider;
 import de.blizzy.backup.vfs.RemoteLocation;
 import de.blizzy.backup.vfs.RemoteLocationDialog;
 
-public class SftpLocationProvider implements ILocationProvider {
+public class FtpLocationProvider implements ILocationProvider {
 	public String getId() {
-		return BackupPlugin.ID + ".locationProvider.sftp"; //$NON-NLS-1$
+		return BackupPlugin.ID + ".locationProvider.ftp"; //$NON-NLS-1$
 	}
 	
 	public ILocation promptLocation(Shell parentShell) {
 		RemoteLocationDialog dlg = new RemoteLocationDialog(parentShell) {
 			@Override
 			protected ILocation createLocation() {
-				return new SftpLocation(hostText.getText(), Integer.parseInt(portText.getText()),
-						loginText.getText(), passwordText.getText(), folderText.getText(), SftpLocationProvider.this);
+				return new FtpLocation(hostText.getText(), Integer.parseInt(portText.getText()),
+						loginText.getText(), passwordText.getText(), folderText.getText(), FtpLocationProvider.this);
 			}
 		};
-		dlg.setTitle(Messages.Title_SFTP);
-		dlg.setPort(22);
+		dlg.setTitle(Messages.Title_FTP);
+		dlg.setPort(21);
+		dlg.setCredentialsOptional(true);
 		return (dlg.open() == Window.OK) ? dlg.getLocation() : null;
 	}
 	
 	public ILocation getLocation(IDialogSettings section) {
-		return SftpLocation.getLocation(section, this);
+		return FtpLocation.getLocation(section, this);
 	}
 
 	public void saveSettings(ILocation location, IDialogSettings section) {

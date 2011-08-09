@@ -21,4 +21,5 @@ public interface ILocation {
 	String getDisplayName();
 	IFolder getRootFolder();
 	ILocationProvider getProvider();
+	void close();
 }

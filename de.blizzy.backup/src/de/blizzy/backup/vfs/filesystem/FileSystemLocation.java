@@ -53,4 +53,7 @@ public class FileSystemLocation implements ILocation {
 	public ILocationProvider getProvider() {
 		return provider;
 	}
+	
+	public void close() {
+	}
 }

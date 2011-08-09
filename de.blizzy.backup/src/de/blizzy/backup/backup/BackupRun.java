@@ -120,6 +120,8 @@ public class BackupRun implements Runnable {
 					backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
 				} catch (IOException e) {
 					BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+				} finally {
+					location.close();
 				}
 			}
 			

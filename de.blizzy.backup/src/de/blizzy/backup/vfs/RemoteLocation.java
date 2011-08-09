@@ -19,14 +19,16 @@ package de.blizzy.backup.vfs;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs.FileObject;
+import org.apache.commons.vfs.FileSystem;
 import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemManager;
 import org.apache.commons.vfs.FileSystemOptions;
 import org.apache.commons.vfs.UserAuthenticator;
 import org.apache.commons.vfs.VFS;
 import org.apache.commons.vfs.auth.StaticUserAuthenticator;
 import org.apache.commons.vfs.impl.DefaultFileSystemConfigBuilder;
 import org.eclipse.jface.dialogs.IDialogSettings;
+
+import de.blizzy.backup.BackupPlugin;
 
 public abstract class RemoteLocation implements ILocation {
 	private String host;
@@ -35,6 +37,7 @@ public abstract class RemoteLocation implements ILocation {
 	private String password;
 	private String folder;
 	private ILocationProvider provider;
+	private FileSystem fileSystem;
 
 	protected RemoteLocation(String host, int port, String login, String password, String folder,
 			ILocationProvider provider) {
@@ -91,22 +94,45 @@ public abstract class RemoteLocation implements ILocation {
 	}
 
 	FileObject resolveFile(String file) throws FileSystemException {
+		FileSystem fileSystem = getFileSystem();
+		return fileSystem.resolveFile(file);
+	}
+	
+	private FileSystem getFileSystem() throws FileSystemException {
+		if (fileSystem == null) {
+			FileSystemOptions opts = getFileSystemOptions();
+			FileObject fileObject = VFS.getManager().resolveFile(
+					getProtocol() + "://" + host + ":" + String.valueOf(port), //$NON-NLS-1$ //$NON-NLS-2$
+					opts);
+			fileSystem = fileObject.getFileSystem();
+		}
+		return fileSystem;
+	}
+	
+	private FileSystemOptions getFileSystemOptions() throws FileSystemException {
 		FileSystemOptions opts = new FileSystemOptions();
 		setFileSystemOptions(opts);
-		UserAuthenticator authenticator;
 		if (StringUtils.isNotBlank(login) && StringUtils.isNotBlank(password)) {
-			authenticator = new StaticUserAuthenticator(null, login, password);
-		} else {
-			authenticator = new StaticUserAuthenticator(null, "anonymous", "anonymous@"); //$NON-NLS-1$ //$NON-NLS-2$
+			UserAuthenticator authenticator = new StaticUserAuthenticator(null, login, password);
+			DefaultFileSystemConfigBuilder.getInstance().setUserAuthenticator(
+					opts, authenticator);
 		}
-		DefaultFileSystemConfigBuilder.getInstance().setUserAuthenticator(opts, authenticator);
-		FileSystemManager manager = VFS.getManager();
-		return manager.resolveFile(getProtocol() + "://" + host + ":" + String.valueOf(port) + file, opts); //$NON-NLS-1$ //$NON-NLS-2$
+		return opts;
 	}
 
 	/**
 	 * @throws FileSystemException  
 	 */
 	protected void setFileSystemOptions(@SuppressWarnings("unused") FileSystemOptions options) throws FileSystemException {
+	}
+	
+	public void close() {
+		if (fileSystem != null) {
+			try {
+				VFS.getManager().closeFileSystem(fileSystem);
+			} catch (FileSystemException e) {
+				BackupPlugin.getDefault().logError("error while closing filesystem", e); //$NON-NLS-1$
+			}
+		}
 	}
 }

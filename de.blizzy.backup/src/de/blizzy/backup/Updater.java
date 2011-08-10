@@ -134,6 +134,8 @@ public class Updater {
 					});
 				}
 			}
+		} else {
+			BackupPlugin.getDefault().getLog().log(status);
 		}
 
 		return restartNecessary;

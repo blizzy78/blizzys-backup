@@ -450,6 +450,16 @@ public class BackupRun implements Runnable {
 	private void removeOldBackups() throws SQLException {
 		removeOldBackupsDaily();
 		removeOldBackupsWeekly();
+		removeFailedBackups();
+	}
+
+	private void removeFailedBackups() throws SQLException {
+		Set<Integer> ids = new HashSet<Integer>(database.factory()
+			.select(Backups.ID)
+			.from(Backups.BACKUPS)
+			.where(Backups.NUM_ENTRIES.isNull())
+			.fetch(Backups.ID));
+		removeBackups(ids);
 	}
 	
 	private void removeOldBackupsDaily() throws SQLException {

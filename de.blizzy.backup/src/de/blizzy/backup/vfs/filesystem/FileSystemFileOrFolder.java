@@ -18,9 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup.vfs.filesystem;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.attribute.DosFileAttributes;
@@ -28,9 +27,12 @@ import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
+
 import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;
 import de.blizzy.backup.vfs.IFolder;
+import de.blizzy.backup.vfs.IOutputStreamProvider;
 
 public class FileSystemFileOrFolder implements IFile, IFolder {
 	private File file;
@@ -73,8 +75,14 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 		return result;
 	}
 
-	public InputStream getInputStream() throws IOException {
-		return new FileInputStream(file);
+	public void copy(IOutputStreamProvider outputStreamProvider) throws IOException {
+		OutputStream out = null;
+		try {
+			out = outputStreamProvider.getOutputStream();
+			Files.copy(file.toPath(), out);
+		} finally {
+			IOUtils.closeQuietly(out);
+		}
 	}
 	
 	public long getLength() {

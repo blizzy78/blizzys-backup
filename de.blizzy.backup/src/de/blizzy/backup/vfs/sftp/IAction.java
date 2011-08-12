@@ -15,11 +15,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs;
+package de.blizzy.backup.vfs.sftp;
 
 import java.io.IOException;
 
-public interface IFile extends IFileSystemEntry {
-	long getLength() throws IOException;
-	void copy(IOutputStreamProvider outputStreamProvider) throws IOException;
+interface IAction<T> {
+	T run() throws IOException;
+	boolean canRetry(IOException e);
 }

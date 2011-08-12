@@ -17,17 +17,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.backup;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.security.DigestOutputStream;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
@@ -35,6 +36,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -42,9 +44,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
@@ -62,6 +64,7 @@ import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;
 import de.blizzy.backup.vfs.IFolder;
 import de.blizzy.backup.vfs.ILocation;
+import de.blizzy.backup.vfs.IOutputStreamProvider;
 import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 
 public class BackupRun implements Runnable {
@@ -209,7 +212,13 @@ public class BackupRun implements Runnable {
 			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
 			.execute();
 		int id = database.factory().lastID().intValue();
-		for (IFileSystemEntry entry : folder.list()) {
+		List<IFileSystemEntry> entries = new ArrayList<IFileSystemEntry>(folder.list());
+		Collections.sort(entries, new Comparator<IFileSystemEntry>() {
+			public int compare(IFileSystemEntry e1, IFileSystemEntry e2) {
+				return e1.getName().compareTo(e2.getName());
+			}
+		});
+		for (IFileSystemEntry entry : entries) {
 			if (!running) {
 				break;
 			}
@@ -241,9 +250,8 @@ public class BackupRun implements Runnable {
 		FileTime lastModificationTime = file.getLastModificationTime();
 
 		int fileId = -1;
-		String checksum = null;
 		if (settings.isUseChecksums()) {
-			checksum = getChecksum(file);
+			String checksum = getChecksum(file);
 			fileId = findOldFile(file, checksum);
 		} else {
 			int entryId = findFileOrFolderEntryInPreviousBackup(file);
@@ -268,18 +276,14 @@ public class BackupRun implements Runnable {
 						(entryLength == file.getLength())) {
 						
 						fileId = record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
-						checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
 					}
 				}
 			}
 		}
 		if (fileId <= 0) {
-			if (checksum == null) {
-				checksum = getChecksum(file);
-			}
 			String backupFilePath = createBackupFilePath();
 			File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
-			fileId = backupFileContents(file, backupFile, backupFilePath, checksum);
+			fileId = backupFileContents(file, backupFile, backupFilePath);
 		}
 
 		database.factory()
@@ -345,22 +349,28 @@ public class BackupRun implements Runnable {
 				-1;
 	}
 
-	private int backupFileContents(IFile file, File backupFile, String backupFilePath, String checksum)
+	private int backupFileContents(IFile file, final File backupFile, String backupFilePath)
 		throws IOException, SQLException {
 
 		FileUtils.forceMkdir(backupFile.getParentFile());
-		InputStream in = null;
-		OutputStream out = null;
-		try {
-			in = new BufferedInputStream(file.getInputStream());
-			out = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(backupFile)));
-			IOUtils.copy(in, out);
-			out.flush();
-		} finally {
-			IOUtils.closeQuietly(in);
-			IOUtils.closeQuietly(out);
-		}
-		
+
+		final MessageDigest[] digest = new MessageDigest[1];
+		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
+			public OutputStream getOutputStream() throws IOException {
+				try {
+					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
+					return new DigestOutputStream(
+							new GZIPOutputStream(
+									new BufferedOutputStream(new FileOutputStream(backupFile))),
+							digest[0]);
+				} catch (GeneralSecurityException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		};
+		file.copy(outputStreamProvider);
+		String checksum = toHexString(digest[0]);
+
 		database.factory()
 			.insertInto(de.blizzy.backup.database.schema.tables.Files.FILES)
 			.set(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH, backupFilePath)
@@ -371,13 +381,23 @@ public class BackupRun implements Runnable {
 	}
 	
 	private String getChecksum(IFile file) throws IOException {
-		InputStream in = null;
-		try {
-			in = new BufferedInputStream(file.getInputStream());
-			return DigestUtils.md5Hex(in);
-		} finally {
-			IOUtils.closeQuietly(in);
-		}
+		final MessageDigest[] digest = new MessageDigest[1];
+		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
+			public OutputStream getOutputStream() throws IOException {
+				try {
+					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
+					return new DigestOutputStream(new NullOutputStream(), digest[0]);
+				} catch (GeneralSecurityException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		};
+		file.copy(outputStreamProvider);
+		return toHexString(digest[0]);
+	}
+
+	private String toHexString(MessageDigest digest) {
+		return Hex.encodeHexString(digest.digest());
 	}
 
 	private String createBackupFilePath() {

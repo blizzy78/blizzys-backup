@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup.vfs;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
-public interface IFile extends IFileSystemEntry {
-	long getLength() throws IOException;
-	void copy(IOutputStreamProvider outputStreamProvider) throws IOException;
+public interface IOutputStreamProvider {
+	OutputStream getOutputStream() throws IOException;
 }

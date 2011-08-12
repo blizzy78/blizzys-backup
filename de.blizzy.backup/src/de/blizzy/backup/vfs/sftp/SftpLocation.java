@@ -17,40 +17,128 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.vfs.sftp;
 
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemOptions;
-import org.apache.commons.vfs.provider.sftp.SftpFileSystemConfigBuilder;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.schmizz.sshj.Config;
+import net.schmizz.sshj.DefaultConfig;
+import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.common.Factory;
+import net.schmizz.sshj.common.Factory.Named;
+import net.schmizz.sshj.sftp.SFTPClient;
+import net.schmizz.sshj.transport.compression.Compression;
+import net.schmizz.sshj.transport.compression.NoneCompression;
+import net.schmizz.sshj.transport.compression.ZlibCompression;
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
+
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
 
+import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.vfs.IFolder;
-import de.blizzy.backup.vfs.RemoteLocation;
+import de.blizzy.backup.vfs.ILocation;
+import de.blizzy.backup.vfs.ILocationProvider;
 
-class SftpLocation extends RemoteLocation {
+class SftpLocation implements ILocation {
+	static final int MAX_TRIES = 5;
+	
+	private String host;
+	private int port;
+	private String login;
+	private String password;
+	private String folder;
+	private SftpLocationProvider provider;
+	private SSHClient sshClient;
+	private SFTPClient sftpClient;
+
 	public SftpLocation(String host, int port, String login, String password, String folder,
 			SftpLocationProvider provider) {
-
-		super(host, port, login, password, folder, provider);
+		
+		this.host = host;
+		this.port = port;
+		this.login = login;
+		this.password = password;
+		this.folder = folder;
+		this.provider = provider;
 	}
 
-	@Override
-	protected String getProtocol() {
-		return "sftp"; //$NON-NLS-1$
+	public String getDisplayName() {
+		return "sftp://" + host + folder; //$NON-NLS-1$
 	}
 
-	@Override
 	public IFolder getRootFolder() {
-		SftpFileOrFolder root = new SftpFileOrFolder(getFolder(), this);
-		root.setIsFolder();
-		return root;
+		return new SftpFileOrFolder(folder, this);
 	}
 
-	@Override
-	protected void setFileSystemOptions(FileSystemOptions options) throws FileSystemException {
-		SftpFileSystemConfigBuilder builder = SftpFileSystemConfigBuilder.getInstance();
-		builder.setStrictHostKeyChecking(options, "no"); //$NON-NLS-1$
-		builder.setCompression(options, "zlib,none"); //$NON-NLS-1$
+	public ILocationProvider getProvider() {
+		return provider;
+	}
+
+	public void close() {
+		disconnect();
+	}
+
+	void reconnect() {
+		disconnect();
 	}
 	
+	private void disconnect() {
+		if (sftpClient != null) {
+			try {
+				sftpClient.close();
+			} catch (IOException e) {
+				BackupPlugin.getDefault().logError("error while closing SFTP client", e); //$NON-NLS-1$
+			} finally {
+				sftpClient = null;
+			}
+		}
+
+		if (sshClient != null) {
+			try {
+				sshClient.close();
+			} catch (IOException e) {
+				BackupPlugin.getDefault().logError("error while closing SSH client", e); //$NON-NLS-1$
+			} finally {
+				sshClient = null;
+			}
+		}
+	}
+
+	String getHost() {
+		return host;
+	}
+
+	SFTPClient getSftpClient() throws IOException {
+		if (sftpClient == null) {
+			sftpClient = getSshClient().newSFTPClient();
+		}
+		return sftpClient;
+	}
+	
+	private SSHClient getSshClient() throws IOException {
+		if (sshClient == null) {
+			Config config = new DefaultConfig();
+			List<Named<Compression>> compressions = new ArrayList<Factory.Named<Compression>>();
+			compressions.add(new ZlibCompression.Factory());
+			compressions.add(new NoneCompression.Factory());
+			config.setCompressionFactories(compressions);
+			sshClient = new SSHClient(config);
+			sshClient.addHostKeyVerifier(new PromiscuousVerifier());
+			sshClient.connect(host, port);
+			sshClient.authPassword(login, password);
+		}
+		return sshClient;
+	}
+
+	public void saveSettings(IDialogSettings section) {
+		section.put("host", host); //$NON-NLS-1$
+		section.put("port", String.valueOf(port)); //$NON-NLS-1$
+		section.put("login", StringUtils.isNotBlank(login) ? login : StringUtils.EMPTY); //$NON-NLS-1$
+		section.put("password", StringUtils.isNotBlank(password) ? password : StringUtils.EMPTY); //$NON-NLS-1$
+		section.put("folder", folder); //$NON-NLS-1$
+	}
+
 	static SftpLocation getLocation(IDialogSettings section, SftpLocationProvider provider) {
 		return new SftpLocation(section.get("host"), Integer.parseInt(section.get("port")), //$NON-NLS-1$ //$NON-NLS-2$
 				section.get("login"), section.get("password"), section.get("folder"), provider); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$

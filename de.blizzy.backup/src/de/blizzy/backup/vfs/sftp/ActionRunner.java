@@ -15,11 +15,36 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs;
+package de.blizzy.backup.vfs.sftp;
 
 import java.io.IOException;
 
-public interface IFile extends IFileSystemEntry {
-	long getLength() throws IOException;
-	void copy(IOutputStreamProvider outputStreamProvider) throws IOException;
+class ActionRunner<T> {
+	private IAction<T> action;
+	private int maxTries;
+	private SftpLocation location;
+
+	ActionRunner(IAction<T> action, int maxTries, SftpLocation location) {
+		this.action = action;
+		this.maxTries = maxTries;
+		this.location = location;
+	}
+	
+	T run() throws IOException {
+		T result;
+		IOException ex = null;
+		for (int tries = 0; tries < maxTries; tries++) {
+			try {
+				result = action.run();
+				return result;
+			} catch (IOException e) {
+				ex = e;
+				location.reconnect();
+				if (action.canRetry(e)) {
+					continue;
+				}
+			}
+		}
+		throw ex;
+	}
 }

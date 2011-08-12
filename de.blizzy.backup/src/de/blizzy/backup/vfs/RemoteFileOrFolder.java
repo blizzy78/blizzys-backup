@@ -17,12 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.vfs;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs.FileContent;
 import org.apache.commons.vfs.FileObject;
@@ -30,6 +33,8 @@ import org.apache.commons.vfs.FileSystemException;
 import org.apache.commons.vfs.FileType;
 
 public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IFolder, IFile {
+	private static final int BUFFER_SIZE = 128 * 1024;
+	
 	private String file;
 	private L location;
 	private FileObject fileObject;
@@ -109,8 +114,17 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		isFolder = Boolean.TRUE;
 	}
 
-	public InputStream getInputStream() throws IOException {
-		return getFileContent().getInputStream();
+	public void copy(IOutputStreamProvider outputStreamProvider) throws IOException {
+		InputStream in = null;
+		OutputStream out = null;
+		try {
+			in = new BufferedInputStream(getFileContent().getInputStream(), BUFFER_SIZE);
+			out = outputStreamProvider.getOutputStream();
+			IOUtils.copy(in, out);
+		} finally {
+			IOUtils.closeQuietly(in);
+			IOUtils.closeQuietly(out);
+		}
 	}
 
 	public long getLength() throws IOException {

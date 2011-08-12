@@ -25,7 +25,6 @@ import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.vfs.ILocation;
 import de.blizzy.backup.vfs.ILocationProvider;
-import de.blizzy.backup.vfs.RemoteLocation;
 import de.blizzy.backup.vfs.RemoteLocationDialog;
 
 public class SftpLocationProvider implements ILocationProvider {
@@ -51,6 +50,6 @@ public class SftpLocationProvider implements ILocationProvider {
 	}
 
 	public void saveSettings(ILocation location, IDialogSettings section) {
-		((RemoteLocation) location).saveSettings(section);
+		((SftpLocation) location).saveSettings(section);
 	}
 }

@@ -32,7 +32,7 @@ import net.schmizz.sshj.transport.compression.NoneCompression;
 import net.schmizz.sshj.transport.compression.ZlibCompression;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
 
 import de.blizzy.backup.BackupPlugin;

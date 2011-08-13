@@ -23,7 +23,7 @@ import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.jface.dialogs.IDialogConstants;

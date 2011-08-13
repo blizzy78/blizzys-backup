@@ -20,7 +20,7 @@ package de.blizzy.backup;
 import java.text.DateFormat;
 import java.util.Date;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;

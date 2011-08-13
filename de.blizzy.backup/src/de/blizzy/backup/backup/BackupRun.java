@@ -47,7 +47,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 import org.jooq.Cursor;

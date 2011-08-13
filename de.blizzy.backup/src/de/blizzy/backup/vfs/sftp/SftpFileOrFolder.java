@@ -33,7 +33,7 @@ import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;

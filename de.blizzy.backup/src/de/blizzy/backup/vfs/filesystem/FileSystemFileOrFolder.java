@@ -21,14 +21,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.attribute.DosFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 
+import de.blizzy.backup.FileAttributes;
 import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;
 import de.blizzy.backup.vfs.IFolder;
@@ -36,6 +35,7 @@ import de.blizzy.backup.vfs.IOutputStreamProvider;
 
 public class FileSystemFileOrFolder implements IFile, IFolder {
 	private File file;
+	private FileAttributes attrs;
 
 	public FileSystemFileOrFolder(File file) {
 		this.file = file;
@@ -48,20 +48,24 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 	public String getAbsolutePath() {
 		return file.getAbsolutePath();
 	}
+	
+	private FileAttributes getAttributes() throws IOException {
+		if (attrs == null) {
+			attrs = FileAttributes.get(file.toPath());
+		}
+		return attrs;
+	}
 
 	public boolean isHidden() throws IOException {
-		DosFileAttributes attrs = Files.readAttributes(file.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-		return (attrs != null) ? attrs.isHidden() : false;
+		return getAttributes().isHidden();
 	}
 
 	public FileTime getCreationTime() throws IOException {
-		DosFileAttributes attrs = Files.readAttributes(file.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-		return (attrs != null) ? attrs.creationTime() : null;
+		return getAttributes().getCreationTime();
 	}
 
 	public FileTime getLastModificationTime() throws IOException {
-		DosFileAttributes attrs = Files.readAttributes(file.toPath(), DosFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-		return (attrs != null) ? attrs.lastModifiedTime() : null;
+		return getAttributes().getModificationTime();
 	}
 
 	public Set<IFileSystemEntry> list() {

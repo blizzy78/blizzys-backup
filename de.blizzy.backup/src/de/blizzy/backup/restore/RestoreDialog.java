@@ -24,9 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -79,6 +77,7 @@ import org.jooq.Record;
 
 import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.FileAttributes;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
@@ -558,15 +557,13 @@ public class RestoreDialog extends Dialog {
 			}
 		}
 
-		DosFileAttributeView view = Files.getFileAttributeView(outputPath, DosFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-		if (view != null) {
-			if (entry.hidden) {
-				view.setHidden(entry.hidden);
-			}
-			FileTime modTime = (entry.modificationTime != null) ? FileTime.fromMillis(entry.modificationTime.getTime()) : null;
-			FileTime createTime = (entry.creationTime != null) ? FileTime.fromMillis(entry.creationTime.getTime()) : null;
-			view.setTimes(modTime, null, createTime);
+		FileAttributes fileAttributes = FileAttributes.get(outputPath);
+		if (entry.hidden) {
+			fileAttributes.setHidden(entry.hidden);
 		}
+		FileTime createTime = (entry.creationTime != null) ? FileTime.fromMillis(entry.creationTime.getTime()) : null;
+		FileTime modTime = (entry.modificationTime != null) ? FileTime.fromMillis(entry.modificationTime.getTime()) : null;
+		fileAttributes.setTimes(createTime, modTime);
 		
 		if (entry.type != EntryType.FOLDER) {
 			monitor.worked(1);

@@ -138,6 +138,7 @@ public class BackupRun implements Runnable {
 			fireBackupStatusChanged();
 			try {
 				removeOldBackups();
+				consolidateDuplicateFiles();
 				removeUnusedFiles();
 				removeOldDatabaseBackups();
 			} finally {
@@ -620,7 +621,7 @@ public class BackupRun implements Runnable {
 			database.closeQuietly(cursor);
 		}
 		
-		BackupPlugin.getDefault().logMessage("Removing unused files: " + filesToRemove); //$NON-NLS-1$
+		BackupPlugin.getDefault().logMessage("removing unused files: " + filesToRemove); //$NON-NLS-1$
 		if (!filesToRemove.isEmpty()) {
 			removeFiles(filesToRemove);
 		}
@@ -701,6 +702,63 @@ public class BackupRun implements Runnable {
 			removeBackups(Collections.singleton(id));
 		}
 		return record != null;
+	}
+
+	private void consolidateDuplicateFiles() throws SQLException {
+		Cursor<Record> cursor = null;
+		try {
+			cursor = database.factory()
+				.select(de.blizzy.backup.database.schema.tables.Files.CHECKSUM,
+						de.blizzy.backup.database.schema.tables.Files.LENGTH)
+				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.groupBy(de.blizzy.backup.database.schema.tables.Files.CHECKSUM,
+						de.blizzy.backup.database.schema.tables.Files.LENGTH)
+				.having(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.count().greaterThan(Integer.valueOf(1)))
+				.fetchLazy();
+			while (cursor.hasNext()) {
+				Record record = cursor.fetchOne();
+				String checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
+				long length = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
+				consolidateDuplicateFiles(checksum, length);
+			}
+		} finally {
+			database.closeQuietly(cursor);
+		}
+	}
+	
+	private void consolidateDuplicateFiles(String checksum, long length) throws SQLException {
+		Cursor<Record> cursor = null;
+		try {
+			List<Integer> fileIds = database.factory()
+				.select(de.blizzy.backup.database.schema.tables.Files.ID)
+				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.where(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.equal(checksum),
+						de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(length)))
+				.fetch(de.blizzy.backup.database.schema.tables.Files.ID);
+			if (fileIds.size() >= 2) {
+				int masterFileId = fileIds.get(0).intValue();
+				fileIds = fileIds.subList(1, fileIds.size());
+				consolidateDuplicateFiles(masterFileId, fileIds);
+			}
+		} finally {
+			database.closeQuietly(cursor);
+		}
+	}
+
+	private void consolidateDuplicateFiles(int masterFileId, List<Integer> fileIds) throws SQLException {
+		BackupPlugin.getDefault().logMessage("consolidating duplicate files: " + masterFileId + " <- " + fileIds); //$NON-NLS-1$ //$NON-NLS-2$
+
+		Long masterId = Long.valueOf(masterFileId);
+		while (!fileIds.isEmpty()) {
+			int endIdx = Math.min(fileIds.size(), 10);
+			List<Integer> chunk = fileIds.subList(0, endIdx);
+			database.factory()
+				.update(Entries.ENTRIES)
+				.set(Entries.FILE_ID, masterId)
+				.where(Entries.FILE_ID.in(chunk))
+				.execute();
+			fileIds = fileIds.subList(endIdx, fileIds.size());
+		}
 	}
 
 	public boolean isCleaningUp() {

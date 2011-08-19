@@ -74,7 +74,6 @@ public class BackupRun implements Runnable {
 	private Settings settings;
 	private Thread thread;
 	private Database database;
-	private int previousBackupId = -1;
 	private int backupId;
 	private List<IBackupRunListener> listeners = new ArrayList<IBackupRunListener>();
 	private String currentFile;
@@ -98,15 +97,6 @@ public class BackupRun implements Runnable {
 		try {
 			database.open();
 			database.initialize(createBackupFilePath());
-			
-			Record record = database.factory()
-				.select(Backups.ID)
-				.from(Backups.BACKUPS)
-				.orderBy(Backups.RUN_TIME.desc())
-				.fetchAny();
-			if (record != null) {
-				previousBackupId = record.getValue(Backups.ID).intValue();
-			}
 			
 			database.factory()
 				.insertInto(Backups.BACKUPS)
@@ -253,33 +243,9 @@ public class BackupRun implements Runnable {
 		int fileId = -1;
 		if (settings.isUseChecksums()) {
 			String checksum = getChecksum(file);
-			fileId = findOldFile(file, checksum);
+			fileId = findOldFileViaChecksum(file, checksum);
 		} else {
-			int entryId = findFileOrFolderEntryInPreviousBackup(file);
-			if (entryId > 0) {
-				Record record = database.factory()
-					.select(Entries.MODIFICATION_TIME,
-							de.blizzy.backup.database.schema.tables.Files.ID,
-							de.blizzy.backup.database.schema.tables.Files.LENGTH,
-							de.blizzy.backup.database.schema.tables.Files.CHECKSUM)
-					.from(Entries.ENTRIES)
-					.join(de.blizzy.backup.database.schema.tables.Files.FILES)
-						.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
-					.where(Entries.ID.equal(Integer.valueOf(entryId)),
-							Entries.TYPE.equal(Byte.valueOf((byte) EntryType.FILE.getValue())))
-					.fetchAny();
-				if (record != null) {
-					Timestamp entryModTime = record.getValue(Entries.MODIFICATION_TIME);
-					long entryModificationTime = (entryModTime != null) ? entryModTime.getTime() : -1;
-					long entryLength = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
-					if ((entryModificationTime > 0) &&
-						(lastModificationTime != null) && (entryModificationTime == lastModificationTime.toMillis()) &&
-						(entryLength == file.getLength())) {
-						
-						fileId = record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
-					}
-				}
-			}
+			fileId = findOldFileViaTimestamp(file);
 		}
 		if (fileId <= 0) {
 			String backupFilePath = createBackupFilePath();
@@ -302,35 +268,78 @@ public class BackupRun implements Runnable {
 		numEntries++;
 	}
 	
-	private int findFileOrFolderEntryInPreviousBackup(IFileSystemEntry file) throws SQLException, IOException {
-		if (previousBackupId > 0) {
-			if (file.isFolder()) {
-				// try to find folder as root folder
+	private int findOldFileViaTimestamp(IFile file) throws SQLException, IOException {
+		FileTime lastModificationTime = file.getLastModificationTime();
+		long length = file.getLength();
+		Cursor<Record> cursor = null;
+		try {
+			cursor = database.factory()
+				.select(Backups.ID)
+				.from(Backups.BACKUPS)
+				.where(Backups.ID.notEqual(Integer.valueOf(backupId)))
+				.orderBy(Backups.RUN_TIME.desc())
+				.fetchLazy();
+			while (cursor.hasNext()) {
+				int backupId = cursor.fetchOne().getValue(Backups.ID).intValue();
+				int entryId = findFileOrFolderEntryInBackup(file, backupId);
+				if (entryId > 0) {
+					Record record = database.factory()
+						.select(Entries.MODIFICATION_TIME,
+								de.blizzy.backup.database.schema.tables.Files.ID,
+								de.blizzy.backup.database.schema.tables.Files.LENGTH)
+						.from(Entries.ENTRIES)
+						.join(de.blizzy.backup.database.schema.tables.Files.FILES)
+							.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
+						.where(Entries.ID.equal(Integer.valueOf(entryId)),
+								Entries.TYPE.equal(Byte.valueOf((byte) EntryType.FILE.getValue())))
+						.fetchAny();
+					if (record != null) {
+						Timestamp entryModTime = record.getValue(Entries.MODIFICATION_TIME);
+						long entryModificationTime = (entryModTime != null) ? entryModTime.getTime() : -1;
+						long entryLength = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
+						if ((entryModificationTime > 0) &&
+							(lastModificationTime != null) && (entryModificationTime == lastModificationTime.toMillis()) &&
+							(entryLength == length)) {
+							
+							return record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
+						}
+					}
+				}
+			}
+		} finally {
+			database.closeQuietly(cursor);
+		}
+		
+		return -1;
+	}
+	
+	private int findFileOrFolderEntryInBackup(IFileSystemEntry file, int backupId) throws SQLException, IOException {
+		if (file.isFolder()) {
+			// try to find folder as root folder
+			Record record = database.factory()
+				.select(Entries.ID)
+				.from(Entries.ENTRIES)
+				.where(Entries.NAME.equal(file.getAbsolutePath()), Entries.PARENT_ID.isNull(),
+						Entries.BACKUP_ID.equal(Integer.valueOf(backupId)))
+				.fetchAny();
+			if (record != null) {
+				return record.getValue(Entries.ID).intValue();
+			}
+		}
+		
+		// find folder in parent folder
+		IFolder parentFolder = file.getParentFolder();
+		if (parentFolder != null) {
+			int parentFolderId = findFileOrFolderEntryInBackup(parentFolder, backupId);
+			if (parentFolderId > 0) {
 				Record record = database.factory()
 					.select(Entries.ID)
 					.from(Entries.ENTRIES)
-					.where(Entries.NAME.equal(file.getAbsolutePath()), Entries.PARENT_ID.isNull(),
-							Entries.BACKUP_ID.equal(Integer.valueOf(previousBackupId)))
+					.where(Entries.NAME.equal(file.getName()), Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
+							Entries.BACKUP_ID.equal(Integer.valueOf(backupId)))
 					.fetchAny();
 				if (record != null) {
 					return record.getValue(Entries.ID).intValue();
-				}
-			}
-			
-			// find folder in parent folder
-			IFolder parentFolder = file.getParentFolder();
-			if (parentFolder != null) {
-				int parentFolderId = findFileOrFolderEntryInPreviousBackup(parentFolder);
-				if (parentFolderId > 0) {
-					Record record = database.factory()
-						.select(Entries.ID)
-						.from(Entries.ENTRIES)
-						.where(Entries.NAME.equal(file.getName()), Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
-								Entries.BACKUP_ID.equal(Integer.valueOf(previousBackupId)))
-						.fetchAny();
-					if (record != null) {
-						return record.getValue(Entries.ID).intValue();
-					}
 				}
 			}
 		}
@@ -338,7 +347,7 @@ public class BackupRun implements Runnable {
 		return -1;
 	}
 
-	private int findOldFile(IFile file, String checksum) throws SQLException, IOException {
+	private int findOldFileViaChecksum(IFile file, String checksum) throws SQLException, IOException {
 		Record record = database.factory()
 			.select(de.blizzy.backup.database.schema.tables.Files.ID)
 			.from(de.blizzy.backup.database.schema.tables.Files.FILES)

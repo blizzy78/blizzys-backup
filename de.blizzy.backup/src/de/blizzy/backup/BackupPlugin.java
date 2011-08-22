@@ -46,6 +46,7 @@ public class BackupPlugin extends AbstractUIPlugin {
 	public static final String COPYRIGHT_YEARS = "2011"; //$NON-NLS-1$
 
 	private static final String ARG_HIDDEN = "-hidden"; //$NON-NLS-1$
+	private static final String ARG_CHECK_GUI = "-checkGui"; //$NON-NLS-1$
 
 	private static BackupPlugin instance;
 
@@ -60,6 +61,11 @@ public class BackupPlugin extends AbstractUIPlugin {
 	boolean isHidden() {
 		return Boolean.parseBoolean(
 				StringUtils.defaultString(getApplicationArg(ARG_HIDDEN), Boolean.FALSE.toString()));
+	}
+	
+	boolean isCheckGui() {
+		return Boolean.parseBoolean(
+				StringUtils.defaultString(getApplicationArg(ARG_CHECK_GUI), Boolean.FALSE.toString()));
 	}
 	
 	private String getApplicationArg(String argName) {

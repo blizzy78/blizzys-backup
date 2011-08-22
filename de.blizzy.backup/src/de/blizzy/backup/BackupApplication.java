@@ -37,6 +37,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import de.blizzy.backup.backup.BackupEndedEvent;
 import de.blizzy.backup.backup.BackupRun;
 import de.blizzy.backup.backup.BackupRunAdapter;
+import de.blizzy.backup.check.CheckRun;
 import de.blizzy.backup.settings.ISettingsListener;
 import de.blizzy.backup.settings.Settings;
 import de.blizzy.backup.settings.SettingsManager;
@@ -255,5 +256,9 @@ public class BackupApplication implements IApplication {
 	
 	public static SettingsManager getSettingsManager() {
 		return settingsManager;
+	}
+
+	static void runCheck() {
+		new CheckRun(settingsManager.getSettings(), backupShell.getShell()).runCheck();
 	}
 }

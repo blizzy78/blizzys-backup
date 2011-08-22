@@ -61,6 +61,7 @@ class BackupShell {
 	private Shell shell;
 	private Button restoreButton;
 	private Button backupNowButton;
+	private Button checkButton;
 	private Label statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
@@ -74,6 +75,7 @@ class BackupShell {
 			updateStatusLabel();
 			updateRestoreButton();
 			updateBackupNowButton();
+			updateCheckButton();
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
@@ -81,6 +83,7 @@ class BackupShell {
 			updateStatusLabel();
 			updateRestoreButton();
 			updateBackupNowButton();
+			updateCheckButton();
 		}
 	};
 
@@ -176,6 +179,21 @@ class BackupShell {
 		label.setText(Messages.RunBackupNow);
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 
+		if (BackupPlugin.getDefault().isCheckGui()) {
+			checkButton = new Button(buttonsComposite, SWT.PUSH);
+			checkButton.setText(Messages.Button_Check);
+			checkButton.setFont(bigFont);
+			gd = new GridData(SWT.FILL, SWT.FILL, false, true);
+			gd.widthHint = (int) (extent.x * 1.6d);
+			gd.heightHint = extent.y * 2;
+			checkButton.setLayoutData(gd);
+			updateCheckButton();
+
+			label = new Label(buttonsComposite, SWT.NONE);
+			label.setText(Messages.CheckBackup);
+			label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+		}
+		
 		statusLabel = new Label(shell, SWT.NONE);
 		statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		updateStatusLabel();
@@ -209,6 +227,15 @@ class BackupShell {
 				BackupApplication.scheduleBackupRun(true);
 			}
 		});
+		
+		if (checkButton != null) {
+			checkButton.addSelectionListener(new SelectionAdapter() {
+				@Override
+				public void widgetSelected(SelectionEvent e) {
+					BackupApplication.runCheck();
+				}
+			});
+		}
 		
 		shell.addDisposeListener(new DisposeListener() {
 			public void widgetDisposed(DisposeEvent e) {
@@ -299,6 +326,18 @@ class BackupShell {
 		});
 	}
 
+	private void updateCheckButton() {
+		if (checkButton != null) {
+			Utils.runAsync(shell.getDisplay(), new Runnable() {
+				public void run() {
+					if (!checkButton.isDisposed()) {
+						checkButton.setEnabled((backupRun == null) && BackupApplication.areSettingsOkayToRunBackup());
+					}
+				}
+			});
+		}
+	}
+	
 	private void editSettings() {
 		new SettingsDialog(shell).open();
 	}
@@ -339,6 +378,7 @@ class BackupShell {
 		this.backupRun = backupRun;
 		backupRun.addListener(backupRunListener);
 		updateBackupNowButton();
+		updateCheckButton();
 	}
 
 	Shell getShell() {

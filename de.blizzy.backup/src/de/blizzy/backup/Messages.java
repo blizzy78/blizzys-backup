@@ -21,21 +21,26 @@ import org.eclipse.osgi.util.NLS;
 
 public class Messages extends NLS {
 	private static final String BUNDLE_NAME = "de.blizzy.backup.messages"; //$NON-NLS-1$
+	public static String BackupIntegrityIntact;
+	public static String BackupIntegrityNotIntact;
 	public static String Button_Add;
 	public static String Button_AddX;
 	public static String Button_BackupNow;
 	public static String Button_Browse;
+	public static String Button_Check;
 	public static String Button_Exit;
 	public static String Button_MinimizeOnly;
 	public static String Button_MoveUp;
 	public static String Button_Remove;
 	public static String Button_Restore;
 	public static String Button_Settings;
+	public static String CheckBackup;
 	public static String CheckingForNewVersion;
 	public static String CleaningUp;
 	public static String CompareFilesChecksum;
 	public static String CompareFilesMetadata;
 	public static String DropFoldersHelp;
+	public static String ErrorsWhileCheckingBackup;
 	public static String ExitApplication;
 	public static String FolderContainsExistingBackup;
 	public static String FolderIsChildOfOutputFolder;
@@ -67,7 +72,9 @@ public class Messages extends NLS {
 	public static String RestoreFromBackup;
 	public static String RunBackupNow;
 	public static String Running;
+	public static String Title_BackupIntegrityCheck;
 	public static String Title_BlizzysBackup;
+	public static String Title_CheckBackupIntegrity;
 	public static String Title_CloseBackupDatabase;
 	public static String Title_Error;
 	public static String Title_ExistingBackup;

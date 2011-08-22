@@ -661,7 +661,9 @@ public class BackupRun implements Runnable {
 			(folder.list().length == 0)) {
 
 			try {
+				BackupPlugin.getDefault().logMessage("deleting empty folder: " + folder.getAbsolutePath()); //$NON-NLS-1$
 				Files.delete(folder.toPath());
+
 				File parentFolder = folder.getParentFile();
 				removeFoldersIfEmpty(parentFolder);
 			} catch (IOException e) {

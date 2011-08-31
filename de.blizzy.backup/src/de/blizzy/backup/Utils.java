@@ -22,6 +22,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.UUID;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -36,6 +40,8 @@ import de.blizzy.backup.vfs.IFolder;
 
 public final class Utils {
 	private static final String DIALOG_SECTION = BackupPlugin.ID + ".dialog"; //$NON-NLS-1$
+	private static final DateFormat BACKUP_PATH_FORMAT =
+		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
 
 	private Utils() {}
 
@@ -50,6 +56,10 @@ public final class Utils {
 			section = parent.addNewSection(name);
 		}
 		return section;
+	}
+
+	public static String createBackupFilePath() {
+		return BACKUP_PATH_FORMAT.format(new Date()) + "/" + UUID.randomUUID().toString(); //$NON-NLS-1$
 	}
 
 	public static File toBackupFile(String backupFilePath, String outputFolder) {

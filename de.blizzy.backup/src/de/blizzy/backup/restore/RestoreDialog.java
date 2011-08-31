@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -77,6 +76,7 @@ import org.jooq.Record;
 
 import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Compression;
 import de.blizzy.backup.FileAttributes;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
@@ -124,6 +124,7 @@ public class RestoreDialog extends Dialog {
 				Cursor<BackupsRecord> cursor = null;
 				try {
 					database.open();
+					database.initialize();
 					
 					cursor = database.factory()
 						.selectFrom(Backups.BACKUPS).where(Backups.NUM_ENTRIES.isNotNull()).orderBy(Backups.RUN_TIME.desc())
@@ -175,6 +176,8 @@ public class RestoreDialog extends Dialog {
 		} catch (InterruptedException e) {
 			// not cancelable
 		}
+		
+		System.gc();
 		
 		return super.close();
 	}
@@ -432,7 +435,8 @@ public class RestoreDialog extends Dialog {
 		return database.factory()
 			.select(Entries.ID, Entries.PARENT_ID, Entries.NAME, Entries.TYPE, Entries.CREATION_TIME, Entries.MODIFICATION_TIME,
 					Entries.HIDDEN, de.blizzy.backup.database.schema.tables.Files.LENGTH,
-					de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH)
+					de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH,
+					de.blizzy.backup.database.schema.tables.Files.COMPRESSION)
 			.from(Entries.ENTRIES)
 			.leftOuterJoin(de.blizzy.backup.database.schema.tables.Files.FILES)
 				.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
@@ -460,7 +464,10 @@ public class RestoreDialog extends Dialog {
 			Long lengthLong = record.getValueAsLong(de.blizzy.backup.database.schema.tables.Files.LENGTH);
 			long length = (lengthLong != null) ? lengthLong.longValue() : -1;
 			String backupPath = record.getValueAsString(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
-			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath);
+			Integer compressionInt = record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.COMPRESSION);
+			Compression compression = (compressionInt != null) ? Compression.fromValue(compressionInt.intValue()) : null;
+			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath,
+					compression);
 			entries.add(entry);
 		}
 		return entries;
@@ -550,7 +557,7 @@ public class RestoreDialog extends Dialog {
 			outputPath = outputFile.toPath();
 			InputStream in = null;
 			try {
-				in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(inputFile)));
+				in = entry.compression.getInputStream(new BufferedInputStream(new FileInputStream(inputFile)));
 				Files.copy(in, outputPath);
 			} finally {
 				IOUtils.closeQuietly(in);

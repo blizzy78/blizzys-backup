@@ -11,7 +11,7 @@ package de.blizzy.backup.database.schema.tables;
 @SuppressWarnings("nls")
 public class Files extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord> {
 
-	private static final long serialVersionUID = -51882157;
+	private static final long serialVersionUID = 1969028711;
 
 	/**
 	 * The singleton instance of FILES
@@ -52,6 +52,11 @@ public class Files extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.dat
 	 * An uncommented item
 	 */
 	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Long> LENGTH = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Long>("LENGTH", org.jooq.impl.SQLDataType.BIGINT, FILES);
+
+	/**
+	 * An uncommented item
+	 */
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Byte> COMPRESSION = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Byte>("COMPRESSION", org.jooq.impl.SQLDataType.TINYINT, FILES);
 
 	/**
 	 * No further instances allowed

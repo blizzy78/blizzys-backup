@@ -31,8 +31,6 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -41,10 +39,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +51,7 @@ import org.jooq.Cursor;
 import org.jooq.Record;
 
 import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
@@ -68,9 +66,6 @@ import de.blizzy.backup.vfs.IOutputStreamProvider;
 import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 
 public class BackupRun implements Runnable {
-	private static final DateFormat BACKUP_PATH_FORMAT =
-		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
-	
 	private Settings settings;
 	private Thread thread;
 	private Database database;
@@ -96,7 +91,7 @@ public class BackupRun implements Runnable {
 		database = new Database(settings);
 		try {
 			database.open();
-			database.initialize(createBackupFilePath());
+			database.initialize();
 			
 			database.factory()
 				.insertInto(Backups.BACKUPS)
@@ -142,8 +137,8 @@ public class BackupRun implements Runnable {
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} finally {
 			database.close();
-
 			backupDatabase();
+			System.gc();
 			
 			fireBackupEnded();
 			
@@ -248,7 +243,7 @@ public class BackupRun implements Runnable {
 			fileId = findOldFileViaTimestamp(file);
 		}
 		if (fileId <= 0) {
-			String backupFilePath = createBackupFilePath();
+			String backupFilePath = Utils.createBackupFilePath();
 			File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
 			fileId = backupFileContents(file, backupFile, backupFilePath);
 		}
@@ -370,7 +365,7 @@ public class BackupRun implements Runnable {
 				try {
 					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
 					return new DigestOutputStream(
-							new GZIPOutputStream(
+							new BZip2CompressorOutputStream(
 									new BufferedOutputStream(new FileOutputStream(backupFile))),
 							digest[0]);
 				} catch (GeneralSecurityException e) {
@@ -386,6 +381,7 @@ public class BackupRun implements Runnable {
 			.set(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH, backupFilePath)
 			.set(de.blizzy.backup.database.schema.tables.Files.CHECKSUM, checksum)
 			.set(de.blizzy.backup.database.schema.tables.Files.LENGTH, Long.valueOf(file.getLength()))
+			.set(de.blizzy.backup.database.schema.tables.Files.COMPRESSION, Byte.valueOf((byte) Compression.BZIP2.getValue()))
 			.execute();
 		return database.factory().lastID().intValue();
 	}
@@ -410,10 +406,6 @@ public class BackupRun implements Runnable {
 		return Hex.encodeHexString(digest.digest());
 	}
 
-	private String createBackupFilePath() {
-		return BACKUP_PATH_FORMAT.format(new Date()) + "/" + UUID.randomUUID().toString(); //$NON-NLS-1$
-	}
-	
 	public void addListener(IBackupRunListener listener) {
 		synchronized (listeners) {
 			listeners.add(listener);

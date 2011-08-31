@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -29,8 +30,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.jooq.Cursor;
 import org.jooq.impl.Factory;
 
+import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
+import de.blizzy.backup.database.schema.tables.Files;
 import de.blizzy.backup.settings.Settings;
 
 public class Database {
@@ -106,7 +109,7 @@ public class Database {
 		}
 	}
 
-	public void initialize(String sampleBackupPath) {
+	public void initialize() {
 		try {
 			factory.query("CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
@@ -115,11 +118,13 @@ public class Database {
 					")") //$NON-NLS-1$
 					.execute();
 			
+			String sampleBackupPath = Utils.createBackupFilePath();
 			factory.query("CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
 					"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
 					"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-					"length BIGINT NOT NULL" + //$NON-NLS-1$
+					"length BIGINT NOT NULL, " + //$NON-NLS-1$
+					"compression TINYINT NOT NULL" + //$NON-NLS-1$
 					")") //$NON-NLS-1$
 					.execute();
 			factory.query("CREATE INDEX IF NOT EXISTS idx_old_files ON files " + //$NON-NLS-1$
@@ -148,9 +153,29 @@ public class Database {
 					"(name)") //$NON-NLS-1$
 					.execute();
 			
+			if (!isTableColumnExistent("files", "compression")) { //$NON-NLS-1$ //$NON-NLS-2$
+				factory.query("ALTER TABLE files ADD compression TINYINT NULL DEFAULT " + Compression.GZIP.getValue()) //$NON-NLS-1$
+					.execute();
+				factory.update(Files.FILES)
+					.set(Files.COMPRESSION, Byte.valueOf((byte) Compression.GZIP.getValue()))
+					.execute();
+				factory.query("ALTER TABLE files ALTER COLUMN compression TINYINT NOT NULL") //$NON-NLS-1$
+					.execute();
+			}
+			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();
 		} catch (SQLException e) {
+		}
+	}
+
+	private boolean isTableColumnExistent(String tableName, String columnName) throws SQLException {
+		ResultSet rs = null;
+		try {
+			rs = conn.getMetaData().getColumns(null, null, tableName, columnName);
+			return rs.next();
+		} finally {
+			closeQuietly(rs);
 		}
 	}
 
@@ -158,6 +183,16 @@ public class Database {
 		if (cursor != null) {
 			try {
 				cursor.close();
+			} catch (SQLException e) {
+				// ignore
+			}
+		}
+	}
+	
+	private void closeQuietly(ResultSet rs) {
+		if (rs != null) {
+			try {
+				rs.close();
 			} catch (SQLException e) {
 				// ignore
 			}

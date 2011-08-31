@@ -19,6 +19,7 @@ package de.blizzy.backup.restore;
 
 import java.util.Date;
 
+import de.blizzy.backup.Compression;
 import de.blizzy.backup.database.EntryType;
 
 class Entry {
@@ -31,9 +32,10 @@ class Entry {
 	boolean hidden;
 	long length;
 	String backupPath;
+	Compression compression;
 
 	Entry(int id, int parentId, String name, EntryType type, Date creationTime, Date modificationTime, boolean hidden,
-			long length, String backupPath) {
+			long length, String backupPath, Compression compression) {
 
 		this.id = id;
 		this.parentId = parentId;
@@ -44,5 +46,6 @@ class Entry {
 		this.hidden = hidden;
 		this.length = length;
 		this.backupPath = backupPath;
+		this.compression = compression;
 	}
 }

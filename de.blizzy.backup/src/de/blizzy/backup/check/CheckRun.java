@@ -27,7 +27,6 @@ import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.sql.SQLException;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
@@ -41,10 +40,12 @@ import org.jooq.Cursor;
 import org.jooq.Record;
 
 import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.Compression;
 import de.blizzy.backup.LengthOutputStream;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
+import de.blizzy.backup.database.schema.tables.Files;
 import de.blizzy.backup.settings.Settings;
 
 public class CheckRun implements IRunnableWithProgress {
@@ -95,10 +96,11 @@ public class CheckRun implements IRunnableWithProgress {
 		
 		try {
 			database.open();
+			database.initialize();
 			
 			int numFiles = database.factory()
 				.select(database.factory().count())
-				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+				.from(Files.FILES)
 				.fetchOne(database.factory().count())
 				.intValue();
 			monitor.beginTask(Messages.Title_CheckBackupIntegrity, numFiles);
@@ -106,17 +108,16 @@ public class CheckRun implements IRunnableWithProgress {
 			Cursor<Record> cursor = null;
 			try {
 				cursor = database.factory()
-					.select(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH,
-							de.blizzy.backup.database.schema.tables.Files.CHECKSUM,
-							de.blizzy.backup.database.schema.tables.Files.LENGTH)
-					.from(de.blizzy.backup.database.schema.tables.Files.FILES)
+					.select(Files.BACKUP_PATH, Files.CHECKSUM, Files.LENGTH, Files.COMPRESSION)
+					.from(Files.FILES)
 					.fetchLazy();
 				while (cursor.hasNext()) {
 					Record record = cursor.fetchOne();
-					String backupPath = record.getValue(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
-					String checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
-					long length = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
-					if (!checkFile(backupPath, checksum, length)) {
+					String backupPath = record.getValue(Files.BACKUP_PATH);
+					String checksum = record.getValue(Files.CHECKSUM);
+					long length = record.getValue(Files.LENGTH).longValue();
+					Compression compression = Compression.fromValue(record.getValue(Files.COMPRESSION).intValue());
+					if (!checkFile(backupPath, checksum, length, compression)) {
 						backupOk = false;
 						break;
 					}
@@ -131,17 +132,18 @@ public class CheckRun implements IRunnableWithProgress {
 			throw new InvocationTargetException(e);
 		} finally {
 			database.close();
+			System.gc();
 			monitor.done();
 		}
 	}
 
-	private boolean checkFile(String backupPath, String checksum, long length) throws IOException {
+	private boolean checkFile(String backupPath, String checksum, long length, Compression compression) throws IOException {
 		File backupFile = Utils.toBackupFile(backupPath, outputFolder);
 		if (backupFile.isFile()) {
 			InputStream in = null;
 			DigestOutputStream out = null;
 			try {
-				in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(backupFile)));
+				in = compression.getInputStream(new BufferedInputStream(new FileInputStream(backupFile)));
 				MessageDigest digest = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
 				LengthOutputStream lengthOut = new LengthOutputStream(new NullOutputStream());
 				out = new DigestOutputStream(lengthOut, digest);

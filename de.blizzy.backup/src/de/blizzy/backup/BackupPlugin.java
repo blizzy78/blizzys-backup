@@ -42,7 +42,7 @@ import de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider;
 
 public class BackupPlugin extends AbstractUIPlugin {
 	public static final String ID = "de.blizzy.backup"; //$NON-NLS-1$
-	public static final String VERSION = "1.2.2"; //$NON-NLS-1$
+	public static final String VERSION = "1.2.3"; //$NON-NLS-1$
 	public static final String COPYRIGHT_YEARS = "2011"; //$NON-NLS-1$
 
 	private static final String ARG_HIDDEN = "-hidden"; //$NON-NLS-1$

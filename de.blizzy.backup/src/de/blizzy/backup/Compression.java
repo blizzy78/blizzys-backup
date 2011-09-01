@@ -19,9 +19,12 @@ package de.blizzy.backup;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 
 public enum Compression {
 	GZIP(1),
@@ -47,6 +50,16 @@ public enum Compression {
 		throw new RuntimeException();
 	}
 	
+	public OutputStream getOutputStream(OutputStream out) throws IOException {
+		if (this == GZIP) {
+			return new GZIPOutputStream(out);
+		}
+		if (this == BZIP2) {
+			return new BZip2CompressorOutputStream(out);
+		}
+		throw new RuntimeException();
+	}
+
 	public static Compression fromValue(int value) {
 		if (value == GZIP.value) {
 			return GZIP;

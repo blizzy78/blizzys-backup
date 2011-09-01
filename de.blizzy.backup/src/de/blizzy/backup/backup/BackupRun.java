@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -365,7 +364,7 @@ public class BackupRun implements Runnable {
 				try {
 					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
 					return new DigestOutputStream(
-							new BZip2CompressorOutputStream(
+							Compression.BZIP2.getOutputStream(
 									new BufferedOutputStream(new FileOutputStream(backupFile))),
 							digest[0]);
 				} catch (GeneralSecurityException e) {

@@ -26,6 +26,7 @@ import org.eclipse.swt.widgets.Shell;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Messages;
+import de.blizzy.backup.Utils;
 import de.blizzy.backup.vfs.ILocation;
 import de.blizzy.backup.vfs.ILocationProvider;
 
@@ -38,7 +39,7 @@ public class FileSystemLocationProvider implements ILocationProvider {
 		DirectoryDialog dlg = new DirectoryDialog(parentShell, SWT.OPEN);
 		dlg.setText(Messages.Title_SelectFolder);
 		String folder = dlg.open();
-		return (folder != null) ? new FileSystemLocation(new File(folder), this) : null;
+		return (folder != null) ? new FileSystemLocation(Utils.toCanonicalFile(new File(folder)), this) : null;
 	}
 
 	public ILocation getLocation(IDialogSettings section) {

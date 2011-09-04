@@ -115,4 +115,13 @@ public final class Utils {
 			IOUtils.closeQuietly(out);
 		}
 	}
+	
+	public static File toCanonicalFile(File file) {
+		try {
+			return file.getCanonicalFile();
+		} catch (IOException e) {
+			// ignore
+		}
+		return file.getAbsoluteFile();
+	}
 }

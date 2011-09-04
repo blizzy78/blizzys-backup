@@ -103,11 +103,15 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 	}
 	
 	@Override
+	public int hashCode() {
+		return file.hashCode();
+	}
+	
+	@Override
 	public boolean equals(Object o) {
 		if (o == this) {
 			return true;
-		}
-		if ((o != null) && o.getClass().equals(getClass())) {
+		} else if ((o != null) && o.getClass().equals(getClass())) {
 			FileSystemFileOrFolder other = (FileSystemFileOrFolder) o;
 			return other.file.equals(file);
 		}

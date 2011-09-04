@@ -268,7 +268,7 @@ public class SettingsDialog extends Dialog {
 					if (event.data != null) {
 						for (String file : (String[]) event.data) {
 							if (new File(file).isDirectory()) {
-								addFolder(FileSystemLocationProvider.location(new File(file)));
+								addFolder(FileSystemLocationProvider.location(Utils.toCanonicalFile(new File(file))));
 							}
 						}
 					} else {

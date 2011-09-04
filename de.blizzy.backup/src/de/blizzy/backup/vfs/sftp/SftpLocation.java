@@ -143,4 +143,24 @@ class SftpLocation implements ILocation {
 		return new SftpLocation(section.get("host"), Integer.parseInt(section.get("port")), //$NON-NLS-1$ //$NON-NLS-2$
 				section.get("login"), section.get("password"), section.get("folder"), provider); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
+
+	@Override
+	public int hashCode() {
+		return host.hashCode() ^ port ^
+			login.hashCode() ^ password.hashCode() ^
+			folder.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		} else if ((o != null) && o.getClass().equals(getClass())) {
+			SftpLocation other = (SftpLocation) o;
+			return other.host.equals(host) && (other.port == port) &&
+				other.login.equals(login) && other.password.equals(password) &&
+				other.folder.equals(folder);
+		}
+		return false;
+	}
 }

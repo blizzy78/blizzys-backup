@@ -79,11 +79,18 @@ public abstract class RemoteLocation implements ILocation {
 	}
 
 	@Override
+	public int hashCode() {
+		return host.hashCode() ^ port ^
+			((login != null) ? login.hashCode() : StringUtils.EMPTY.hashCode()) ^
+			((password != null) ? password.hashCode() : StringUtils.EMPTY.hashCode()) ^
+			folder.hashCode();
+	}
+	
+	@Override
 	public boolean equals(Object o) {
 		if (o == this) {
 			return true;
-		}
-		if ((o != null) && o.getClass().equals(getClass())) {
+		} else if ((o != null) && o.getClass().equals(getClass())) {
 			RemoteLocation other = (RemoteLocation) o;
 			return other.host.equals(host) && (other.port == port) &&
 				StringUtils.equals(other.login, login) &&

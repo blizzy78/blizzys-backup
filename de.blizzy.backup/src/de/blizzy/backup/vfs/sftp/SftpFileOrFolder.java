@@ -152,4 +152,20 @@ class SftpFileOrFolder implements IFile, IFolder {
 	public long getLength() throws IOException {
 		return getFileAttributes().getSize();
 	}
+	
+	@Override
+	public int hashCode() {
+		return file.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		} else if ((o != null) && o.getClass().equals(getClass())) {
+			SftpFileOrFolder other = (SftpFileOrFolder) o;
+			return other.file.equals(file);
+		}
+		return false;
+	}
 }

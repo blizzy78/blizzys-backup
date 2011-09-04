@@ -56,4 +56,20 @@ public class FileSystemLocation implements ILocation {
 	
 	public void close() {
 	}
+	
+	@Override
+	public int hashCode() {
+		return root.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		} else if ((o != null) && o.getClass().equals(getClass())) {
+			FileSystemLocation other = (FileSystemLocation) o;
+			return other.root.equals(root);
+		}
+		return false;
+	}
 }

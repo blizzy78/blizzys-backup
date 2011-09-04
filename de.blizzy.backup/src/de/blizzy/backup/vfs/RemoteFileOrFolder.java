@@ -140,4 +140,20 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 	}
 	
 	protected abstract IFolder getFileOrFolder(String file);
+	
+	@Override
+	public int hashCode() {
+		return file.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		} else if ((o != null) && o.getClass().equals(getClass())) {
+			RemoteFileOrFolder<?> other = (RemoteFileOrFolder<?>) o;
+			return other.file.equals(file);
+		}
+		return false;
+	}
 }

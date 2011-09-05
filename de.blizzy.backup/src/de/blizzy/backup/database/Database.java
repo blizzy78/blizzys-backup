@@ -184,7 +184,7 @@ public class Database {
 					"(name)") //$NON-NLS-1$
 					.execute();
 			
-			if (!isTableColumnExistent("files", "compression")) { //$NON-NLS-1$ //$NON-NLS-2$
+			if (!isTableColumnExistent("FILES", "COMPRESSION")) { //$NON-NLS-1$ //$NON-NLS-2$
 				factory.query("ALTER TABLE files ADD compression TINYINT NULL DEFAULT " + Compression.GZIP.getValue()) //$NON-NLS-1$
 					.execute();
 				factory.update(de.blizzy.backup.database.schema.tables.Files.FILES)

@@ -101,7 +101,7 @@ public class RestoreDialog extends Dialog {
 		super(parentShell);
 
 		settings = BackupApplication.getSettingsManager().getSettings();
-		database = new Database(settings);
+		database = new Database(settings, false);
 	}
 	
 	@Override
@@ -135,6 +135,8 @@ public class RestoreDialog extends Dialog {
 						backups.add(backup);
 					}
 				} catch (SQLException e) {
+					throw new InvocationTargetException(e);
+				} catch (IOException e) {
 					throw new InvocationTargetException(e);
 				} finally {
 					database.closeQuietly(cursor);

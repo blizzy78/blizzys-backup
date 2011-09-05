@@ -92,7 +92,7 @@ public class CheckRun implements IRunnableWithProgress {
 	}
 
 	public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
-		database = new Database(settings);
+		database = new Database(settings, false);
 		
 		try {
 			database.open();

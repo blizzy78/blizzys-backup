@@ -19,6 +19,7 @@ package de.blizzy.backup.database;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -30,24 +31,38 @@ import org.apache.commons.lang3.StringUtils;
 import org.jooq.Cursor;
 import org.jooq.impl.Factory;
 
+import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
-import de.blizzy.backup.database.schema.tables.Files;
 import de.blizzy.backup.settings.Settings;
 
 public class Database {
 	private static final String DB_FOLDER_NAME = "$blizzysbackup"; //$NON-NLS-1$
 	
+	private File realFolder;
+	private boolean heavyDuty;
 	private File folder;
 	private Connection conn;
 	private Factory factory;
 
-	public Database(Settings settings) {
-		this.folder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
+	public Database(Settings settings, boolean heavyDuty) {
+		this.realFolder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
+		folder = realFolder;
+		this.heavyDuty = heavyDuty;
 	}
 	
-	public void open() throws SQLException {
+	public void open() throws SQLException, IOException {
+		if (heavyDuty) {
+			folder = Files.createTempDirectory("blizzysbackup-").toFile(); //$NON-NLS-1$
+			if (realFolder.isDirectory()) {
+				copyFolder(realFolder, folder, false);
+			}
+		}
+		open(folder);
+	}
+	
+	private void open(File folder) throws SQLException {
 		if (conn == null) {
 			try {
 				if (!folder.exists()) {
@@ -82,6 +97,17 @@ public class Database {
 				conn = null;
 				factory = null;
 			}
+			
+			if (heavyDuty) {
+				try {
+					copyFolder(folder, realFolder, false);
+					FileUtils.forceDelete(folder);
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("error while closing database", e); //$NON-NLS-1$
+				} finally {
+					folder = realFolder;
+				}
+			}
 		}
 	}
 	
@@ -94,17 +120,22 @@ public class Database {
 	}
 
 	public void backupDatabase(File targetFolder) throws IOException {
-		copyFolder(folder, targetFolder);
+		copyFolder(folder, targetFolder, true);
 	}
 
-	private void copyFolder(File folder, File targetFolder) throws IOException {
+	private void copyFolder(File folder, File targetFolder, boolean zipFiles) throws IOException {
 		FileUtils.forceMkdir(targetFolder);
+		FileUtils.cleanDirectory(targetFolder);
 		
 		for (File file : folder.listFiles()) {
 			if (file.isDirectory()) {
-				copyFolder(file, new File(targetFolder, file.getName()));
+				copyFolder(file, new File(targetFolder, file.getName()), zipFiles);
 			} else {
-				Utils.zipFile(file, new File(targetFolder, file.getName() + ".zip")); //$NON-NLS-1$
+				if (zipFiles) {
+					Utils.zipFile(file, new File(targetFolder, file.getName() + ".zip")); //$NON-NLS-1$
+				} else {
+					FileUtils.copyFile(file, new File(targetFolder, file.getName()));
+				}
 			}
 		}
 	}
@@ -156,8 +187,8 @@ public class Database {
 			if (!isTableColumnExistent("files", "compression")) { //$NON-NLS-1$ //$NON-NLS-2$
 				factory.query("ALTER TABLE files ADD compression TINYINT NULL DEFAULT " + Compression.GZIP.getValue()) //$NON-NLS-1$
 					.execute();
-				factory.update(Files.FILES)
-					.set(Files.COMPRESSION, Byte.valueOf((byte) Compression.GZIP.getValue()))
+				factory.update(de.blizzy.backup.database.schema.tables.Files.FILES)
+					.set(de.blizzy.backup.database.schema.tables.Files.COMPRESSION, Byte.valueOf((byte) Compression.GZIP.getValue()))
 					.execute();
 				factory.query("ALTER TABLE files ALTER COLUMN compression TINYINT NOT NULL") //$NON-NLS-1$
 					.execute();

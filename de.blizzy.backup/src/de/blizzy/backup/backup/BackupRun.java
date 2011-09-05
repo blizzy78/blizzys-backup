@@ -87,7 +87,7 @@ public class BackupRun implements Runnable {
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
-		database = new Database(settings);
+		database = new Database(settings, true);
 		try {
 			database.open();
 			database.initialize();
@@ -131,6 +131,8 @@ public class BackupRun implements Runnable {
 			
 			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 		} catch (SQLException e) {
+			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+		} catch (IOException e) {
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} catch (RuntimeException e) {
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$

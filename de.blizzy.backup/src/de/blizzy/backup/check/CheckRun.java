@@ -112,6 +112,10 @@ public class CheckRun implements IRunnableWithProgress {
 					.from(Files.FILES)
 					.fetchLazy();
 				while (cursor.hasNext()) {
+					if (monitor.isCanceled()) {
+						throw new InterruptedException();
+					}
+					
 					Record record = cursor.fetchOne();
 					String backupPath = record.getValue(Files.BACKUP_PATH);
 					String checksum = record.getValue(Files.CHECKSUM);

@@ -20,7 +20,6 @@ package de.blizzy.backup;
 import java.text.DateFormat;
 import java.util.Date;
 
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
@@ -50,6 +49,7 @@ import org.eclipse.swt.widgets.Shell;
 
 import de.blizzy.backup.backup.BackupEndedEvent;
 import de.blizzy.backup.backup.BackupRun;
+import de.blizzy.backup.backup.BackupStatus;
 import de.blizzy.backup.backup.BackupStatusEvent;
 import de.blizzy.backup.backup.IBackupRunListener;
 import de.blizzy.backup.restore.RestoreDialog;
@@ -66,13 +66,13 @@ class BackupShell {
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
 		public void backupStatusChanged(BackupStatusEvent e) {
-			updateStatusLabel();
+			updateStatusLabel(e.getStatus());
 		}
 		
 		public void backupEnded(BackupEndedEvent e) {
 			backupRun.removeListener(this);
 			backupRun = null;
-			updateStatusLabel();
+			updateStatusLabel(null);
 			updateRestoreButton();
 			updateBackupNowButton();
 			updateCheckButton();
@@ -80,7 +80,7 @@ class BackupShell {
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
 		public void settingsChanged() {
-			updateStatusLabel();
+			updateStatusLabel(null);
 			updateRestoreButton();
 			updateBackupNowButton();
 			updateCheckButton();
@@ -196,7 +196,7 @@ class BackupShell {
 		
 		statusLabel = new Label(shell, SWT.NONE);
 		statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		updateStatusLabel();
+		updateStatusLabel(null);
 
 		shell.pack();
 		
@@ -282,19 +282,12 @@ class BackupShell {
 		BackupApplication.getSettingsManager().removeListener(settingsListener);
 	}
 
-	private void updateStatusLabel() {
+	private void updateStatusLabel(final BackupStatus status) {
 		Utils.runAsync(shell.getDisplay(), new Runnable() {
 			public void run() {
 				if (!statusLabel.isDisposed()) {
-					if (backupRun != null) {
-						if (backupRun.isCleaningUp()) {
-							statusLabel.setText(Messages.Label_Status + ": " + Messages.CleaningUp); //$NON-NLS-1$
-						} else {
-							String currentFile = backupRun.getCurrentFile();
-							if (StringUtils.isNotBlank(currentFile)) {
-								statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + currentFile); //$NON-NLS-1$ //$NON-NLS-2$
-							}
-						}
+					if (status != null) {
+						statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + status.getText()); //$NON-NLS-1$ //$NON-NLS-2$
 					} else {
 						Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
 						statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$

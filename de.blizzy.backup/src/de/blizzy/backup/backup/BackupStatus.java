@@ -17,18 +17,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.backup;
 
-import java.util.EventObject;
+import de.blizzy.backup.Messages;
 
-public class BackupStatusEvent extends EventObject {
-	private BackupStatus status;
+public class BackupStatus {
+	public static final BackupStatus INITIALIZE = new BackupStatus(true, null, false);
+	public static final BackupStatus CLEANUP = new BackupStatus(false, null, true);
 
-	BackupStatusEvent(Object source, BackupStatus status) {
-		super(source);
+	private boolean initialize;
+	private String currentFile;
+	private boolean cleanup;
 
-		this.status = status;
+	public BackupStatus(String currentFile) {
+		this(false, currentFile, false);
 	}
 	
-	public BackupStatus getStatus() {
-		return status;
+	private BackupStatus(boolean initialize, String currentFile, boolean cleanup) {
+		this.initialize = initialize;
+		this.currentFile = currentFile;
+		this.cleanup = cleanup;
+	}
+
+	public String getText() {
+		if (initialize) {
+			return Messages.Initializing;
+		}
+		if (cleanup) {
+			return Messages.CleaningUp;
+		}
+		return currentFile;
 	}
 }

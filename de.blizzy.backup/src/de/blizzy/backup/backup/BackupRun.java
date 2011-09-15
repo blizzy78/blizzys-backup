@@ -70,9 +70,7 @@ public class BackupRun implements Runnable {
 	private Database database;
 	private int backupId;
 	private List<IBackupRunListener> listeners = new ArrayList<IBackupRunListener>();
-	private String currentFile;
 	private boolean running = true;
-	private boolean cleaningUp;
 	private int numEntries;
 
 	public BackupRun(Settings settings) {
@@ -86,6 +84,8 @@ public class BackupRun implements Runnable {
 
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
+		
+		fireBackupStatusChanged(BackupStatus.INITIALIZE);
 		
 		database = new Database(settings, true);
 		try {
@@ -118,16 +118,11 @@ public class BackupRun implements Runnable {
 				.where(Backups.ID.equal(Integer.valueOf(backupId)))
 				.execute();
 			
-			cleaningUp = true;
-			fireBackupStatusChanged();
-			try {
-				removeOldBackups();
-				consolidateDuplicateFiles();
-				removeUnusedFiles();
-				removeOldDatabaseBackups();
-			} finally {
-				cleaningUp = false;
-			}
+			fireBackupStatusChanged(BackupStatus.CLEANUP);
+			removeOldBackups();
+			consolidateDuplicateFiles();
+			removeUnusedFiles();
+			removeOldDatabaseBackups();
 			
 			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 		} catch (SQLException e) {
@@ -230,8 +225,7 @@ public class BackupRun implements Runnable {
 			checkDiskSpaceAndRemoveOldBackups();
 		}
 
-		currentFile = file.getAbsolutePath();
-		fireBackupStatusChanged();
+		fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath()));
 		
 		FileTime creationTime = file.getCreationTime();
 		FileTime lastModificationTime = file.getLastModificationTime();
@@ -425,8 +419,8 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
-	private void fireBackupStatusChanged() {
-		final BackupStatusEvent e = new BackupStatusEvent(this);
+	private void fireBackupStatusChanged(BackupStatus status) {
+		final BackupStatusEvent e = new BackupStatusEvent(this, status);
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
 				public void run() throws Exception {
@@ -455,10 +449,6 @@ public class BackupRun implements Runnable {
 				}
 			});
 		}
-	}
-
-	public String getCurrentFile() {
-		return currentFile;
 	}
 
 	public void stopBackupAndWait() {
@@ -763,9 +753,5 @@ public class BackupRun implements Runnable {
 				.execute();
 			fileIds = fileIds.subList(endIdx, fileIds.size());
 		}
-	}
-
-	public boolean isCleaningUp() {
-		return cleaningUp;
 	}
 }

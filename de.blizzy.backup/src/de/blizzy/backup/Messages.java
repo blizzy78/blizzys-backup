@@ -48,6 +48,7 @@ public class Messages extends NLS {
 	public static String FolderIsParentOfBackupFolder;
 	public static String FolderNotEmpty;
 	public static String Idle;
+	public static String Initializing;
 	public static String Label_BackupOutputFolder;
 	public static String Label_CurrentFolder;
 	public static String Label_Folder;

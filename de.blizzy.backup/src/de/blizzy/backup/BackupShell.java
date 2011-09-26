@@ -65,10 +65,12 @@ class BackupShell {
 	private Label statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
+		@Override
 		public void backupStatusChanged(BackupStatusEvent e) {
 			updateStatusLabel(e.getStatus());
 		}
 		
+		@Override
 		public void backupEnded(BackupEndedEvent e) {
 			backupRun.removeListener(this);
 			backupRun = null;
@@ -79,6 +81,7 @@ class BackupShell {
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
+		@Override
 		public void settingsChanged() {
 			updateStatusLabel(null);
 			updateRestoreButton();
@@ -107,6 +110,7 @@ class BackupShell {
 		
 		Canvas logoCanvas = new Canvas(logoAndHeaderComposite, SWT.DOUBLE_BUFFERED);
 		logoCanvas.addPaintListener(new PaintListener() {
+			@Override
 			public void paintControl(PaintEvent e) {
 				Image image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_48.png") //$NON-NLS-1$
 					.createImage(e.display);
@@ -238,6 +242,7 @@ class BackupShell {
 		}
 		
 		shell.addDisposeListener(new DisposeListener() {
+			@Override
 			public void widgetDisposed(DisposeEvent e) {
 				bigFont.dispose();
 			}
@@ -265,6 +270,7 @@ class BackupShell {
 		});
 		
 		shell.addDisposeListener(new DisposeListener() {
+			@Override
 			public void widgetDisposed(DisposeEvent e) {
 				handleDispose();
 			}
@@ -284,6 +290,7 @@ class BackupShell {
 
 	private void updateStatusLabel(final BackupStatus status) {
 		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			@Override
 			public void run() {
 				if (!statusLabel.isDisposed()) {
 					if (status != null) {
@@ -300,6 +307,7 @@ class BackupShell {
 	
 	private void updateRestoreButton() {
 		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			@Override
 			public void run() {
 				if (!restoreButton.isDisposed()) {
 					Settings settings = BackupApplication.getSettingsManager().getSettings();
@@ -311,6 +319,7 @@ class BackupShell {
 
 	private void updateBackupNowButton() {
 		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			@Override
 			public void run() {
 				if (!backupNowButton.isDisposed()) {
 					backupNowButton.setEnabled((backupRun == null) && BackupApplication.areSettingsOkayToRunBackup());
@@ -322,6 +331,7 @@ class BackupShell {
 	private void updateCheckButton() {
 		if (checkButton != null) {
 			Utils.runAsync(shell.getDisplay(), new Runnable() {
+				@Override
 				public void run() {
 					if (!checkButton.isDisposed()) {
 						checkButton.setEnabled((backupRun == null) && BackupApplication.areSettingsOkayToRunBackup());

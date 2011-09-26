@@ -36,47 +36,47 @@ public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	 * 
 	 * PRIMARY KEY
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer>("ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<>("ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> PARENT_ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer>("PARENT_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> PARENT_ID = new org.jooq.impl.TableFieldImpl<>("PARENT_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> BACKUP_ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer>("BACKUP_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> BACKUP_ID = new org.jooq.impl.TableFieldImpl<>("BACKUP_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Byte> TYPE = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Byte>("TYPE", org.jooq.impl.SQLDataType.TINYINT, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Byte> TYPE = new org.jooq.impl.TableFieldImpl<>("TYPE", org.jooq.impl.SQLDataType.TINYINT, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp> CREATION_TIME = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp>("CREATION_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp> CREATION_TIME = new org.jooq.impl.TableFieldImpl<>("CREATION_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp> MODIFICATION_TIME = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp>("MODIFICATION_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.sql.Timestamp> MODIFICATION_TIME = new org.jooq.impl.TableFieldImpl<>("MODIFICATION_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Boolean> HIDDEN = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Boolean>("HIDDEN", org.jooq.impl.SQLDataType.BOOLEAN, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Boolean> HIDDEN = new org.jooq.impl.TableFieldImpl<>("HIDDEN", org.jooq.impl.SQLDataType.BOOLEAN, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String> NAME = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String>("NAME", org.jooq.impl.SQLDataType.VARCHAR, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String> NAME = new org.jooq.impl.TableFieldImpl<>("NAME", org.jooq.impl.SQLDataType.VARCHAR, ENTRIES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> FILE_ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer>("FILE_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> FILE_ID = new org.jooq.impl.TableFieldImpl<>("FILE_ID", org.jooq.impl.SQLDataType.INTEGER, ENTRIES);
 
 	/**
 	 * No further instances allowed
@@ -96,7 +96,6 @@ public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public java.util.List<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.EntriesRecord>> getKeys() {
 		return java.util.Arrays.<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.EntriesRecord>>asList(de.blizzy.backup.database.schema.Keys.CONSTRAINT_C);
 	}

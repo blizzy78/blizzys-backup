@@ -41,10 +41,12 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 		this.file = file;
 	}
 	
+	@Override
 	public String getName() {
 		return file.getName();
 	}
 
+	@Override
 	public String getAbsolutePath() {
 		return file.getAbsolutePath();
 	}
@@ -56,20 +58,24 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 		return attrs;
 	}
 
+	@Override
 	public boolean isHidden() throws IOException {
 		return getAttributes().isHidden();
 	}
 
+	@Override
 	public FileTime getCreationTime() throws IOException {
 		return getAttributes().getCreationTime();
 	}
 
+	@Override
 	public FileTime getLastModificationTime() throws IOException {
 		return getAttributes().getModificationTime();
 	}
 
+	@Override
 	public Set<IFileSystemEntry> list() {
-		Set<IFileSystemEntry> result = new HashSet<IFileSystemEntry>();
+		Set<IFileSystemEntry> result = new HashSet<>();
 		File[] files = file.listFiles();
 		if (files != null) {
 			for (File f : files) {
@@ -79,6 +85,7 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 		return result;
 	}
 
+	@Override
 	public void copy(IOutputStreamProvider outputStreamProvider) throws IOException {
 		OutputStream out = null;
 		try {
@@ -89,15 +96,18 @@ public class FileSystemFileOrFolder implements IFile, IFolder {
 		}
 	}
 	
+	@Override
 	public long getLength() {
 		return file.length();
 	}
 	
+	@Override
 	public IFolder getParentFolder() {
 		File parent = file.getParentFile();
 		return (parent != null) ? new FileSystemFileOrFolder(parent) : null;
 	}
 	
+	@Override
 	public boolean isFolder() {
 		return file.isDirectory();
 	}

@@ -41,12 +41,14 @@ class EntryLabelProvider implements ITableLabelProvider {
 		fileImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/file.gif").createImage(device); //$NON-NLS-1$
 	}
 	
+	@Override
 	public void dispose() {
 		rootFolderImage.dispose();
 		folderImage.dispose();
 		fileImage.dispose();
 	}
 
+	@Override
 	public String getColumnText(Object element, int columnIndex) {
 		Entry entry = (Entry) element;
 		switch (columnIndex) {
@@ -66,6 +68,7 @@ class EntryLabelProvider implements ITableLabelProvider {
 		return null;
 	}
 
+	@Override
 	public Image getColumnImage(Object element, int columnIndex) {
 		if (columnIndex == 0) {
 			Entry entry = (Entry) element;
@@ -80,13 +83,16 @@ class EntryLabelProvider implements ITableLabelProvider {
 		return null;
 	}
 
+	@Override
 	public boolean isLabelProperty(Object element, String property) {
 		return true;
 	}
 
+	@Override
 	public void addListener(ILabelProviderListener listener) {
 	}
 
+	@Override
 	public void removeListener(ILabelProviderListener listener) {
 	}
 }

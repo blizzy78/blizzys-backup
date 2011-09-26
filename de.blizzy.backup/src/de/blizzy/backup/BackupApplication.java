@@ -54,6 +54,7 @@ public class BackupApplication implements IApplication {
 	private static SettingsManager settingsManager;
 	private static TrayIcon trayIcon;
 
+	@Override
 	public Object start(IApplicationContext context) throws IOException {
 		display = Display.getDefault();
 
@@ -74,6 +75,7 @@ public class BackupApplication implements IApplication {
 	
 			settingsManager = new SettingsManager();
 			settingsManager.addListener(new ISettingsListener() {
+				@Override
 				public void settingsChanged() {
 					if (backupRun == null) {
 						scheduleBackupRun(false);
@@ -218,6 +220,7 @@ public class BackupApplication implements IApplication {
 			new File(settings.getOutputFolder()).exists();
 	}
 	
+	@Override
 	public void stop() {
 		quit();
 	}

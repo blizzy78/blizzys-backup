@@ -115,7 +115,7 @@ public class SettingsDialog extends Dialog {
 		gd.widthHint = convertWidthInCharsToPixels(60);
 		gd.heightHint = convertHeightInCharsToPixels(10);
 		foldersViewer.getControl().setLayoutData(gd);
-		foldersViewer.setInput(new HashSet<ILocation>(settings.getLocations()));
+		foldersViewer.setInput(new HashSet<>(settings.getLocations()));
 		
 		Composite folderButtonsComposite = new Composite(foldersComposite, SWT.NONE);
 		GridLayout layout = new GridLayout(1, false);
@@ -204,6 +204,7 @@ public class SettingsDialog extends Dialog {
 		fileCompareChecksumRadio.setSelection(settings.isUseChecksums());
 		
 		foldersViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
 				removeFolderButton.setEnabled(!e.getSelection().isEmpty());
 			}
@@ -233,6 +234,7 @@ public class SettingsDialog extends Dialog {
 		DropTarget dropTarget = new DropTarget(foldersViewer.getControl(), DND.DROP_LINK);
 		dropTarget.setTransfer(new Transfer[] { FileTransfer.getInstance() });
 		dropTarget.addDropListener(new DropTargetListener() {
+			@Override
 			public void dragEnter(DropTargetEvent event) {
 				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
 					event.detail = DND.DROP_LINK;
@@ -242,9 +244,11 @@ public class SettingsDialog extends Dialog {
 				}
 			}
 
+			@Override
 			public void dragLeave(DropTargetEvent event) {
 			}
 
+			@Override
 			public void dragOver(DropTargetEvent event) {
 				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
 					event.detail = DND.DROP_LINK;
@@ -254,6 +258,7 @@ public class SettingsDialog extends Dialog {
 				}
 			}
 
+			@Override
 			public void dropAccept(DropTargetEvent event) {
 				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
 					event.detail = DND.DROP_LINK;
@@ -263,6 +268,7 @@ public class SettingsDialog extends Dialog {
 				}
 			}
 			
+			@Override
 			public void drop(DropTargetEvent event) {
 				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
 					if (event.data != null) {
@@ -279,6 +285,7 @@ public class SettingsDialog extends Dialog {
 				}
 			}
 			
+			@Override
 			public void dragOperationChanged(DropTargetEvent event) {
 				if (FileTransfer.getInstance().isSupportedType(event.currentDataType)) {
 					event.detail = DND.DROP_LINK;
@@ -341,7 +348,7 @@ public class SettingsDialog extends Dialog {
 		}
 		
 		// is the new folder the parent of any folder in the backup? if so, remove those folders
-		for (ILocation oldLocation : new HashSet<ILocation>(locations)) {
+		for (ILocation oldLocation : new HashSet<>(locations)) {
 			if (Utils.isParent(location.getRootFolder(), oldLocation.getRootFolder())) {
 				locations.remove(oldLocation);
 				foldersViewer.remove(oldLocation);

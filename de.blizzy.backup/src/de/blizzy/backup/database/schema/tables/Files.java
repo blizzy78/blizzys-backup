@@ -36,27 +36,27 @@ public class Files extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.dat
 	 * 
 	 * PRIMARY KEY
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Integer>("ID", org.jooq.impl.SQLDataType.INTEGER, FILES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<>("ID", org.jooq.impl.SQLDataType.INTEGER, FILES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String> BACKUP_PATH = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String>("BACKUP_PATH", org.jooq.impl.SQLDataType.VARCHAR, FILES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String> BACKUP_PATH = new org.jooq.impl.TableFieldImpl<>("BACKUP_PATH", org.jooq.impl.SQLDataType.VARCHAR, FILES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String> CHECKSUM = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String>("CHECKSUM", org.jooq.impl.SQLDataType.VARCHAR, FILES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.String> CHECKSUM = new org.jooq.impl.TableFieldImpl<>("CHECKSUM", org.jooq.impl.SQLDataType.VARCHAR, FILES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Long> LENGTH = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Long>("LENGTH", org.jooq.impl.SQLDataType.BIGINT, FILES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Long> LENGTH = new org.jooq.impl.TableFieldImpl<>("LENGTH", org.jooq.impl.SQLDataType.BIGINT, FILES);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Byte> COMPRESSION = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Byte>("COMPRESSION", org.jooq.impl.SQLDataType.TINYINT, FILES);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Byte> COMPRESSION = new org.jooq.impl.TableFieldImpl<>("COMPRESSION", org.jooq.impl.SQLDataType.TINYINT, FILES);
 
 	/**
 	 * No further instances allowed
@@ -76,7 +76,6 @@ public class Files extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.dat
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public java.util.List<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.FilesRecord>> getKeys() {
 		return java.util.Arrays.<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.FilesRecord>>asList(de.blizzy.backup.database.schema.Keys.CONSTRAINT_3);
 	}

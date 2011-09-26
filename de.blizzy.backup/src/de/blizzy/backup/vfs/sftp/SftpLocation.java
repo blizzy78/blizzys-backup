@@ -24,7 +24,6 @@ import java.util.List;
 import net.schmizz.sshj.Config;
 import net.schmizz.sshj.DefaultConfig;
 import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.common.Factory;
 import net.schmizz.sshj.common.Factory.Named;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.compression.Compression;
@@ -63,18 +62,22 @@ class SftpLocation implements ILocation {
 		this.provider = provider;
 	}
 
+	@Override
 	public String getDisplayName() {
 		return "sftp://" + host + folder; //$NON-NLS-1$
 	}
 
+	@Override
 	public IFolder getRootFolder() {
 		return new SftpFileOrFolder(folder, this);
 	}
 
+	@Override
 	public ILocationProvider getProvider() {
 		return provider;
 	}
 
+	@Override
 	public void close() {
 		disconnect();
 	}
@@ -119,7 +122,7 @@ class SftpLocation implements ILocation {
 	private SSHClient getSshClient() throws IOException {
 		if (sshClient == null) {
 			Config config = new DefaultConfig();
-			List<Named<Compression>> compressions = new ArrayList<Factory.Named<Compression>>();
+			List<Named<Compression>> compressions = new ArrayList<>();
 			compressions.add(new ZlibCompression.Factory());
 			compressions.add(new NoneCompression.Factory());
 			config.setCompressionFactories(compressions);

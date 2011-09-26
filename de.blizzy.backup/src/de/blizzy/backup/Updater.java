@@ -53,6 +53,7 @@ public class Updater {
 		if (needsCheck()) {
 			final ProgressMonitorDialog pmd = new ProgressMonitorDialog(shell);
 			IRunnableWithProgress runnable = new IRunnableWithProgress() {
+				@Override
 				@SuppressWarnings("synthetic-access")
 				public void run(IProgressMonitor monitor) throws InvocationTargetException {
 					SubMonitor progress = SubMonitor.convert(monitor);
@@ -96,8 +97,10 @@ public class Updater {
 		progress.beginTask(Messages.CheckingForNewVersion, 2);
 		
 		BundleContext bundleContext = BackupPlugin.getDefault().getBundle().getBundleContext();
-		ServiceReference ref = bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
-		IProvisioningAgent agent = (IProvisioningAgent) bundleContext.getService(ref);
+		@SuppressWarnings("unchecked")
+		ServiceReference<IProvisioningAgent> ref =
+		(ServiceReference<IProvisioningAgent>) bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
+		IProvisioningAgent agent = bundleContext.getService(ref);
 		boolean restartNecessary = false;
 		ProvisioningSession session = new ProvisioningSession(agent);
 		final UpdateOperation op = new UpdateOperation(session);
@@ -106,6 +109,7 @@ public class Updater {
 		if (status.getCode() == UpdateOperation.STATUS_NOTHING_TO_UPDATE) {
 			if (showDialogIfNoUpdatesAvailable) {
 				shell.getDisplay().syncExec(new Runnable() {
+					@Override
 					public void run() {
 						MessageDialog.openInformation(shell, Messages.Title_NoNewVersionAvailable, Messages.NoNewVersionAvailable);
 					}
@@ -114,6 +118,7 @@ public class Updater {
 		} else if (status.isOK()) {
 			final boolean[] installUpdates = new boolean[1];
 			shell.getDisplay().syncExec(new Runnable() {
+				@Override
 				public void run() {
 					installUpdates[0] = MessageDialog.openConfirm(shell,
 							Messages.Title_NewVersionAvailable, Messages.NewVersionAvailable);
@@ -128,6 +133,7 @@ public class Updater {
 					BackupPlugin.getDefault().getLog().log(status);
 					final IStatus myStatus = status;
 					shell.getDisplay().syncExec(new Runnable() {
+						@Override
 						public void run() {
 							ErrorDialog.openError(shell, Messages.Title_Error, null, myStatus);
 						}

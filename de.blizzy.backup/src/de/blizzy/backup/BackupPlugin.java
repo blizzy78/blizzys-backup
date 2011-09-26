@@ -98,7 +98,7 @@ public class BackupPlugin extends AbstractUIPlugin {
 	}
 	
 	public List<LocationProviderDescriptor> getLocationProviders() {
-		List<LocationProviderDescriptor> result = new ArrayList<LocationProviderDescriptor>();
+		List<LocationProviderDescriptor> result = new ArrayList<>();
 		IExtensionPoint point = Platform.getExtensionRegistry().getExtensionPoint(ID + ".locationProviders"); //$NON-NLS-1$
 		IExtension[] extensions = point.getExtensions();
 		for (IExtension extension : extensions) {
@@ -114,6 +114,7 @@ public class BackupPlugin extends AbstractUIPlugin {
 			}
 		}
 		Collections.sort(result, new Comparator<LocationProviderDescriptor>() {
+			@Override
 			public int compare(LocationProviderDescriptor d1, LocationProviderDescriptor d2) {
 				if (d1.getLocationProvider() instanceof FileSystemLocationProvider) {
 					return -1;

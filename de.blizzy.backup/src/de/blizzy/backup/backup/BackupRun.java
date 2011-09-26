@@ -69,7 +69,7 @@ public class BackupRun implements Runnable {
 	private Thread thread;
 	private Database database;
 	private int backupId;
-	private List<IBackupRunListener> listeners = new ArrayList<IBackupRunListener>();
+	private List<IBackupRunListener> listeners = new ArrayList<>();
 	private boolean running = true;
 	private int numEntries;
 
@@ -82,6 +82,7 @@ public class BackupRun implements Runnable {
 		thread.start();
 	}
 
+	@Override
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
 		
@@ -125,11 +126,7 @@ public class BackupRun implements Runnable {
 			removeOldDatabaseBackups();
 			
 			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
-		} catch (SQLException e) {
-			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
-		} catch (IOException e) {
-			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
-		} catch (RuntimeException e) {
+		} catch (SQLException | IOException | RuntimeException e) {
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} finally {
 			database.close();
@@ -157,7 +154,7 @@ public class BackupRun implements Runnable {
 		File outputFolder = new File(settings.getOutputFolder());
 		File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
 		if (dbBackupRootFolder.isDirectory()) {
-			List<Long> timestamps = new ArrayList<Long>();
+			List<Long> timestamps = new ArrayList<>();
 			for (File f : dbBackupRootFolder.listFiles()) {
 				if (f.isDirectory()) {
 					timestamps.add(Long.valueOf(f.getName()));
@@ -194,8 +191,9 @@ public class BackupRun implements Runnable {
 			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
 			.execute();
 		int id = database.factory().lastID().intValue();
-		List<IFileSystemEntry> entries = new ArrayList<IFileSystemEntry>(folder.list());
+		List<IFileSystemEntry> entries = new ArrayList<>(folder.list());
 		Collections.sort(entries, new Comparator<IFileSystemEntry>() {
+			@Override
 			public int compare(IFileSystemEntry e1, IFileSystemEntry e2) {
 				return e1.getName().compareTo(e2.getName());
 			}
@@ -356,6 +354,7 @@ public class BackupRun implements Runnable {
 
 		final MessageDigest[] digest = new MessageDigest[1];
 		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
+			@Override
 			public OutputStream getOutputStream() throws IOException {
 				try {
 					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
@@ -384,6 +383,7 @@ public class BackupRun implements Runnable {
 	private String getChecksum(IFile file) throws IOException {
 		final MessageDigest[] digest = new MessageDigest[1];
 		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
+			@Override
 			public OutputStream getOutputStream() throws IOException {
 				try {
 					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
@@ -415,7 +415,7 @@ public class BackupRun implements Runnable {
 	
 	private List<IBackupRunListener> getListeners() {
 		synchronized (listeners) {
-			return new ArrayList<IBackupRunListener>(listeners);
+			return new ArrayList<>(listeners);
 		}
 	}
 	
@@ -423,10 +423,12 @@ public class BackupRun implements Runnable {
 		final BackupStatusEvent e = new BackupStatusEvent(this, status);
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
+				@Override
 				public void run() throws Exception {
 					listener.backupStatusChanged(e);
 				}
 				
+				@Override
 				public void handleException(Throwable t) {
 					// TODO
 					t.printStackTrace();
@@ -439,10 +441,12 @@ public class BackupRun implements Runnable {
 		final BackupEndedEvent e = new BackupEndedEvent(this);
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
+				@Override
 				public void run() throws Exception {
 					listener.backupEnded(e);
 				}
 				
+				@Override
 				public void handleException(Throwable t) {
 					// TODO
 					t.printStackTrace();
@@ -467,7 +471,7 @@ public class BackupRun implements Runnable {
 	}
 
 	private void removeFailedBackups() throws SQLException {
-		Set<Integer> ids = new HashSet<Integer>(database.factory()
+		Set<Integer> ids = new HashSet<>(database.factory()
 			.select(Backups.ID)
 			.from(Backups.BACKUPS)
 			.where(Backups.NUM_ENTRIES.isNull())
@@ -477,7 +481,7 @@ public class BackupRun implements Runnable {
 	
 	private void removeOldBackupsDaily() throws SQLException {
 		// collect IDs of all but the most recent backup each day
-		Set<Integer> backupsToRemove = new HashSet<Integer>();
+		Set<Integer> backupsToRemove = new HashSet<>();
 		List<Date> days = getBackupRunsDays();
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
@@ -510,7 +514,7 @@ public class BackupRun implements Runnable {
 	
 	private void removeOldBackupsWeekly() throws SQLException {
 		// collect IDs of all but the most recent backup each day
-		Set<Integer> backupsToRemove = new HashSet<Integer>();
+		Set<Integer> backupsToRemove = new HashSet<>();
 		List<Date> days = getBackupRunsDays();
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
@@ -561,7 +565,7 @@ public class BackupRun implements Runnable {
 				.where(Backups.RUN_TIME.lessThan(new Timestamp(c.getTimeInMillis())))
 				.orderBy(Backups.RUN_TIME)
 				.fetchLazy();
-			List<Date> days = new ArrayList<Date>();
+			List<Date> days = new ArrayList<>();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
 				c.setTimeInMillis(record.getValueAsTimestamp(Backups.RUN_TIME).getTime());
@@ -592,7 +596,7 @@ public class BackupRun implements Runnable {
 
 	private void removeUnusedFiles() throws SQLException {
 		Cursor<Record> cursor = null;
-		Set<FileEntry> filesToRemove = new HashSet<FileEntry>();
+		Set<FileEntry> filesToRemove = new HashSet<>();
 		try {
 			cursor = database.factory()
 				.select(de.blizzy.backup.database.schema.tables.Files.ID,

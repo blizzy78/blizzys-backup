@@ -46,14 +46,17 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		this.location = location;
 	}
 
+	@Override
 	public String getName() {
 		return StringUtils.substringAfterLast(file, "/"); //$NON-NLS-1$
 	}
 	
+	@Override
 	public String getAbsolutePath() {
 		return location.getProtocol() + "://" + location.getHost() + file; //$NON-NLS-1$
 	}
 
+	@Override
 	public IFolder getParentFolder() {
 		if (!file.equals("/")) { //$NON-NLS-1$
 			String parentFolder = StringUtils.substringBeforeLast(file, "/"); //$NON-NLS-1$
@@ -71,14 +74,17 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		return location;
 	}
 	
+	@Override
 	public boolean isHidden() throws IOException {
 		return getName().startsWith("."); //$NON-NLS-1$
 	}
 
+	@Override
 	public FileTime getCreationTime() throws IOException {
 		return null;
 	}
 
+	@Override
 	public FileTime getLastModificationTime() throws IOException {
 		FileContent content = getFileContent();
 		try {
@@ -103,6 +109,7 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		return fileContent;
 	}
 
+	@Override
 	public boolean isFolder() throws IOException {
 		if (isFolder == null) {
 			isFolder = Boolean.valueOf(getFileObject().getType().equals(FileType.FOLDER));
@@ -114,6 +121,7 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		isFolder = Boolean.TRUE;
 	}
 
+	@Override
 	public void copy(IOutputStreamProvider outputStreamProvider) throws IOException {
 		InputStream in = null;
 		OutputStream out = null;
@@ -127,12 +135,14 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		}
 	}
 
+	@Override
 	public long getLength() throws IOException {
 		return getFileContent().getSize();
 	}
 
+	@Override
 	public Set<IFileSystemEntry> list() throws IOException {
-		Set<IFileSystemEntry> result = new HashSet<IFileSystemEntry>();
+		Set<IFileSystemEntry> result = new HashSet<>();
 		for (FileObject child : getFileObject().getChildren()) {
 			result.add(getFileOrFolder(file + "/" + child.getName().getBaseName())); //$NON-NLS-1$
 		}

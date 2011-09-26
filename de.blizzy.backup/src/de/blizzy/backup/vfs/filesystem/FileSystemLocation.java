@@ -34,10 +34,12 @@ public class FileSystemLocation implements ILocation {
 		this.provider = provider;
 	}
 	
+	@Override
 	public String getDisplayName() {
 		return root.getAbsolutePath();
 	}
 
+	@Override
 	public IFolder getRootFolder() {
 		return root;
 	}
@@ -50,10 +52,12 @@ public class FileSystemLocation implements ILocation {
 		section.put("path", root.getAbsolutePath()); //$NON-NLS-1$
 	}
 	
+	@Override
 	public ILocationProvider getProvider() {
 		return provider;
 	}
 	
+	@Override
 	public void close() {
 	}
 	

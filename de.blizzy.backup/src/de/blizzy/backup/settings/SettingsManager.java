@@ -36,11 +36,11 @@ import de.blizzy.backup.vfs.LocationProviderDescriptor;
 import de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider;
 
 public class SettingsManager {
-	private List<ISettingsListener> listeners = new ArrayList<ISettingsListener>();
+	private List<ISettingsListener> listeners = new ArrayList<>();
 	
 	public Settings getSettings() {
 		IDialogSettings section = getSection();
-		Set<ILocation> locations = new HashSet<ILocation>();
+		Set<ILocation> locations = new HashSet<>();
 
 		IDialogSettings locationsSection = section.getSection("locations"); //$NON-NLS-1$
 		if (locationsSection != null) {
@@ -129,14 +129,16 @@ public class SettingsManager {
 	private void fireSettingsChanged() {
 		List<ISettingsListener> ls;
 		synchronized (listeners) {
-			ls = new ArrayList<ISettingsListener>(listeners);
+			ls = new ArrayList<>(listeners);
 		}
 		for (final ISettingsListener l : ls) {
 			SafeRunner.run(new ISafeRunnable() {
+				@Override
 				public void run() throws Exception {
 					l.settingsChanged();
 				}
 				
+				@Override
 				public void handleException(Throwable t) {
 					BackupPlugin.getDefault().logError(StringUtils.EMPTY, t);
 				}

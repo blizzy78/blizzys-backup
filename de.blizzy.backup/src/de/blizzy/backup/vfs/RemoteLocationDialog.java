@@ -132,12 +132,14 @@ public abstract class RemoteLocationDialog extends Dialog {
 		folderText.setLayoutData(gd);
 		
 		hostText.addModifyListener(new ModifyListener() {
+			@Override
 			public void modifyText(ModifyEvent e) {
 				updateOkButton();
 			}
 		});
 
 		portText.addVerifyListener(new VerifyListener() {
+			@Override
 			public void verifyText(VerifyEvent e) {
 				if (StringUtils.isNotBlank(e.text) && !StringUtils.containsOnly(e.text, "0123456789")) { //$NON-NLS-1$
 					e.doit = false;
@@ -146,24 +148,28 @@ public abstract class RemoteLocationDialog extends Dialog {
 		});
 		
 		portText.addModifyListener(new ModifyListener() {
+			@Override
 			public void modifyText(ModifyEvent e) {
 				updateOkButton();
 			}
 		});
 		
 		loginText.addModifyListener(new ModifyListener() {
+			@Override
 			public void modifyText(ModifyEvent e) {
 				updateOkButton();
 			}
 		});
 		
 		passwordText.addModifyListener(new ModifyListener() {
+			@Override
 			public void modifyText(ModifyEvent e) {
 				updateOkButton();
 			}
 		});
 		
 		folderText.addModifyListener(new ModifyListener() {
+			@Override
 			public void modifyText(ModifyEvent e) {
 				updateOkButton();
 			}

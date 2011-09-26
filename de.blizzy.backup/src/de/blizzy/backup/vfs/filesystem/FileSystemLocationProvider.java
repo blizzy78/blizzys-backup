@@ -31,10 +31,12 @@ import de.blizzy.backup.vfs.ILocation;
 import de.blizzy.backup.vfs.ILocationProvider;
 
 public class FileSystemLocationProvider implements ILocationProvider {
+	@Override
 	public String getId() {
 		return BackupPlugin.ID + ".locationProvider.filesystem"; //$NON-NLS-1$
 	}
 	
+	@Override
 	public ILocation promptLocation(Shell parentShell) {
 		DirectoryDialog dlg = new DirectoryDialog(parentShell, SWT.OPEN);
 		dlg.setText(Messages.Title_SelectFolder);
@@ -42,10 +44,12 @@ public class FileSystemLocationProvider implements ILocationProvider {
 		return (folder != null) ? new FileSystemLocation(Utils.toCanonicalFile(new File(folder)), this) : null;
 	}
 
+	@Override
 	public ILocation getLocation(IDialogSettings section) {
 		return FileSystemLocation.getLocation(section, this);
 	}
 
+	@Override
 	public void saveSettings(ILocation location, IDialogSettings section) {
 		((FileSystemLocation) location).saveSettings(section);
 	}

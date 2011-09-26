@@ -91,6 +91,7 @@ public class CheckRun implements IRunnableWithProgress {
 		}
 	}
 
+	@Override
 	public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
 		database = new Database(settings, false);
 		
@@ -130,9 +131,7 @@ public class CheckRun implements IRunnableWithProgress {
 			} finally {
 				database.closeQuietly(cursor);
 			}
-		} catch (SQLException e) {
-			throw new InvocationTargetException(e);
-		} catch (IOException e) {
+		} catch (SQLException | IOException e) {
 			throw new InvocationTargetException(e);
 		} finally {
 			database.close();

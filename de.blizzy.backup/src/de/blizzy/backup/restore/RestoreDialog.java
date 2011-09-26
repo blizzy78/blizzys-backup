@@ -90,7 +90,7 @@ import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 
 public class RestoreDialog extends Dialog {
 	private Settings settings;
-	private List<Backup> backups = new ArrayList<Backup>();
+	private List<Backup> backups = new ArrayList<>();
 	private Database database;
 	private ComboViewer backupsViewer;
 	private TableViewer entriesViewer;
@@ -119,6 +119,7 @@ public class RestoreDialog extends Dialog {
 	@Override
 	public int open() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
+			@Override
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
 				Cursor<BackupsRecord> cursor = null;
@@ -134,9 +135,7 @@ public class RestoreDialog extends Dialog {
 						Backup backup = new Backup(record.getId().intValue(), new Date(record.getRunTime().getTime()), record.getNumEntries().intValue());
 						backups.add(backup);
 					}
-				} catch (SQLException e) {
-					throw new InvocationTargetException(e);
-				} catch (IOException e) {
+				} catch (SQLException | IOException e) {
 					throw new InvocationTargetException(e);
 				} finally {
 					database.closeQuietly(cursor);
@@ -160,6 +159,7 @@ public class RestoreDialog extends Dialog {
 	@Override
 	public boolean close() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
+			@Override
 			public void run(IProgressMonitor monitor) throws InvocationTargetException {
 				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
@@ -284,6 +284,7 @@ public class RestoreDialog extends Dialog {
 		currentFolderLink.setLayoutData(gd);
 		
 		backupsViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
 				try {
 					Backup backup = (Backup) ((IStructuredSelection) e.getSelection()).getFirstElement();
@@ -295,6 +296,7 @@ public class RestoreDialog extends Dialog {
 		});
 		
 		entriesViewer.addOpenListener(new IOpenListener() {
+			@Override
 			public void open(OpenEvent e) {
 				IStructuredSelection selection = (IStructuredSelection) e.getSelection();
 				if (selection.size() == 1) {
@@ -312,6 +314,7 @@ public class RestoreDialog extends Dialog {
 		});
 		
 		entriesViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
 				restoreButton.setEnabled(!e.getSelection().isEmpty());
 			}
@@ -450,7 +453,7 @@ public class RestoreDialog extends Dialog {
 	}
 	
 	private List<Entry> getEntries(Cursor<Record> cursor) throws SQLException {
-		List<Entry> entries = new ArrayList<Entry>();
+		List<Entry> entries = new ArrayList<>();
 		while (cursor.hasNext()) {
 			Record record = cursor.fetchOne();
 			int id = record.getValueAsInteger(Entries.ID).intValue();
@@ -502,6 +505,7 @@ public class RestoreDialog extends Dialog {
 			final int backupId = backup.id;
 			final int numEntries = backup.numEntries;
 			IRunnableWithProgress runnable = new IRunnableWithProgress() {
+				@Override
 				public void run(IProgressMonitor monitor) throws InvocationTargetException,
 						InterruptedException {
 
@@ -510,9 +514,7 @@ public class RestoreDialog extends Dialog {
 						for (Entry entry : entries) {
 							restoreEntry(entry, new File(myFolder), settings.getOutputFolder(), backupId, monitor);
 						}
-					} catch (IOException e) {
-						throw new InvocationTargetException(e);
-					} catch (SQLException e) {
+					} catch (SQLException | IOException e) {
 						throw new InvocationTargetException(e);
 					} finally {
 						monitor.done();

@@ -36,17 +36,17 @@ public class Backups extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	 * 
 	 * PRIMARY KEY
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer>("ID", org.jooq.impl.SQLDataType.INTEGER, BACKUPS);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer> ID = new org.jooq.impl.TableFieldImpl<>("ID", org.jooq.impl.SQLDataType.INTEGER, BACKUPS);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.sql.Timestamp> RUN_TIME = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.sql.Timestamp>("RUN_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, BACKUPS);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.sql.Timestamp> RUN_TIME = new org.jooq.impl.TableFieldImpl<>("RUN_TIME", org.jooq.impl.SQLDataType.TIMESTAMP, BACKUPS);
 
 	/**
 	 * An uncommented item
 	 */
-	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer> NUM_ENTRIES = new org.jooq.impl.TableFieldImpl<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer>("NUM_ENTRIES", org.jooq.impl.SQLDataType.INTEGER, BACKUPS);
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer> NUM_ENTRIES = new org.jooq.impl.TableFieldImpl<>("NUM_ENTRIES", org.jooq.impl.SQLDataType.INTEGER, BACKUPS);
 
 	/**
 	 * No further instances allowed
@@ -66,7 +66,6 @@ public class Backups extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public java.util.List<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.BackupsRecord>> getKeys() {
 		return java.util.Arrays.<org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.BackupsRecord>>asList(de.blizzy.backup.database.schema.Keys.CONSTRAINT_1);
 	}

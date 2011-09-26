@@ -52,14 +52,17 @@ class SftpFileOrFolder implements IFile, IFolder {
 		this.location = location;
 	}
 
+	@Override
 	public String getName() {
 		return StringUtils.substringAfterLast(file, "/"); //$NON-NLS-1$
 	}
 
+	@Override
 	public String getAbsolutePath() {
 		return "sftp://" + location.getHost() + file; //$NON-NLS-1$
 	}
 
+	@Override
 	public IFolder getParentFolder() {
 		if (!file.equals("/")) { //$NON-NLS-1$
 			String parentFolder = StringUtils.substringBeforeLast(file, "/"); //$NON-NLS-1$
@@ -71,14 +74,17 @@ class SftpFileOrFolder implements IFile, IFolder {
 		return null;
 	}
 
+	@Override
 	public boolean isHidden() throws IOException {
 		return getName().startsWith("."); //$NON-NLS-1$
 	}
 
+	@Override
 	public FileTime getCreationTime() throws IOException {
 		return null;
 	}
 
+	@Override
 	public FileTime getLastModificationTime() throws IOException {
 		return FileTime.fromMillis(getFileAttributes().getMtime());
 	}
@@ -86,47 +92,55 @@ class SftpFileOrFolder implements IFile, IFolder {
 	private FileAttributes getFileAttributes() throws IOException {
 		if (fileAttributes == null) {
 			IAction<FileAttributes> action = new IAction<FileAttributes>() {
+				@Override
 				public FileAttributes run() throws IOException {
 					return location.getSftpClient().lstat(file);
 				}
 				
+				@Override
 				public boolean canRetry(IOException e) {
 					return (e instanceof SFTPException) &&
 						(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
 				}
 			};
-			fileAttributes = new ActionRunner<FileAttributes>(
+			fileAttributes = new ActionRunner<>(
 					action, SftpLocation.MAX_TRIES, location).run();
 		}
 		return fileAttributes;
 	}
 
+	@Override
 	public boolean isFolder() throws IOException {
 		return getFileAttributes().getType() == FileMode.Type.DIRECTORY;
 	}
 
+	@Override
 	public Set<IFileSystemEntry> list() throws IOException {
 		IAction<List<RemoteResourceInfo>> action = new IAction<List<RemoteResourceInfo>>() {
+			@Override
 			public List<RemoteResourceInfo> run() throws IOException {
 				return location.getSftpClient().ls(file);
 			}
 			
+			@Override
 			public boolean canRetry(IOException e) {
 				return (e instanceof SFTPException) &&
 					(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
 			}
 		};
-		List<RemoteResourceInfo> files = new ActionRunner<List<RemoteResourceInfo>>(
+		List<RemoteResourceInfo> files = new ActionRunner<>(
 				action, SftpLocation.MAX_TRIES, location).run();
-		Set<IFileSystemEntry> result = new HashSet<IFileSystemEntry>();
+		Set<IFileSystemEntry> result = new HashSet<>();
 		for (RemoteResourceInfo file : files) {
 			result.add(new SftpFileOrFolder(file.getPath(), location));
 		}
 		return result;
 	}
 
+	@Override
 	public void copy(final IOutputStreamProvider outputStreamProvider) throws IOException {
 		IAction<Void> action = new IAction<Void>() {
+			@Override
 			public Void run() throws IOException {
 				InputStream in = null;
 				OutputStream out = null;
@@ -141,14 +155,16 @@ class SftpFileOrFolder implements IFile, IFolder {
 				return null;
 			}
 			
+			@Override
 			public boolean canRetry(IOException e) {
 				return (e instanceof SFTPException) &&
 					(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
 			}
 		};
-		new ActionRunner<Void>(action, SftpLocation.MAX_TRIES, location).run();
+		new ActionRunner<>(action, SftpLocation.MAX_TRIES, location).run();
 	}
 	
+	@Override
 	public long getLength() throws IOException {
 		return getFileAttributes().getSize();
 	}

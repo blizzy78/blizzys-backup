@@ -18,9 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup.backup;
 
 public class BackupRunAdapter implements IBackupRunListener {
+	@Override
 	public void backupStatusChanged(BackupStatusEvent e) {
 	}
 
+	@Override
 	public void backupEnded(BackupEndedEvent e) {
 	}
 }

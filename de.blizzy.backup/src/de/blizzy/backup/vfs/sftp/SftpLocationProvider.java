@@ -28,10 +28,12 @@ import de.blizzy.backup.vfs.ILocationProvider;
 import de.blizzy.backup.vfs.RemoteLocationDialog;
 
 public class SftpLocationProvider implements ILocationProvider {
+	@Override
 	public String getId() {
 		return BackupPlugin.ID + ".locationProvider.sftp"; //$NON-NLS-1$
 	}
 	
+	@Override
 	public ILocation promptLocation(Shell parentShell) {
 		RemoteLocationDialog dlg = new RemoteLocationDialog(parentShell) {
 			@Override
@@ -45,10 +47,12 @@ public class SftpLocationProvider implements ILocationProvider {
 		return (dlg.open() == Window.OK) ? dlg.getLocation() : null;
 	}
 	
+	@Override
 	public ILocation getLocation(IDialogSettings section) {
 		return SftpLocation.getLocation(section, this);
 	}
 
+	@Override
 	public void saveSettings(ILocation location, IDialogSettings section) {
 		((SftpLocation) location).saveSettings(section);
 	}

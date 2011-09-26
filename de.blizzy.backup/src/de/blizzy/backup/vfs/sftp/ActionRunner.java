@@ -33,7 +33,8 @@ class ActionRunner<T> {
 	T run() throws IOException {
 		T result;
 		IOException ex = null;
-		for (int tries = 0; tries < maxTries; tries++) {
+		int tries = 0;
+		do {
 			try {
 				result = action.run();
 				return result;
@@ -44,7 +45,7 @@ class ActionRunner<T> {
 					continue;
 				}
 			}
-		}
+		} while (++tries < maxTries);
 		throw ex;
 	}
 }

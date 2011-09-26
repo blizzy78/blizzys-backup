@@ -52,16 +52,19 @@ public abstract class RemoteLocation implements ILocation {
 
 	protected abstract String getProtocol();
 
+	@Override
 	public String getDisplayName() {
 		return getProtocol() + "://" + host + folder; //$NON-NLS-1$
 	}
 
+	@Override
 	public abstract IFolder getRootFolder();
 
 	public String getFolder() {
 		return folder;
 	}
 	
+	@Override
 	public ILocationProvider getProvider() {
 		return provider;
 	}
@@ -133,6 +136,7 @@ public abstract class RemoteLocation implements ILocation {
 	protected void setFileSystemOptions(@SuppressWarnings("unused") FileSystemOptions options) throws FileSystemException {
 	}
 	
+	@Override
 	public void close() {
 		if (fileSystem != null) {
 			try {

@@ -85,14 +85,17 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 		BackupApplication.getSettingsManager().removeListener(this);
 	}
 
+	@Override
 	public void backupStatusChanged(BackupStatusEvent e) {
 	}
 
+	@Override
 	public void backupEnded(BackupEndedEvent e) {
 		backupRun.removeListener(this);
 		backupRun = null;
 		if (trayItem != null) {
 			Utils.runAsync(trayItem.getDisplay(), new Runnable() {
+				@Override
 				public void run() {
 					if (!trayItem.isDisposed()) {
 						updateStatus();
@@ -109,6 +112,7 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 		}
 		if (trayItem != null) {
 			Utils.runAsync(trayItem.getDisplay(), new Runnable() {
+				@Override
 				public void run() {
 					if (!trayItem.isDisposed()) {
 						updateStatus();
@@ -118,6 +122,7 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 		}
 	}
 	
+	@Override
 	public void settingsChanged() {
 		updateStatus();
 	}

@@ -315,7 +315,7 @@ public class BackupRun implements Runnable {
 			}
 		}
 		
-		// find folder in parent folder
+		// find entry in parent folder
 		IFolder parentFolder = file.getParentFolder();
 		if (parentFolder != null) {
 			int parentFolderId = findFileOrFolderEntryInBackup(parentFolder, backupId);

@@ -311,7 +311,7 @@ class BackupShell {
 			public void run() {
 				if (!restoreButton.isDisposed()) {
 					Settings settings = BackupApplication.getSettingsManager().getSettings();
-					restoreButton.setEnabled(Utils.isBackupFolder(settings.getOutputFolder()));
+					restoreButton.setEnabled((backupRun == null) && Utils.isBackupFolder(settings.getOutputFolder()));
 				}
 			}
 		});
@@ -380,6 +380,7 @@ class BackupShell {
 	void setBackupRun(BackupRun backupRun) {
 		this.backupRun = backupRun;
 		backupRun.addListener(backupRunListener);
+		updateRestoreButton();
 		updateBackupNowButton();
 		updateCheckButton();
 	}

@@ -97,10 +97,8 @@ public class Updater {
 		progress.beginTask(Messages.CheckingForNewVersion, 2);
 		
 		BundleContext bundleContext = BackupPlugin.getDefault().getBundle().getBundleContext();
-		@SuppressWarnings("unchecked")
-		ServiceReference<IProvisioningAgent> ref =
-		(ServiceReference<IProvisioningAgent>) bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
-		IProvisioningAgent agent = bundleContext.getService(ref);
+		ServiceReference ref = bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
+		IProvisioningAgent agent = (IProvisioningAgent) bundleContext.getService(ref);
 		boolean restartNecessary = false;
 		ProvisioningSession session = new ProvisioningSession(agent);
 		final UpdateOperation op = new UpdateOperation(session);

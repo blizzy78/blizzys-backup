@@ -20,26 +20,32 @@ package de.blizzy.backup.backup;
 import de.blizzy.backup.Messages;
 
 public class BackupStatus {
-	public static final BackupStatus INITIALIZE = new BackupStatus(true, null, false);
-	public static final BackupStatus CLEANUP = new BackupStatus(false, null, true);
+	public static final BackupStatus INITIALIZE = new BackupStatus(true, null, false, false);
+	public static final BackupStatus FINALIZE = new BackupStatus(false, null, true, false);
+	public static final BackupStatus CLEANUP = new BackupStatus(false, null, false, true);
 
 	private boolean initialize;
 	private String currentFile;
+	private boolean finalize;
 	private boolean cleanup;
 
 	public BackupStatus(String currentFile) {
-		this(false, currentFile, false);
+		this(false, currentFile, false, false);
 	}
 	
-	private BackupStatus(boolean initialize, String currentFile, boolean cleanup) {
+	private BackupStatus(boolean initialize, String currentFile, boolean finalize, boolean cleanup) {
 		this.initialize = initialize;
 		this.currentFile = currentFile;
+		this.finalize = finalize;
 		this.cleanup = cleanup;
 	}
 
 	public String getText() {
 		if (initialize) {
 			return Messages.Initializing;
+		}
+		if (finalize) {
+			return Messages.Finalizing;
 		}
 		if (cleanup) {
 			return Messages.CleaningUp;

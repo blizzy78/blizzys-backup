@@ -129,6 +129,7 @@ public class BackupRun implements Runnable {
 		} catch (SQLException | IOException | RuntimeException e) {
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} finally {
+			fireBackupStatusChanged(BackupStatus.FINALIZE);
 			database.close();
 			backupDatabase();
 			System.gc();

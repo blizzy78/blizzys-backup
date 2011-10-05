@@ -42,6 +42,7 @@ public class Messages extends NLS {
 	public static String DropFoldersHelp;
 	public static String ErrorsWhileCheckingBackup;
 	public static String ExitApplication;
+	public static String Finalizing;
 	public static String FolderContainsExistingBackup;
 	public static String FolderIsChildOfOutputFolder;
 	public static String FolderIsOutputFolder;

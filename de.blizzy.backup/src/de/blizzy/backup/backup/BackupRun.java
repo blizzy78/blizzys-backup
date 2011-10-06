@@ -67,11 +67,13 @@ import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
 public class BackupRun implements Runnable {
 	private Settings settings;
 	private Thread thread;
+	private Thread entriesCounterThread;
 	private Database database;
 	private int backupId;
 	private List<IBackupRunListener> listeners = new ArrayList<>();
 	private boolean running = true;
 	private int numEntries;
+	private int totalEntries;
 
 	public BackupRun(Settings settings) {
 		this.settings = settings;
@@ -80,6 +82,19 @@ public class BackupRun implements Runnable {
 	public void runBackup() {
 		thread = new Thread(this, "Backup"); //$NON-NLS-1$
 		thread.start();
+		
+		Runnable runnable = new Runnable() {
+			@Override
+			public void run() {
+				try {
+					countEntries();
+				} catch (RuntimeException e) {
+					BackupPlugin.getDefault().logError("error while counting entries", e); //$NON-NLS-1$
+				}
+			}
+		};
+		entriesCounterThread = new Thread(runnable, "Entries Counter"); //$NON-NLS-1$
+		entriesCounterThread.start();
 	}
 
 	@Override
@@ -224,7 +239,7 @@ public class BackupRun implements Runnable {
 			checkDiskSpaceAndRemoveOldBackups();
 		}
 
-		fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath()));
+		fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath(), numEntries, totalEntries));
 		
 		FileTime creationTime = file.getCreationTime();
 		FileTime lastModificationTime = file.getLastModificationTime();
@@ -459,10 +474,19 @@ public class BackupRun implements Runnable {
 	public void stopBackupAndWait() {
 		running = false;
 		try {
+			entriesCounterThread.join();
+		} catch (InterruptedException e) {
+			// ignore
+		}
+		try {
 			thread.join();
 		} catch (InterruptedException e) {
 			// ignore
 		}
+	}
+	
+	public void stopBackup() {
+		running = false;
 	}
 
 	private void removeOldBackups() throws SQLException {
@@ -483,7 +507,7 @@ public class BackupRun implements Runnable {
 	private void removeOldBackupsDaily() throws SQLException {
 		// collect IDs of all but the most recent backup each day
 		Set<Integer> backupsToRemove = new HashSet<>();
-		List<Date> days = getBackupRunsDays();
+		List<Date> days = getBackupRunsDays(7);
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
 			long start = day.getTime();
@@ -514,9 +538,9 @@ public class BackupRun implements Runnable {
 	}
 	
 	private void removeOldBackupsWeekly() throws SQLException {
-		// collect IDs of all but the most recent backup each day
+		// collect IDs of all but the most recent backup each week
 		Set<Integer> backupsToRemove = new HashSet<>();
-		List<Date> days = getBackupRunsDays();
+		List<Date> days = getBackupRunsDays(30);
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
 			long start = getWeekStart(day).getTime();
@@ -550,12 +574,12 @@ public class BackupRun implements Runnable {
 		return new Date(c.getTimeInMillis());
 	}
 
-	private List<Date> getBackupRunsDays() throws SQLException {
+	private List<Date> getBackupRunsDays(int skipDays) throws SQLException {
 		Cursor<Record> cursor = null;
 		try {
-			// get all days where there are backups (and which are older than 14 days)
+			// get all days where there are backups (and which are older than skipDays days)
 			Calendar c = Calendar.getInstance();
-			c.add(Calendar.DAY_OF_YEAR, -14);
+			c.add(Calendar.DAY_OF_YEAR, -skipDays);
 			c.set(Calendar.HOUR_OF_DAY, 0);
 			c.set(Calendar.MINUTE, 0);
 			c.set(Calendar.SECOND, 0);
@@ -757,6 +781,30 @@ public class BackupRun implements Runnable {
 				.where(Entries.FILE_ID.in(chunk))
 				.execute();
 			fileIds = fileIds.subList(endIdx, fileIds.size());
+		}
+	}
+
+	private void countEntries() {
+		for (ILocation location : settings.getLocations()) {
+			countEntries(location.getRootFolder());
+		}
+	}
+
+	private void countEntries(IFolder folder) {
+		try {
+			for (IFileSystemEntry entry : folder.list()) {
+				if (!running) {
+					break;
+				}
+
+				if (entry.isFolder()) {
+					countEntries((IFolder) entry);
+				} else {
+					totalEntries++;
+				}
+			}
+		} catch (IOException e) {
+			BackupPlugin.getDefault().logError("error while counting entries in folder: " + folder.getAbsolutePath(), e); //$NON-NLS-1$
 		}
 	}
 }

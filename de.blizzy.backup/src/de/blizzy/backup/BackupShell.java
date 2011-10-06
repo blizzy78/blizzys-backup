@@ -20,7 +20,11 @@ package de.blizzy.backup;
 import java.text.DateFormat;
 import java.util.Date;
 
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
@@ -45,7 +49,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
+import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.ToolBar;
 
 import de.blizzy.backup.backup.BackupEndedEvent;
 import de.blizzy.backup.backup.BackupRun;
@@ -62,6 +68,8 @@ class BackupShell {
 	private Button restoreButton;
 	private Button backupNowButton;
 	private Button checkButton;
+	private Composite progressComposite;
+	private ProgressBar progressBar;
 	private Label statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
@@ -78,6 +86,7 @@ class BackupShell {
 			updateRestoreButton();
 			updateBackupNowButton();
 			updateCheckButton();
+			updateProgressVisibility();
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
@@ -198,7 +207,42 @@ class BackupShell {
 			label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		}
 		
-		statusLabel = new Label(shell, SWT.NONE);
+		Composite progressStatusComposite = new Composite(shell, SWT.NONE);
+		layout = new GridLayout(1, false);
+		layout.marginWidth = 0;
+		layout.marginHeight = 0;
+		progressStatusComposite.setLayout(layout);
+		progressStatusComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		
+		progressComposite = new Composite(progressStatusComposite, SWT.NONE);
+		layout = new GridLayout(2, false);
+		layout.marginWidth = 0;
+		layout.marginHeight = 0;
+		progressComposite.setLayout(layout);
+		progressComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+
+		progressBar = new ProgressBar(progressComposite, SWT.HORIZONTAL | SWT.SMOOTH);
+		progressBar.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		progressBar.setMinimum(0);
+		updateProgressVisibility();
+
+		ToolBarManager toolBarManager = new ToolBarManager(SWT.FLAT);
+		IAction stopAction = new Action() {
+			@Override
+			public void run() {
+				if (backupRun != null) {
+					backupRun.stopBackup();
+				}
+			}
+		};
+		ImageDescriptor imgDesc = BackupPlugin.getDefault().getImageDescriptor("etc/icons/stop.gif"); //$NON-NLS-1$
+		stopAction.setImageDescriptor(imgDesc);
+		stopAction.setToolTipText(Messages.Button_StopBackup);
+		toolBarManager.add(stopAction);
+		ToolBar toolBar = toolBarManager.createControl(progressComposite);
+		toolBar.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
+		
+		statusLabel = new Label(progressStatusComposite, SWT.NONE);
 		statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		updateStatusLabel(null);
 
@@ -294,11 +338,22 @@ class BackupShell {
 			public void run() {
 				if (!statusLabel.isDisposed()) {
 					if (status != null) {
-						statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " - " + status.getText()); //$NON-NLS-1$ //$NON-NLS-2$
+						int numEntries = status.getNumEntries();
+						int totalEntries = status.getTotalEntries();
+						statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " " + //$NON-NLS-1$ //$NON-NLS-2$
+								(((numEntries >= 0) && (totalEntries >= 0)) ?
+										("(" + (int) Math.round(numEntries * 100d / totalEntries) + "%) ") : "") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+								"- " + status.getText()); //$NON-NLS-1$
+						if ((numEntries >= 0) && (totalEntries >= 0)) {
+							progressBar.setMaximum(totalEntries);
+							progressBar.setSelection(numEntries);
+						}
 					} else {
 						Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
 						statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 								DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate));
+						progressBar.setMaximum(0);
+						progressBar.setSelection(0);
 					}
 				}
 			}
@@ -383,6 +438,18 @@ class BackupShell {
 		updateRestoreButton();
 		updateBackupNowButton();
 		updateCheckButton();
+		updateProgressVisibility();
+	}
+	
+	private void updateProgressVisibility() {
+		Utils.runAsync(shell.getDisplay(), new Runnable() {
+			@Override
+			public void run() {
+				if (!progressComposite.isDisposed()) {
+					progressComposite.setVisible(backupRun != null);
+				}
+			}
+		});
 	}
 
 	Shell getShell() {

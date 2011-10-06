@@ -30,6 +30,7 @@ import org.eclipse.swt.widgets.TrayItem;
 
 import de.blizzy.backup.backup.BackupEndedEvent;
 import de.blizzy.backup.backup.BackupRun;
+import de.blizzy.backup.backup.BackupStatus;
 import de.blizzy.backup.backup.BackupStatusEvent;
 import de.blizzy.backup.backup.IBackupRunListener;
 import de.blizzy.backup.settings.ISettingsListener;
@@ -46,7 +47,7 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 			trayItem = new TrayItem(systemTray, SWT.NONE);
 			image = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_16.png").createImage(display); //$NON-NLS-1$
 			progressImage = BackupPlugin.getDefault().getImageDescriptor("etc/logo/logo_progress_16.png").createImage(display); //$NON-NLS-1$
-			updateStatus();
+			updateStatus(null);
 			trayItem.addSelectionListener(new SelectionAdapter() {
 				@Override
 				public void widgetSelected(SelectionEvent e) {
@@ -58,14 +59,23 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 		}
 	}
 
-	private void updateStatus() {
+	private void updateStatus(BackupStatus status) {
 		if (trayItem != null) {
 			trayItem.setImage((backupRun != null) ? progressImage : image);
 			Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
+			int numEntries = -1;
+			int totalEntries = -1;
+			if (status != null) {
+				numEntries = status.getNumEntries();
+				totalEntries = status.getTotalEntries();
+			}
 			trayItem.setToolTipText(Messages.Title_BlizzysBackup + " - " + //$NON-NLS-1$
-					((backupRun != null) ? Messages.Running :
-					Messages.Label_NextRun + ": " + //$NON-NLS-1$
-						DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate)));
+					((backupRun != null) ?
+							(Messages.Running +
+								(((numEntries >= 0) && (totalEntries >= 0)) ?
+										(" (" + (int) Math.round(numEntries * 100d / totalEntries) + "%)") : "")) : //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+							Messages.Label_NextRun + ": " + //$NON-NLS-1$
+								DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate)));
 		}
 	}
 	
@@ -86,7 +96,17 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 	}
 
 	@Override
-	public void backupStatusChanged(BackupStatusEvent e) {
+	public void backupStatusChanged(final BackupStatusEvent e) {
+		if (trayItem != null) {
+			Utils.runAsync(trayItem.getDisplay(), new Runnable() {
+				@Override
+				public void run() {
+					if (!trayItem.isDisposed()) {
+						updateStatus(e.getStatus());
+					}
+				}
+			});
+		}
 	}
 
 	@Override
@@ -98,7 +118,7 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 				@Override
 				public void run() {
 					if (!trayItem.isDisposed()) {
-						updateStatus();
+						updateStatus(null);
 					}
 				}
 			});
@@ -115,7 +135,7 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 				@Override
 				public void run() {
 					if (!trayItem.isDisposed()) {
-						updateStatus();
+						updateStatus(null);
 					}
 				}
 			});
@@ -124,6 +144,6 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 	
 	@Override
 	public void settingsChanged() {
-		updateStatus();
+		updateStatus(null);
 	}
 }

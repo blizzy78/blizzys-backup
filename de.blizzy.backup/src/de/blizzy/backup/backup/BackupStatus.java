@@ -20,26 +20,38 @@ package de.blizzy.backup.backup;
 import de.blizzy.backup.Messages;
 
 public class BackupStatus {
-	public static final BackupStatus INITIALIZE = new BackupStatus(true, null, false, false);
-	public static final BackupStatus FINALIZE = new BackupStatus(false, null, true, false);
-	public static final BackupStatus CLEANUP = new BackupStatus(false, null, false, true);
+	public static final BackupStatus INITIALIZE = new BackupStatus(true, null, -1, -1, false, false);
+	public static final BackupStatus FINALIZE = new BackupStatus(false, null, -1, -1, true, false);
+	public static final BackupStatus CLEANUP = new BackupStatus(false, null, -1, -1, false, true);
 
 	private boolean initialize;
+	private int numEntries;
+	private int totalEntries;
 	private String currentFile;
 	private boolean finalize;
 	private boolean cleanup;
 
-	public BackupStatus(String currentFile) {
-		this(false, currentFile, false, false);
+	public BackupStatus(String currentFile, int numEntries, int totalEntries) {
+		this(false, currentFile, numEntries, totalEntries, false, false);
 	}
 	
-	private BackupStatus(boolean initialize, String currentFile, boolean finalize, boolean cleanup) {
+	private BackupStatus(boolean initialize, String currentFile, int numEntries, int totalEntries, boolean finalize, boolean cleanup) {
 		this.initialize = initialize;
 		this.currentFile = currentFile;
+		this.numEntries = numEntries;
+		this.totalEntries = totalEntries;
 		this.finalize = finalize;
 		this.cleanup = cleanup;
 	}
 
+	public int getNumEntries() {
+		return numEntries;
+	}
+	
+	public int getTotalEntries() {
+		return totalEntries;
+	}
+	
 	public String getText() {
 		if (initialize) {
 			return Messages.Initializing;

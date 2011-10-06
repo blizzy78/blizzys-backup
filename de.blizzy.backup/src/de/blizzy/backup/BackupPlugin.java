@@ -45,6 +45,10 @@ public class BackupPlugin extends AbstractUIPlugin {
 	public static final String VERSION = "1.2.5"; //$NON-NLS-1$
 	public static final String COPYRIGHT_YEARS = "2011"; //$NON-NLS-1$
 
+	public static final int KEEP_HOURLIES_DAYS = 7;
+	public static final int KEEP_DAILIES_DAYS = 30;
+	public static final int MAX_DISK_FILL_RATE = 80;
+
 	private static final String ARG_HIDDEN = "-hidden"; //$NON-NLS-1$
 	private static final String ARG_CHECK_GUI = "-checkGui"; //$NON-NLS-1$
 

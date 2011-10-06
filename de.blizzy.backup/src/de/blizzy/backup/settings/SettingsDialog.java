@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup.settings;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +74,7 @@ public class SettingsDialog extends Dialog {
 	private DateTime dailyTime;
 	private Button fileCompareMetadataRadio;
 	private Button fileCompareChecksumRadio;
+	private Label scheduleExplanationLabel;
 
 	public SettingsDialog(Shell parentShell) {
 		super(parentShell);
@@ -203,6 +206,15 @@ public class SettingsDialog extends Dialog {
 		fileCompareMetadataRadio.setSelection(!settings.isUseChecksums());
 		fileCompareChecksumRadio.setSelection(settings.isUseChecksums());
 		
+		Group scheduleExplanationComposite = new Group(composite, SWT.NONE);
+		scheduleExplanationComposite.setText(Messages.Title_ScheduleExplanation);
+		scheduleExplanationComposite.setLayout(new GridLayout(1, false));
+		scheduleExplanationComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+
+		scheduleExplanationLabel = new Label(scheduleExplanationComposite, SWT.NONE);
+		scheduleExplanationLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		updateExplanationLabel();
+
 		foldersViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
@@ -228,6 +240,14 @@ public class SettingsDialog extends Dialog {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				dailyTime.setEnabled(runDailyRadio.getSelection());
+				updateExplanationLabel();
+			}
+		});
+		
+		dailyTime.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateExplanationLabel();
 			}
 		});
 		
@@ -423,6 +443,30 @@ public class SettingsDialog extends Dialog {
 		if (folder != null) {
 			outputFolderText.setText(folder);
 		}
+	}
+	
+	private void updateExplanationLabel() {
+		DateFormat timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT);
+		Calendar c = Calendar.getInstance();
+		c.set(Calendar.HOUR_OF_DAY, dailyTime.getHours());
+		c.set(Calendar.MINUTE, dailyTime.getMinutes());
+		scheduleExplanationLabel.setText(
+				"- " + (runHourlyRadio.getSelection() ? //$NON-NLS-1$
+						Messages.ScheduleExplanation_HourlyBackups :
+						NLS.bind(Messages.ScheduleExplanation_DailyBackups, timeFormat.format(c.getTime()))) +
+				"\n" + //$NON-NLS-1$
+				(runHourlyRadio.getSelection() ?
+						"- " + //$NON-NLS-1$
+							NLS.bind(Messages.ScheduleExplanation_HourlyBackupsKeepTime, Integer.valueOf(BackupPlugin.KEEP_HOURLIES_DAYS)) +
+							"\n" : //$NON-NLS-1$
+						"") + //$NON-NLS-1$
+				"- " + //$NON-NLS-1$
+				NLS.bind(Messages.ScheduleExplanation_DailyBackupsKeepTime, Integer.valueOf(BackupPlugin.KEEP_DAILIES_DAYS)) +
+				"\n" + //$NON-NLS-1$
+				"- " + //$NON-NLS-1$
+				NLS.bind(Messages.ScheduleExplanation_WeeklyBackupsKeepDisk, Integer.valueOf(BackupPlugin.MAX_DISK_FILL_RATE)) +
+				// compensate for missing line
+				(!runHourlyRadio.getSelection() ? "\n " : "")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 	
 	@Override

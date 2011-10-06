@@ -75,6 +75,11 @@ public class Messages extends NLS {
 	public static String RestoreFromBackup;
 	public static String RunBackupNow;
 	public static String Running;
+	public static String ScheduleExplanation_DailyBackups;
+	public static String ScheduleExplanation_DailyBackupsKeepTime;
+	public static String ScheduleExplanation_HourlyBackups;
+	public static String ScheduleExplanation_HourlyBackupsKeepTime;
+	public static String ScheduleExplanation_WeeklyBackupsKeepDisk;
 	public static String Title_BackupIntegrityCheck;
 	public static String Title_BlizzysBackup;
 	public static String Title_CheckBackupIntegrity;
@@ -96,6 +101,7 @@ public class Messages extends NLS {
 	public static String Title_ProgramRunning;
 	public static String Title_Restore;
 	public static String Title_RestoreFromBackup;
+	public static String Title_ScheduleExplanation;
 	public static String Title_SelectFolder;
 	public static String Title_SelectOutputFolder;
 	public static String Title_Settings;

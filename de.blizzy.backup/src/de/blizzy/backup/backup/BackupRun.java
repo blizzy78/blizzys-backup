@@ -507,7 +507,7 @@ public class BackupRun implements Runnable {
 	private void removeOldBackupsDaily() throws SQLException {
 		// collect IDs of all but the most recent backup each day
 		Set<Integer> backupsToRemove = new HashSet<>();
-		List<Date> days = getBackupRunsDays(7);
+		List<Date> days = getBackupRunsDays(BackupPlugin.KEEP_HOURLIES_DAYS);
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
 			long start = day.getTime();
@@ -540,7 +540,7 @@ public class BackupRun implements Runnable {
 	private void removeOldBackupsWeekly() throws SQLException {
 		// collect IDs of all but the most recent backup each week
 		Set<Integer> backupsToRemove = new HashSet<>();
-		List<Date> days = getBackupRunsDays(30);
+		List<Date> days = getBackupRunsDays(BackupPlugin.KEEP_DAILIES_DAYS);
 		Calendar c = Calendar.getInstance();
 		for (Date day : days) {
 			long start = getWeekStart(day).getTime();
@@ -695,8 +695,8 @@ public class BackupRun implements Runnable {
 						break;
 					}
 					
-					double avail = (double) available / (double) total * 100d;
-					if (avail >= 20d) {
+					double avail = available * 100d / total;
+					if (avail >= (100d - BackupPlugin.MAX_DISK_FILL_RATE)) {
 						break;
 					}
 					

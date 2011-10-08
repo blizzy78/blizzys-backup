@@ -72,6 +72,7 @@ public class BackupRun implements Runnable {
 	private int backupId;
 	private List<IBackupRunListener> listeners = new ArrayList<>();
 	private boolean running = true;
+	private boolean paused;
 	private int numEntries;
 	private int totalEntries;
 
@@ -118,6 +119,7 @@ public class BackupRun implements Runnable {
 				if (!running) {
 					break;
 				}
+				doPause();
 
 				try {
 					backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
@@ -218,6 +220,7 @@ public class BackupRun implements Runnable {
 			if (!running) {
 				break;
 			}
+			doPause();
 			
 			try {
 				if (entry.isFolder()) {
@@ -487,7 +490,16 @@ public class BackupRun implements Runnable {
 	
 	public void stopBackup() {
 		running = false;
+		setPaused(false);
 	}
+	
+	public void setPaused(boolean paused) {
+		synchronized (this) {
+			this.paused = paused;
+			notify();
+		}
+	}
+	
 
 	private void removeOldBackups() throws SQLException {
 		removeOldBackupsDaily();
@@ -805,6 +817,18 @@ public class BackupRun implements Runnable {
 			}
 		} catch (IOException e) {
 			BackupPlugin.getDefault().logError("error while counting entries in folder: " + folder.getAbsolutePath(), e); //$NON-NLS-1$
+		}
+	}
+	
+	private void doPause() {
+		synchronized (this) {
+			while (paused) {
+				try {
+					wait();
+				} catch (InterruptedException e) {
+					// ignore
+				}
+			}
 		}
 	}
 }

@@ -31,6 +31,7 @@ public class Messages extends NLS {
 	public static String Button_Exit;
 	public static String Button_MinimizeOnly;
 	public static String Button_MoveUp;
+	public static String Button_PauseBackup;
 	public static String Button_Remove;
 	public static String Button_Restore;
 	public static String Button_Settings;

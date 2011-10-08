@@ -75,7 +75,12 @@ class BackupShell {
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
 		@Override
 		public void backupStatusChanged(BackupStatusEvent e) {
-			updateStatusLabel(e.getStatus());
+			BackupStatus status = e.getStatus();
+			updateStatusLabel(status);
+			if (status.isCleanup() || status.isFinalize()) {
+				pauseAction.setEnabled(false);
+				stopAction.setEnabled(false);
+			}
 		}
 		
 		@Override
@@ -87,6 +92,8 @@ class BackupShell {
 			updateBackupNowButton();
 			updateCheckButton();
 			updateProgressVisibility();
+			pauseAction.setEnabled(true);
+			stopAction.setEnabled(true);
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
@@ -98,6 +105,8 @@ class BackupShell {
 			updateCheckButton();
 		}
 	};
+	private IAction pauseAction;
+	private IAction stopAction;
 
 	BackupShell(Display display) {
 		shell = new Shell(display, SWT.SHELL_TRIM ^ SWT.MAX);
@@ -215,7 +224,7 @@ class BackupShell {
 		progressStatusComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		
 		progressComposite = new Composite(progressStatusComposite, SWT.NONE);
-		layout = new GridLayout(2, false);
+		layout = new GridLayout(3, false);
 		layout.marginWidth = 0;
 		layout.marginHeight = 0;
 		progressComposite.setLayout(layout);
@@ -227,7 +236,21 @@ class BackupShell {
 		updateProgressVisibility();
 
 		ToolBarManager toolBarManager = new ToolBarManager(SWT.FLAT);
-		IAction stopAction = new Action() {
+
+		pauseAction = new Action(Messages.Button_PauseBackup, IAction.AS_CHECK_BOX) {
+			@Override
+			public void run() {
+				if (backupRun != null) {
+					backupRun.setPaused(pauseAction.isChecked());
+				}
+			}
+		};
+		ImageDescriptor imgDesc = BackupPlugin.getDefault().getImageDescriptor("etc/icons/pause.gif"); //$NON-NLS-1$
+		pauseAction.setImageDescriptor(imgDesc);
+		pauseAction.setToolTipText(Messages.Button_PauseBackup);
+		toolBarManager.add(pauseAction);
+
+		stopAction = new Action() {
 			@Override
 			public void run() {
 				if (backupRun != null) {
@@ -235,10 +258,11 @@ class BackupShell {
 				}
 			}
 		};
-		ImageDescriptor imgDesc = BackupPlugin.getDefault().getImageDescriptor("etc/icons/stop.gif"); //$NON-NLS-1$
+		imgDesc = BackupPlugin.getDefault().getImageDescriptor("etc/icons/stop.gif"); //$NON-NLS-1$
 		stopAction.setImageDescriptor(imgDesc);
 		stopAction.setToolTipText(Messages.Button_StopBackup);
 		toolBarManager.add(stopAction);
+
 		ToolBar toolBar = toolBarManager.createControl(progressComposite);
 		toolBar.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		

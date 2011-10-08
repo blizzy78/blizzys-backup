@@ -52,6 +52,14 @@ public class BackupStatus {
 		return totalEntries;
 	}
 	
+	public boolean isCleanup() {
+		return cleanup;
+	}
+	
+	public boolean isFinalize() {
+		return finalize;
+	}
+
 	public String getText() {
 		if (initialize) {
 			return Messages.Initializing;

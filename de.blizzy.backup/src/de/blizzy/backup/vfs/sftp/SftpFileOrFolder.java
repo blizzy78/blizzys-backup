@@ -86,7 +86,7 @@ class SftpFileOrFolder implements IFile, IFolder {
 
 	@Override
 	public FileTime getLastModificationTime() throws IOException {
-		return FileTime.fromMillis(getFileAttributes().getMtime());
+		return FileTime.fromMillis(getFileAttributes().getMtime() * 1000L);
 	}
 	
 	private FileAttributes getFileAttributes() throws IOException {

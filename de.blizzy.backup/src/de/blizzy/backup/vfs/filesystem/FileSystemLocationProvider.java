@@ -31,6 +31,8 @@ import de.blizzy.backup.vfs.ILocation;
 import de.blizzy.backup.vfs.ILocationProvider;
 
 public class FileSystemLocationProvider implements ILocationProvider {
+	private String lastFolder;
+
 	@Override
 	public String getId() {
 		return BackupPlugin.ID + ".locationProvider.filesystem"; //$NON-NLS-1$
@@ -40,7 +42,13 @@ public class FileSystemLocationProvider implements ILocationProvider {
 	public ILocation promptLocation(Shell parentShell) {
 		DirectoryDialog dlg = new DirectoryDialog(parentShell, SWT.OPEN);
 		dlg.setText(Messages.Title_SelectFolder);
+		if (lastFolder != null) {
+			dlg.setFilterPath(lastFolder);
+		}
 		String folder = dlg.open();
+		if (folder != null) {
+			lastFolder = folder;
+		}
 		return (folder != null) ? new FileSystemLocation(Utils.toCanonicalFile(new File(folder)), this) : null;
 	}
 

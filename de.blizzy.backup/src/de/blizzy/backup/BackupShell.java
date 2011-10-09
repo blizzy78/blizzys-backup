@@ -92,6 +92,7 @@ class BackupShell {
 			updateBackupNowButton();
 			updateCheckButton();
 			updateProgressVisibility();
+			pauseAction.setChecked(false);
 			pauseAction.setEnabled(true);
 			stopAction.setEnabled(true);
 		}
@@ -254,6 +255,9 @@ class BackupShell {
 			@Override
 			public void run() {
 				if (backupRun != null) {
+					pauseAction.setChecked(false);
+					pauseAction.setEnabled(false);
+					stopAction.setEnabled(false);
 					backupRun.stopBackup();
 				}
 			}

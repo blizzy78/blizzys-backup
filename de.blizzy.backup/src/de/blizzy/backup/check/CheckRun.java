@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
@@ -29,8 +30,10 @@ import java.security.MessageDigest;
 import java.sql.SQLException;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
@@ -49,6 +52,20 @@ import de.blizzy.backup.database.schema.tables.Files;
 import de.blizzy.backup.settings.Settings;
 
 public class CheckRun implements IRunnableWithProgress {
+	private static final class FileCheckResult {
+		static final FileCheckResult BROKEN = new FileCheckResult(false, null);
+		
+		boolean ok;
+		String checksumSHA256;
+
+		FileCheckResult(boolean ok, String checksumSHA256) {
+			this.ok = ok;
+			this.checksumSHA256 = checksumSHA256;
+		}
+	}
+	
+	private static final int SHA256_LENGTH = DigestUtils.sha256Hex(StringUtils.EMPTY).length();
+	
 	private Settings settings;
 	private String outputFolder;
 	private Shell parentShell;
@@ -109,7 +126,7 @@ public class CheckRun implements IRunnableWithProgress {
 			Cursor<Record> cursor = null;
 			try {
 				cursor = database.factory()
-					.select(Files.BACKUP_PATH, Files.CHECKSUM, Files.LENGTH, Files.COMPRESSION)
+					.select(Files.ID, Files.BACKUP_PATH, Files.CHECKSUM, Files.LENGTH, Files.COMPRESSION)
 					.from(Files.FILES)
 					.fetchLazy();
 				while (cursor.hasNext()) {
@@ -122,9 +139,18 @@ public class CheckRun implements IRunnableWithProgress {
 					String checksum = record.getValue(Files.CHECKSUM);
 					long length = record.getValue(Files.LENGTH).longValue();
 					Compression compression = Compression.fromValue(record.getValue(Files.COMPRESSION).intValue());
-					if (!checkFile(backupPath, checksum, length, compression)) {
+					FileCheckResult checkResult = checkFile(backupPath, checksum, length, compression);
+					if (!checkResult.ok) {
 						backupOk = false;
 						break;
+					}
+					if (checksum.length() != SHA256_LENGTH) {
+						Integer id = record.getValue(Files.ID);
+						database.factory()
+							.update(Files.FILES)
+							.set(Files.CHECKSUM, checkResult.checksumSHA256)
+							.where(Files.ID.equal(id))
+							.execute();
 					}
 					monitor.worked(1);
 				}
@@ -140,22 +166,32 @@ public class CheckRun implements IRunnableWithProgress {
 		}
 	}
 
-	private boolean checkFile(String backupPath, String checksum, long length, Compression compression) throws IOException {
+	private FileCheckResult checkFile(String backupPath, String checksum,
+			long length, Compression compression) throws IOException {
+
 		File backupFile = Utils.toBackupFile(backupPath, outputFolder);
 		if (backupFile.isFile()) {
 			InputStream in = null;
-			DigestOutputStream out = null;
+			OutputStream out = null;
 			try {
 				in = compression.getInputStream(new BufferedInputStream(new FileInputStream(backupFile)));
-				MessageDigest digest = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
 				LengthOutputStream lengthOut = new LengthOutputStream(new NullOutputStream());
+				MessageDigest digest = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
 				out = new DigestOutputStream(lengthOut, digest);
+				MessageDigest md5Digest = null;
+				if (checksum.length() != SHA256_LENGTH) {
+					md5Digest = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
+					out = new DigestOutputStream(out, md5Digest);
+				}
 				IOUtils.copy(in, out);
 				out.flush();
 				
 				String fileChecksum = Hex.encodeHexString(digest.digest());
+				String fileChecksumMD5 = (md5Digest != null) ? Hex.encodeHexString(md5Digest.digest()) : null;
 				long fileLength = lengthOut.getLength();
-				return (fileLength == length) && fileChecksum.equals(checksum);
+				boolean ok = (fileLength == length) &&
+						checksum.equals((checksum.length() == SHA256_LENGTH) ? fileChecksum : fileChecksumMD5);
+				return new FileCheckResult(ok, fileChecksum);
 			} catch (GeneralSecurityException e) {
 				throw new RuntimeException(e);
 			} finally {
@@ -163,6 +199,6 @@ public class CheckRun implements IRunnableWithProgress {
 				IOUtils.closeQuietly(out);
 			}
 		}
-		return false;
+		return FileCheckResult.BROKEN;
 	}
 }

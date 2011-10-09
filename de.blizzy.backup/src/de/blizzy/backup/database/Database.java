@@ -153,7 +153,7 @@ public class Database {
 			factory.query("CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
 					"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-					"checksum VARCHAR(" + DigestUtils.md5Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+					"checksum VARCHAR(" + DigestUtils.sha256Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
 					"length BIGINT NOT NULL, " + //$NON-NLS-1$
 					"compression TINYINT NOT NULL" + //$NON-NLS-1$
 					")") //$NON-NLS-1$
@@ -193,6 +193,10 @@ public class Database {
 				factory.query("ALTER TABLE files ALTER COLUMN compression TINYINT NOT NULL") //$NON-NLS-1$
 					.execute();
 			}
+			
+			factory.query("ALTER TABLE files ALTER COLUMN " + //$NON-NLS-1$
+				"checksum VARCHAR(" + DigestUtils.sha256Hex(StringUtils.EMPTY).length() + ") NOT NULL") //$NON-NLS-1$ //$NON-NLS-2$
+				.execute();
 			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();

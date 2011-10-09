@@ -376,7 +376,7 @@ public class BackupRun implements Runnable {
 			@Override
 			public OutputStream getOutputStream() throws IOException {
 				try {
-					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
+					digest[0] = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
 					return new DigestOutputStream(
 							Compression.BZIP2.getOutputStream(
 									new BufferedOutputStream(new FileOutputStream(backupFile))),
@@ -405,7 +405,7 @@ public class BackupRun implements Runnable {
 			@Override
 			public OutputStream getOutputStream() throws IOException {
 				try {
-					digest[0] = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
+					digest[0] = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
 					return new DigestOutputStream(new NullOutputStream(), digest[0]);
 				} catch (GeneralSecurityException e) {
 					throw new RuntimeException(e);

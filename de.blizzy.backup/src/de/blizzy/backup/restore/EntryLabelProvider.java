@@ -19,17 +19,18 @@ package de.blizzy.backup.restore;
 
 import java.text.DateFormat;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.Image;
 
 import de.blizzy.backup.BackupPlugin;
+import de.blizzy.backup.FileLengthFormat;
 import de.blizzy.backup.database.EntryType;
 
 class EntryLabelProvider implements ITableLabelProvider {
 	private static final DateFormat DATE_FORMAT = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
+	private static final FileLengthFormat FILE_LENGTH_FORMAT = new FileLengthFormat();
 
 	private Image rootFolderImage;
 	private Image folderImage;
@@ -56,7 +57,7 @@ class EntryLabelProvider implements ITableLabelProvider {
 				return entry.name;
 			case 1:
 				if (entry.length >= 0) {
-					return FileUtils.byteCountToDisplaySize(entry.length);
+					return FILE_LENGTH_FORMAT.format(entry.length);
 				}
 				break;
 			case 2:

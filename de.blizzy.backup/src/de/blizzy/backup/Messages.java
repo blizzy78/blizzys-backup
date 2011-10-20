@@ -50,6 +50,10 @@ public class Messages extends NLS {
 	public static String FolderIsOutputFolder;
 	public static String FolderIsParentOfBackupFolder;
 	public static String FolderNotEmpty;
+	public static String Format_Bytes;
+	public static String Format_GB;
+	public static String Format_KB;
+	public static String Format_MB;
 	public static String Idle;
 	public static String Initializing;
 	public static String Label_BackupOutputFolder;

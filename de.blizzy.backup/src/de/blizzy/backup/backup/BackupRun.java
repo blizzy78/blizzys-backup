@@ -362,7 +362,7 @@ public class BackupRun implements Runnable {
 					de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(file.getLength())))
 			.fetchAny();
 		return (record != null) ?
-				record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.ID).intValue() :
+				record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue() :
 				-1;
 	}
 
@@ -605,7 +605,7 @@ public class BackupRun implements Runnable {
 			List<Date> days = new ArrayList<>();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
-				c.setTimeInMillis(record.getValueAsTimestamp(Backups.RUN_TIME).getTime());
+				c.setTimeInMillis(record.getValue(Backups.RUN_TIME).getTime());
 				c.set(Calendar.HOUR_OF_DAY, 0);
 				c.set(Calendar.MINUTE, 0);
 				c.set(Calendar.SECOND, 0);
@@ -646,8 +646,8 @@ public class BackupRun implements Runnable {
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
 				FileEntry file = new FileEntry(
-						record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.ID).intValue(),
-						record.getValueAsString(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH));
+						record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue(),
+						record.getValue(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH));
 				filesToRemove.add(file);
 			}
 		} finally {
@@ -732,7 +732,7 @@ public class BackupRun implements Runnable {
 			.orderBy(Backups.RUN_TIME)
 			.fetchAny();
 		if (record != null) {
-			Integer id = record.getValueAsInteger(Backups.ID);
+			Integer id = record.getValue(Backups.ID);
 			BackupPlugin.getDefault().logMessage("removing backup: " + id); //$NON-NLS-1$
 			removeBackups(Collections.singleton(id));
 		}

@@ -429,7 +429,7 @@ public class RestoreDialog extends Dialog {
 			.where(Entries.ID.equal(Integer.valueOf(folderId)))
 			.fetchOne();
 		String name = record.getValue(Entries.NAME);
-		Integer parentFolderId = record.getValueAsInteger(Entries.PARENT_ID);
+		Integer parentFolderId = record.getValue(Entries.PARENT_ID);
 		String parentFolder = getFolderLink(backup, (parentFolderId != null) ? parentFolderId.intValue() : -1);
 		String part = "<a href=\"" + folderId + "_" + ((parentFolderId != null) ? parentFolderId.intValue() : -1) + //$NON-NLS-1$ //$NON-NLS-2$
 			"\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$
@@ -456,21 +456,21 @@ public class RestoreDialog extends Dialog {
 		List<Entry> entries = new ArrayList<>();
 		while (cursor.hasNext()) {
 			Record record = cursor.fetchOne();
-			int id = record.getValueAsInteger(Entries.ID).intValue();
-			Integer parentIdInt = record.getValueAsInteger(Entries.PARENT_ID);
+			int id = record.getValue(Entries.ID).intValue();
+			Integer parentIdInt = record.getValue(Entries.PARENT_ID);
 			int parentId = (parentIdInt != null) ? parentIdInt.intValue() : -1;
-			String name = record.getValueAsString(Entries.NAME);
-			EntryType type = EntryType.fromValue(record.getValueAsInteger(Entries.TYPE).intValue());
-			Timestamp createTime = record.getValueAsTimestamp(Entries.CREATION_TIME);
+			String name = record.getValue(Entries.NAME);
+			EntryType type = EntryType.fromValue(record.getValue(Entries.TYPE).intValue());
+			Timestamp createTime = record.getValue(Entries.CREATION_TIME);
 			Date creationTime = (createTime != null) ? new Date(createTime.getTime()) : null;
-			Timestamp modTime = record.getValueAsTimestamp(Entries.MODIFICATION_TIME);
+			Timestamp modTime = record.getValue(Entries.MODIFICATION_TIME);
 			Date modificationTime = (modTime != null) ? new Date(modTime.getTime()) : null;
-			boolean hidden = record.getValueAsBoolean(Entries.HIDDEN).booleanValue();
-			Long lengthLong = record.getValueAsLong(de.blizzy.backup.database.schema.tables.Files.LENGTH);
+			boolean hidden = record.getValue(Entries.HIDDEN).booleanValue();
+			Long lengthLong = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH);
 			long length = (lengthLong != null) ? lengthLong.longValue() : -1;
-			String backupPath = record.getValueAsString(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
-			Integer compressionInt = record.getValueAsInteger(de.blizzy.backup.database.schema.tables.Files.COMPRESSION);
-			Compression compression = (compressionInt != null) ? Compression.fromValue(compressionInt.intValue()) : null;
+			String backupPath = record.getValue(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
+			Byte compressionByte = record.getValue(de.blizzy.backup.database.schema.tables.Files.COMPRESSION);
+			Compression compression = (compressionByte != null) ? Compression.fromValue(compressionByte.intValue()) : null;
 			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath,
 					compression);
 			entries.add(entry);

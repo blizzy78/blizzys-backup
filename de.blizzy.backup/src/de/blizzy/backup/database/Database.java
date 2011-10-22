@@ -142,6 +142,8 @@ public class Database {
 
 	public void initialize() {
 		try {
+			int sha256Length = DigestUtils.sha256Hex(StringUtils.EMPTY).length();
+			
 			factory.query("CREATE TABLE IF NOT EXISTS backups (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
 					"run_time DATETIME NOT NULL, " + //$NON-NLS-1$
@@ -153,7 +155,7 @@ public class Database {
 			factory.query("CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
 					"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
-					"checksum VARCHAR(" + DigestUtils.sha256Hex(StringUtils.EMPTY).length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+					"checksum VARCHAR(" + sha256Length + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
 					"length BIGINT NOT NULL, " + //$NON-NLS-1$
 					"compression TINYINT NOT NULL" + //$NON-NLS-1$
 					")") //$NON-NLS-1$
@@ -194,13 +196,16 @@ public class Database {
 					.execute();
 			}
 			
-			factory.query("ALTER TABLE files ALTER COLUMN " + //$NON-NLS-1$
-				"checksum VARCHAR(" + DigestUtils.sha256Hex(StringUtils.EMPTY).length() + ") NOT NULL") //$NON-NLS-1$ //$NON-NLS-2$
-				.execute();
+			if (getTableColumnSize("FILES", "CHECKSUM") != sha256Length) { //$NON-NLS-1$ //$NON-NLS-2$
+				factory.query("ALTER TABLE files ALTER COLUMN " + //$NON-NLS-1$
+					"checksum VARCHAR(" + sha256Length + ") NOT NULL") //$NON-NLS-1$ //$NON-NLS-2$
+					.execute();
+			}
 			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();
 		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -209,6 +214,17 @@ public class Database {
 		try {
 			rs = conn.getMetaData().getColumns(null, null, tableName, columnName);
 			return rs.next();
+		} finally {
+			closeQuietly(rs);
+		}
+	}
+	
+	private int getTableColumnSize(String tableName, String columnName) throws SQLException {
+		ResultSet rs = null;
+		try {
+			rs = conn.getMetaData().getColumns(null, null, tableName, columnName);
+			rs.next();
+			return rs.getInt(7);
 		} finally {
 			closeQuietly(rs);
 		}

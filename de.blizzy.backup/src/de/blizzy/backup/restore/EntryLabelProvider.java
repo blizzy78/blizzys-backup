@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.restore;
 
+import java.io.File;
 import java.text.DateFormat;
 
 import org.eclipse.jface.viewers.ILabelProviderListener;
@@ -35,6 +36,7 @@ class EntryLabelProvider implements ITableLabelProvider {
 	private Image rootFolderImage;
 	private Image folderImage;
 	private Image fileImage;
+	private boolean showFullPath;
 
 	EntryLabelProvider(Device device) {
 		rootFolderImage = BackupPlugin.getDefault().getImageDescriptor("etc/icons/rootFolder.gif").createImage(device); //$NON-NLS-1$
@@ -54,7 +56,9 @@ class EntryLabelProvider implements ITableLabelProvider {
 		Entry entry = (Entry) element;
 		switch (columnIndex) {
 			case 0:
-				return entry.name;
+				return (showFullPath && (entry.fullPath != null)) ?
+						entry.fullPath + File.separator + entry.name :
+						entry.name;
 			case 1:
 				if (entry.length >= 0) {
 					return FILE_LENGTH_FORMAT.format(entry.length);
@@ -95,5 +99,9 @@ class EntryLabelProvider implements ITableLabelProvider {
 
 	@Override
 	public void removeListener(ILabelProviderListener listener) {
+	}
+
+	void setShowFullPath(boolean showFullPath) {
+		this.showFullPath = showFullPath;
 	}
 }

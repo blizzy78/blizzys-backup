@@ -33,6 +33,7 @@ class Entry {
 	long length;
 	String backupPath;
 	Compression compression;
+	String fullPath;
 
 	Entry(int id, int parentId, String name, EntryType type, Date creationTime, Date modificationTime, boolean hidden,
 			long length, String backupPath, Compression compression) {

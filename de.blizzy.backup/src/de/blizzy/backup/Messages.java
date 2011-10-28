@@ -68,6 +68,7 @@ public class Messages extends NLS {
 	public static String Label_Port;
 	public static String Label_RunDaily;
 	public static String Label_RunHourly;
+	public static String Label_SearchFileFolder;
 	public static String Label_ShowBackupContentsAt;
 	public static String Label_Size;
 	public static String Label_Status;

@@ -14,19 +14,19 @@ package de.blizzy.backup.database.schema;
 public final class Sequences {
 
 	/**
-	 * The sequence SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157
+	 * The sequence SYSTEM_SEQUENCE_1F25903E_691F_4157_9F3C_3757E62B5DD4
 	 */
-	public static final org.jooq.Sequence SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157 = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157", de.blizzy.backup.database.schema.Public.PUBLIC);
+	public static final org.jooq.Sequence SYSTEM_SEQUENCE_1F25903E_691F_4157_9F3C_3757E62B5DD4 = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_1F25903E_691F_4157_9F3C_3757E62B5DD4", de.blizzy.backup.database.schema.Public.PUBLIC);
 
 	/**
-	 * The sequence SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B
+	 * The sequence SYSTEM_SEQUENCE_6F8C7182_BB0B_463B_BB4D_61D1EA6EE391
 	 */
-	public static final org.jooq.Sequence SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B", de.blizzy.backup.database.schema.Public.PUBLIC);
+	public static final org.jooq.Sequence SYSTEM_SEQUENCE_6F8C7182_BB0B_463B_BB4D_61D1EA6EE391 = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_6F8C7182_BB0B_463B_BB4D_61D1EA6EE391", de.blizzy.backup.database.schema.Public.PUBLIC);
 
 	/**
-	 * The sequence SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233
+	 * The sequence SYSTEM_SEQUENCE_C82CD0E0_44D2_4E99_8793_97CF93FD142F
 	 */
-	public static final org.jooq.Sequence SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233 = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233", de.blizzy.backup.database.schema.Public.PUBLIC);
+	public static final org.jooq.Sequence SYSTEM_SEQUENCE_C82CD0E0_44D2_4E99_8793_97CF93FD142F = new org.jooq.impl.SequenceImpl("SYSTEM_SEQUENCE_C82CD0E0_44D2_4E99_8793_97CF93FD142F", de.blizzy.backup.database.schema.Public.PUBLIC);
 
 	/**
 	 * No instances

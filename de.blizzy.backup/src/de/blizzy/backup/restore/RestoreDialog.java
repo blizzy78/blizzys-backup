@@ -487,7 +487,7 @@ public class RestoreDialog extends Dialog {
 					Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)) :
 					Entries.PARENT_ID.isNull();
 		} else {
-			searchCondition = Entries.NAME.lower().like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
+			searchCondition = Entries.NAME_LOWER.like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 		return database.factory()
 			.select(Entries.ID, Entries.PARENT_ID, Entries.NAME, Entries.TYPE, Entries.CREATION_TIME, Entries.MODIFICATION_TIME,

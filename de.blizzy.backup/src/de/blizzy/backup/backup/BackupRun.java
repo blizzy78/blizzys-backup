@@ -207,6 +207,7 @@ public class BackupRun implements Runnable {
 			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
 			.set(Entries.HIDDEN, Boolean.valueOf(folder.isHidden()))
 			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
+			.set(Entries.NAME_LOWER, StringUtils.isNotBlank(overrideName) ? overrideName.toLowerCase() : folder.getName().toLowerCase())
 			.execute();
 		int id = database.factory().lastID().intValue();
 		List<IFileSystemEntry> entries = new ArrayList<>(folder.list());
@@ -269,6 +270,7 @@ public class BackupRun implements Runnable {
 			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
 			.set(Entries.HIDDEN, Boolean.valueOf(file.isHidden()))
 			.set(Entries.NAME, file.getName())
+			.set(Entries.NAME_LOWER, file.getName().toLowerCase())
 			.set(Entries.FILE_ID, Integer.valueOf(fileId))
 			.execute();
 		

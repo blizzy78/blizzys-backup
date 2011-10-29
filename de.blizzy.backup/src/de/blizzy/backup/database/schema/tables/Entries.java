@@ -11,7 +11,7 @@ package de.blizzy.backup.database.schema.tables;
 @SuppressWarnings("nls")
 public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord> {
 
-	private static final long serialVersionUID = 2049829665;
+	private static final long serialVersionUID = 1646243030;
 
 	/**
 	 * The singleton instance of ENTRIES
@@ -72,6 +72,11 @@ public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	 * An uncommented item
 	 */
 	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String> NAME = new org.jooq.impl.TableFieldImpl<>("NAME", org.jooq.impl.SQLDataType.VARCHAR, ENTRIES);
+
+	/**
+	 * An uncommented item
+	 */
+	public static final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String> NAME_LOWER = new org.jooq.impl.TableFieldImpl<>("NAME_LOWER", org.jooq.impl.SQLDataType.VARCHAR, ENTRIES);
 
 	/**
 	 * An uncommented item

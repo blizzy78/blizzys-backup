@@ -35,6 +35,7 @@ import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
+import de.blizzy.backup.database.schema.tables.Entries;
 import de.blizzy.backup.settings.Settings;
 
 public class Database {
@@ -173,6 +174,7 @@ public class Database {
 					"modification_time DATETIME NULL, " + //$NON-NLS-1$
 					"hidden BOOLEAN NOT NULL, " + //$NON-NLS-1$
 					"name VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
+					"name_lower VARCHAR(1024) NOT NULL, " + //$NON-NLS-1$
 					"file_id INT NULL" + //$NON-NLS-1$
 					")") //$NON-NLS-1$
 					.execute();
@@ -201,6 +203,19 @@ public class Database {
 					"checksum VARCHAR(" + sha256Length + ") NOT NULL") //$NON-NLS-1$ //$NON-NLS-2$
 					.execute();
 			}
+			
+			if (!isTableColumnExistent("ENTRIES", "NAME_LOWER")) { //$NON-NLS-1$ //$NON-NLS-2$
+				factory.query("ALTER TABLE entries ADD name_lower VARCHAR(1024) NULL") //$NON-NLS-1$
+					.execute();
+				factory.update(Entries.ENTRIES)
+					.set(Entries.NAME_LOWER, Entries.NAME.lower())
+					.execute();
+				factory.query("ALTER TABLE entries ALTER COLUMN name_lower VARCHAR(1024) NOT NULL") //$NON-NLS-1$
+					.execute();
+			}
+			factory.query("CREATE INDEX IF NOT EXISTS idx_entries_search ON entries " + //$NON-NLS-1$
+					"(backup_id, name_lower)") //$NON-NLS-1$
+					.execute();
 			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();

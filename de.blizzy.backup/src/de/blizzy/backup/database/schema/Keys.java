@@ -15,13 +15,13 @@ public class Keys extends org.jooq.impl.AbstractKeys {
 
 	// IDENTITY definitions
 	public static final org.jooq.Identity<de.blizzy.backup.database.schema.tables.records.BackupsRecord, java.lang.Integer> IDENTITY_BACKUPS = createIdentity(de.blizzy.backup.database.schema.tables.Backups.BACKUPS, de.blizzy.backup.database.schema.tables.Backups.ID);
-	public static final org.jooq.Identity<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> IDENTITY_ENTRIES = createIdentity(de.blizzy.backup.database.schema.tables.Entries.ENTRIES, de.blizzy.backup.database.schema.tables.Entries.ID);
 	public static final org.jooq.Identity<de.blizzy.backup.database.schema.tables.records.FilesRecord, java.lang.Integer> IDENTITY_FILES = createIdentity(de.blizzy.backup.database.schema.tables.Files.FILES, de.blizzy.backup.database.schema.tables.Files.ID);
+	public static final org.jooq.Identity<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.Integer> IDENTITY_ENTRIES = createIdentity(de.blizzy.backup.database.schema.tables.Entries.ENTRIES, de.blizzy.backup.database.schema.tables.Entries.ID);
 
 	// UNIQUE and PRIMARY KEY definitions
 	public static final org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.BackupsRecord> CONSTRAINT_1 = createUniqueKey(de.blizzy.backup.database.schema.tables.Backups.BACKUPS, de.blizzy.backup.database.schema.tables.Backups.ID);
-	public static final org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.EntriesRecord> CONSTRAINT_C = createUniqueKey(de.blizzy.backup.database.schema.tables.Entries.ENTRIES, de.blizzy.backup.database.schema.tables.Entries.ID);
 	public static final org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.FilesRecord> CONSTRAINT_3 = createUniqueKey(de.blizzy.backup.database.schema.tables.Files.FILES, de.blizzy.backup.database.schema.tables.Files.ID);
+	public static final org.jooq.UniqueKey<de.blizzy.backup.database.schema.tables.records.EntriesRecord> CONSTRAINT_C = createUniqueKey(de.blizzy.backup.database.schema.tables.Entries.ENTRIES, de.blizzy.backup.database.schema.tables.Entries.ID);
 
 	// FOREIGN KEY definitions
 

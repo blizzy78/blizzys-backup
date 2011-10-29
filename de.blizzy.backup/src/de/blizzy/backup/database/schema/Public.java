@@ -11,7 +11,7 @@ package de.blizzy.backup.database.schema;
 @SuppressWarnings("nls")
 public class Public extends org.jooq.impl.SchemaImpl {
 
-	private static final long serialVersionUID = 17977461;
+	private static final long serialVersionUID = 1551878597;
 
 	/**
 	 * The singleton instance of PUBLIC
@@ -28,16 +28,16 @@ public class Public extends org.jooq.impl.SchemaImpl {
 	@Override
 	public final java.util.List<org.jooq.Sequence> getSequences() {
 		return java.util.Arrays.<org.jooq.Sequence>asList(
-			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157,
-			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B,
-			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233);
+			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_1F25903E_691F_4157_9F3C_3757E62B5DD4,
+			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_6F8C7182_BB0B_463B_BB4D_61D1EA6EE391,
+			de.blizzy.backup.database.schema.Sequences.SYSTEM_SEQUENCE_C82CD0E0_44D2_4E99_8793_97CF93FD142F);
 	}
 
 	@Override
 	public final java.util.List<org.jooq.Table<?>> getTables() {
 		return java.util.Arrays.<org.jooq.Table<?>>asList(
 			de.blizzy.backup.database.schema.tables.Backups.BACKUPS,
-			de.blizzy.backup.database.schema.tables.Entries.ENTRIES,
-			de.blizzy.backup.database.schema.tables.Files.FILES);
+			de.blizzy.backup.database.schema.tables.Files.FILES,
+			de.blizzy.backup.database.schema.tables.Entries.ENTRIES);
 	}
 }

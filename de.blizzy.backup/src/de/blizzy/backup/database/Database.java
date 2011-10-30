@@ -184,8 +184,10 @@ public class Database {
 			factory.query("CREATE INDEX IF NOT EXISTS idx_folder_entries ON entries " + //$NON-NLS-1$
 					"(backup_id, parent_id)") //$NON-NLS-1$
 					.execute();
-			factory.query("CREATE INDEX IF NOT EXISTS idx_entries_names ON entries " + //$NON-NLS-1$
-					"(name)") //$NON-NLS-1$
+			factory.query("DROP INDEX IF EXISTS idx_entries_names") //$NON-NLS-1$
+					.execute();
+			factory.query("CREATE INDEX IF NOT EXISTS idx_entries_names2 ON entries " + //$NON-NLS-1$
+					"(name, backup_id, parent_id)") //$NON-NLS-1$
 					.execute();
 			
 			if (!isTableColumnExistent("FILES", "COMPRESSION")) { //$NON-NLS-1$ //$NON-NLS-2$

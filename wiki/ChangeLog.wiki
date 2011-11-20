@@ -1,0 +1,31 @@
+#labels Featured
+*1.2.7, 2011-10-29*
+  * added function to search for files and folders when restoring
+
+*1.2.6, 2011-10-09*
+  * backup run may be paused and stopped in GUI
+  * files backed up from SFTP locations now have correct timestamps
+
+*1.2.5, 2011-10-05*
+  * minor improvements
+
+*1.2.4, 2011-09-13*
+  * minor improvements to backup
+
+*1.2.3, 2011-08-31*
+  * use different compression algorithm to conserve more space on backup medium
+
+*1.2.2, 2011-08-20*
+  * minor improvements to backup
+
+*1.2.1, 2011-08-12*
+  * SFTP improvements
+
+*1.2.0, 2011-08-10*
+  * added support for SFTP source locations
+
+*1.1.0, 2011-08-06*
+  * file comparison may now work with timestamps instead of checksums
+
+*1.0.0, 2011-08-02*
+  * initial release

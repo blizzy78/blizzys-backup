@@ -1,0 +1,52 @@
+#labels Featured
+==General==
+
+*What is the focus of blizzy's Backup?*
+
+The application's main target are home end users who want to keep regular backups of their files, along with a history of those. The focus is on simplicity and ease of use instead of number of features.
+
+*On what platforms does blizzy's Backup run?*
+
+Project development currently focuses on the Windows platform.
+
+*What are the requirements to run the application?*
+
+blizzy's Backup runs on any Windows platform that has JDK 7 installed, which can be downloaded [http://www.oracle.com/technetwork/java/javase/downloads/index.html here].
+
+*In what languages is the application available?*
+
+The application is translated into English and German. If you want to help with translating to other languages, please see our [http://crowdin.net/project/blizzysbackup/invite translations page].
+
+*Is blizzy's Backup free to use?*
+
+Yes. If you want, you can make donations by clicking here:
+
+[https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WEEG3LK8Z456Y Donate via PayPal]
+
+*Can you implement feature X?*
+
+Please feel free to discuss your idea in the [http://groups.google.com/group/blizzys-backup-discuss/topics discussion group].
+
+==Usage==
+
+*For how long does the application keep old backups?*
+
+Hourly backups (which are optional) are kept for 7 days. Daily backups are kept for 30 days. After that, those backups are deleted automatically with the exception of the most recent weekly backup. The weekly backups are kept until the device that holds the output folder is 80% full.
+
+In addition, the oldest backups are deleted whenever more space on the device is needed to run the current backup.
+
+See the following graphic for a timeline:
+
+http://blizzys-backup.googlecode.com/files/timeline.png
+
+*How does the application store backups?*
+
+Backup metadata and files are kept in a designated output folder. All files are compressed to save space. In addition, if a file has not changed from one backup to the next, it will not be copied again to save more space. (Instead it is visible in multiple backup runs when restoring.)
+
+*What devices can be used as backup medium?*
+
+The application stores backup files in a regular folder. This means it can store files on any device, be it your harddisk, a USB harddisk or USB stick, an iSCSI target (when mounted as a harddisk in Windows), or what have you.
+
+*Does the application update itself with new versions?*
+
+Yes. On startup the application looks for updates on the update server. This is done if the last search was more than 7 days ago, which means you might have to wait a few days to get an update.

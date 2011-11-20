@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: blizzy's Backup Tests
+Bundle-SymbolicName: de.blizzy.backup.test;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: Maik Schreiber
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .,
+ lib/mockito-all-1.9.0-rc1.jar
+Require-Bundle: org.junit;bundle-version="4.8.1",
+ de.blizzy.backup;bundle-version="1.2.4"

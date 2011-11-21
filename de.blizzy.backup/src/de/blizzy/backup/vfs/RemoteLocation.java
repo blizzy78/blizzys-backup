@@ -17,20 +17,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.vfs;
 
+import java.io.IOException;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.vfs.FileObject;
-import org.apache.commons.vfs.FileSystem;
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileSystemOptions;
-import org.apache.commons.vfs.UserAuthenticator;
-import org.apache.commons.vfs.VFS;
-import org.apache.commons.vfs.auth.StaticUserAuthenticator;
-import org.apache.commons.vfs.impl.DefaultFileSystemConfigBuilder;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileSystemOptions;
+import org.apache.commons.vfs2.UserAuthenticator;
+import org.apache.commons.vfs2.VFS;
+import org.apache.commons.vfs2.auth.StaticUserAuthenticator;
+import org.apache.commons.vfs2.impl.DefaultFileSystemConfigBuilder;
 import org.eclipse.jface.dialogs.IDialogSettings;
 
 import de.blizzy.backup.BackupPlugin;
 
 public abstract class RemoteLocation implements ILocation {
+	static final int MAX_TRIES = 5;
+	
 	private String host;
 	private int port;
 	private String login;
@@ -138,12 +142,27 @@ public abstract class RemoteLocation implements ILocation {
 	
 	@Override
 	public void close() {
+		disconnect();
+	}
+	
+	@Override
+	public void reconnect() {
+		disconnect();
+	}
+
+	private void disconnect() {
 		if (fileSystem != null) {
 			try {
 				VFS.getManager().closeFileSystem(fileSystem);
 			} catch (FileSystemException e) {
 				BackupPlugin.getDefault().logError("error while closing filesystem", e); //$NON-NLS-1$
+			} finally {
+				fileSystem = null;
 			}
 		}
+	}
+	
+	boolean canRetryAction(IOException e) {
+		return e instanceof FileSystemException;
 	}
 }

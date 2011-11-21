@@ -26,6 +26,7 @@ import net.schmizz.sshj.DefaultConfig;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.Factory.Named;
 import net.schmizz.sshj.sftp.SFTPClient;
+import net.schmizz.sshj.sftp.SFTPException;
 import net.schmizz.sshj.transport.compression.Compression;
 import net.schmizz.sshj.transport.compression.NoneCompression;
 import net.schmizz.sshj.transport.compression.ZlibCompression;
@@ -82,7 +83,8 @@ class SftpLocation implements ILocation {
 		disconnect();
 	}
 
-	void reconnect() {
+	@Override
+	public void reconnect() {
 		disconnect();
 	}
 	
@@ -132,6 +134,18 @@ class SftpLocation implements ILocation {
 			sshClient.authPassword(login, password);
 		}
 		return sshClient;
+	}
+	
+	boolean canRetryAction(IOException e) {
+		if (e instanceof SFTPException) {
+			SFTPException ex = (SFTPException) e;
+			switch (ex.getDisconnectReason()) {
+				case UNKNOWN:
+				case PROTOCOL_ERROR:
+					return true;
+			}
+		}
+		return false;
 	}
 
 	public void saveSettings(IDialogSettings section) {

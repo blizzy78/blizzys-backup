@@ -62,6 +62,10 @@ public class FileSystemLocation implements ILocation {
 	}
 	
 	@Override
+	public void reconnect() {
+	}
+
+	@Override
 	public int hashCode() {
 		return root.hashCode();
 	}

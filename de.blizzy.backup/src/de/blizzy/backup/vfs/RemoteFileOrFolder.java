@@ -27,10 +27,10 @@ import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.vfs.FileContent;
-import org.apache.commons.vfs.FileObject;
-import org.apache.commons.vfs.FileSystemException;
-import org.apache.commons.vfs.FileType;
+import org.apache.commons.vfs2.FileContent;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileType;
 
 public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IFolder, IFile {
 	private static final int BUFFER_SIZE = 128 * 1024;
@@ -95,16 +95,39 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 		}
 	}
 
-	private FileObject getFileObject() throws FileSystemException {
+	private FileObject getFileObject() throws IOException {
 		if (fileObject == null) {
-			fileObject = location.resolveFile(file);
+			IAction<FileObject> action = new IAction<FileObject>() {
+				@Override
+				public FileObject run() throws IOException {
+					return location.resolveFile(file);
+				}
+				
+				@Override
+				public boolean canRetry(IOException e) {
+					return location.canRetryAction(e);
+				}
+			};
+			fileObject = new ActionRunner<>(action, RemoteLocation.MAX_TRIES, location).run();
 		}
 		return fileObject;
 	}
 
-	private FileContent getFileContent() throws FileSystemException {
+	private FileContent getFileContent() throws IOException {
 		if (fileContent == null) {
-			fileContent = getFileObject().getContent();
+			final FileObject fileObject = getFileObject();
+			IAction<FileContent> action = new IAction<FileContent>() {
+				@Override
+				public FileContent run() throws IOException {
+					return fileObject.getContent();
+				}
+				
+				@Override
+				public boolean canRetry(IOException e) {
+					return location.canRetryAction(e);
+				}
+			};
+			fileContent = new ActionRunner<>(action, RemoteLocation.MAX_TRIES, location).run();
 		}
 		return fileContent;
 	}
@@ -122,17 +145,30 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 	}
 
 	@Override
-	public void copy(IOutputStreamProvider outputStreamProvider) throws IOException {
-		InputStream in = null;
-		OutputStream out = null;
-		try {
-			in = new BufferedInputStream(getFileContent().getInputStream(), BUFFER_SIZE);
-			out = outputStreamProvider.getOutputStream();
-			IOUtils.copy(in, out);
-		} finally {
-			IOUtils.closeQuietly(in);
-			IOUtils.closeQuietly(out);
-		}
+	public void copy(final IOutputStreamProvider outputStreamProvider) throws IOException {
+		final FileContent fileContent = getFileContent();
+		IAction<Void> action = new IAction<Void>() {
+			@Override
+			public Void run() throws IOException {
+				InputStream in = null;
+				OutputStream out = null;
+				try {
+					in = new BufferedInputStream(fileContent.getInputStream(), BUFFER_SIZE);
+					out = outputStreamProvider.getOutputStream();
+					IOUtils.copy(in, out);
+				} finally {
+					IOUtils.closeQuietly(in);
+					IOUtils.closeQuietly(out);
+				}
+				return null;
+			}
+			
+			@Override
+			public boolean canRetry(IOException e) {
+				return location.canRetryAction(e);
+			}
+		};
+		new ActionRunner<>(action, RemoteLocation.MAX_TRIES, location).run();
 	}
 
 	@Override
@@ -142,11 +178,23 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 
 	@Override
 	public Set<IFileSystemEntry> list() throws IOException {
-		Set<IFileSystemEntry> result = new HashSet<>();
-		for (FileObject child : getFileObject().getChildren()) {
-			result.add(getFileOrFolder(file + "/" + child.getName().getBaseName())); //$NON-NLS-1$
-		}
-		return result;
+		final FileObject fileObject = getFileObject();
+		IAction<Set<IFileSystemEntry>> action = new IAction<Set<IFileSystemEntry>>() {
+			@Override
+			public Set<IFileSystemEntry> run() throws IOException {
+				Set<IFileSystemEntry> result = new HashSet<>();
+				for (FileObject child : fileObject.getChildren()) {
+					result.add(getFileOrFolder(file + "/" + child.getName().getBaseName())); //$NON-NLS-1$
+				}
+				return result;
+			}
+			
+			@Override
+			public boolean canRetry(IOException e) {
+				return location.canRetryAction(e);
+			}
+		};
+		return new ActionRunner<>(action, RemoteLocation.MAX_TRIES, location).run();
 	}
 	
 	protected abstract IFolder getFileOrFolder(String file);

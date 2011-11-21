@@ -15,11 +15,37 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-package de.blizzy.backup.vfs.sftp;
+package de.blizzy.backup.vfs;
 
 import java.io.IOException;
 
-interface IAction<T> {
-	T run() throws IOException;
-	boolean canRetry(IOException e);
+public class ActionRunner<T> {
+	private IAction<T> action;
+	private int maxTries;
+	private ILocation location;
+
+	public ActionRunner(IAction<T> action, int maxTries, ILocation location) {
+		this.action = action;
+		this.maxTries = maxTries;
+		this.location = location;
+	}
+	
+	public T run() throws IOException {
+		T result;
+		IOException ex = null;
+		int tries = 0;
+		do {
+			try {
+				result = action.run();
+				return result;
+			} catch (IOException e) {
+				ex = e;
+				location.reconnect();
+				if (action.canRetry(e)) {
+					continue;
+				}
+			}
+		} while (++tries < maxTries);
+		throw ex;
+	}
 }

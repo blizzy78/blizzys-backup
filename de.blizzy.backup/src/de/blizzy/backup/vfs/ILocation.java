@@ -22,4 +22,5 @@ public interface ILocation {
 	IFolder getRootFolder();
 	ILocationProvider getProvider();
 	void close();
+	void reconnect();
 }

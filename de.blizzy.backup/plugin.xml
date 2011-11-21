@@ -34,5 +34,9 @@
             class="de.blizzy.backup.vfs.sftp.SftpLocationProvider"
             name="%locationProvider.sftp.name">
       </locationProvider>
+      <locationProvider
+            class="de.blizzy.backup.vfs.ftp.FtpLocationProvider"
+            name="%locationProvider.ftp.name">
+      </locationProvider>
    </extension>
 </plugin>

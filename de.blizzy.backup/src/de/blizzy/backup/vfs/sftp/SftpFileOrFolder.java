@@ -26,15 +26,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import net.schmizz.sshj.common.DisconnectReason;
 import net.schmizz.sshj.sftp.FileAttributes;
 import net.schmizz.sshj.sftp.FileMode;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
-import net.schmizz.sshj.sftp.SFTPException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import de.blizzy.backup.vfs.ActionRunner;
+import de.blizzy.backup.vfs.IAction;
 import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;
 import de.blizzy.backup.vfs.IFolder;
@@ -99,8 +99,7 @@ class SftpFileOrFolder implements IFile, IFolder {
 				
 				@Override
 				public boolean canRetry(IOException e) {
-					return (e instanceof SFTPException) &&
-						(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
+					return location.canRetryAction(e);
 				}
 			};
 			fileAttributes = new ActionRunner<>(
@@ -124,8 +123,7 @@ class SftpFileOrFolder implements IFile, IFolder {
 			
 			@Override
 			public boolean canRetry(IOException e) {
-				return (e instanceof SFTPException) &&
-					(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
+				return location.canRetryAction(e);
 			}
 		};
 		List<RemoteResourceInfo> files = new ActionRunner<>(
@@ -157,8 +155,7 @@ class SftpFileOrFolder implements IFile, IFolder {
 			
 			@Override
 			public boolean canRetry(IOException e) {
-				return (e instanceof SFTPException) &&
-					(((SFTPException) e).getDisconnectReason() == DisconnectReason.UNKNOWN);
+				return location.canRetryAction(e);
 			}
 		};
 		new ActionRunner<>(action, SftpLocation.MAX_TRIES, location).run();

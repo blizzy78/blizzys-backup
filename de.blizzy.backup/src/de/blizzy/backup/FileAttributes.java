@@ -96,7 +96,13 @@ public class FileAttributes {
 	}
 	
 	public boolean isHidden() {
-		return (dosAttrs != null) ? dosAttrs.isHidden() : path.getFileName().startsWith("."); //$NON-NLS-1$
+		if (dosAttrs != null) {
+			return dosAttrs.isHidden();
+		}
+		if (posixAttrs != null) {
+			return path.getFileName().startsWith("."); //$NON-NLS-1$
+		}
+		return false;
 	}
 	
 	public void setHidden(boolean hidden) throws IOException {
@@ -106,17 +112,29 @@ public class FileAttributes {
 	}
 	
 	public FileTime getCreationTime() {
-		return (dosAttrs != null) ? dosAttrs.creationTime() : posixAttrs.creationTime();
+		if (dosAttrs != null) {
+			return dosAttrs.creationTime();
+		}
+		if (posixAttrs != null) {
+			return posixAttrs.creationTime();
+		}
+		return null;
 	}
 	
 	public FileTime getModificationTime() {
-		return (dosAttrs != null) ? dosAttrs.lastModifiedTime() : posixAttrs.lastModifiedTime();
+		if (dosAttrs != null) {
+			return dosAttrs.lastModifiedTime();
+		}
+		if (posixAttrs != null) {
+			return posixAttrs.lastModifiedTime();
+		}
+		return null;
 	}
 	
 	public void setTimes(FileTime creationTime, FileTime modificationTime) throws IOException {
 		if (dosView != null) {
 			dosView.setTimes(modificationTime, null, creationTime);
-		} else {
+		} else if (posixView != null) {
 			posixView.setTimes(modificationTime, null, creationTime);
 		}
 	}

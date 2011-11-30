@@ -251,6 +251,13 @@ public class SettingsDialog extends Dialog {
 			}
 		});
 		
+		fileCompareChecksumRadio.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				showWarnings(fileCompareChecksumRadio);
+			}
+		});
+		
 		DropTarget dropTarget = new DropTarget(foldersViewer.getControl(), DND.DROP_LINK);
 		dropTarget.setTransfer(new Transfer[] { FileTransfer.getInstance() });
 		dropTarget.addDropListener(new DropTargetListener() {
@@ -317,6 +324,12 @@ public class SettingsDialog extends Dialog {
 		});
 		
 		return composite;
+	}
+
+	private void showWarnings(Control selectedControl) {
+		if ((selectedControl == fileCompareChecksumRadio) && fileCompareChecksumRadio.getSelection()) {
+			MessageDialog.openInformation(getShell(), Messages.Title_Information, Messages.Warning_CompareChecksum);
+		}
 	}
 
 	private void addFolder(ILocationProvider provider) {

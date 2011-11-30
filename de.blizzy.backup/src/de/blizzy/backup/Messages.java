@@ -98,6 +98,7 @@ public class Messages extends NLS {
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;
 	public static String Title_FTP;
+	public static String Title_Information;
 	public static String Title_InvalidFolder;
 	public static String Title_License;
 	public static String Title_NewVersionAvailable;
@@ -114,6 +115,7 @@ public class Messages extends NLS {
 	public static String Title_SFTP;
 	public static String Title_WhenToBackup;
 	public static String Version;
+	public static String Warning_CompareChecksum;
 	public static String XEntries;
 	static {
 		// initialize resource bundle

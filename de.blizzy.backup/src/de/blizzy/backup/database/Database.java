@@ -29,13 +29,14 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.Cursor;
+import org.jooq.exception.DataAccessException;
 import org.jooq.impl.Factory;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
-import de.blizzy.backup.database.schema.tables.Entries;
+import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.settings.Settings;
 
 public class Database {
@@ -193,8 +194,8 @@ public class Database {
 			if (!isTableColumnExistent("FILES", "COMPRESSION")) { //$NON-NLS-1$ //$NON-NLS-2$
 				factory.query("ALTER TABLE files ADD compression TINYINT NULL DEFAULT " + Compression.GZIP.getValue()) //$NON-NLS-1$
 					.execute();
-				factory.update(de.blizzy.backup.database.schema.tables.Files.FILES)
-					.set(de.blizzy.backup.database.schema.tables.Files.COMPRESSION, Byte.valueOf((byte) Compression.GZIP.getValue()))
+				factory.update(Tables.FILES)
+					.set(Tables.FILES.COMPRESSION, Byte.valueOf((byte) Compression.GZIP.getValue()))
 					.execute();
 				factory.query("ALTER TABLE files ALTER COLUMN compression TINYINT NOT NULL") //$NON-NLS-1$
 					.execute();
@@ -209,8 +210,8 @@ public class Database {
 			if (!isTableColumnExistent("ENTRIES", "NAME_LOWER")) { //$NON-NLS-1$ //$NON-NLS-2$
 				factory.query("ALTER TABLE entries ADD name_lower VARCHAR(1024) NULL") //$NON-NLS-1$
 					.execute();
-				factory.update(Entries.ENTRIES)
-					.set(Entries.NAME_LOWER, Entries.NAME.lower())
+				factory.update(Tables.ENTRIES)
+					.set(Tables.ENTRIES.NAME_LOWER, Tables.ENTRIES.NAME.lower())
 					.execute();
 				factory.query("ALTER TABLE entries ALTER COLUMN name_lower VARCHAR(1024) NOT NULL") //$NON-NLS-1$
 					.execute();
@@ -251,7 +252,7 @@ public class Database {
 		if (cursor != null) {
 			try {
 				cursor.close();
-			} catch (SQLException e) {
+			} catch (DataAccessException e) {
 				// ignore
 			}
 		}

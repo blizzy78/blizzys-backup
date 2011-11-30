@@ -41,6 +41,7 @@ import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.swt.widgets.Shell;
 import org.jooq.Cursor;
 import org.jooq.Record;
+import org.jooq.impl.Factory;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
@@ -48,7 +49,7 @@ import de.blizzy.backup.LengthOutputStream;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
-import de.blizzy.backup.database.schema.tables.Files;
+import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.settings.Settings;
 
 public class CheckRun implements IRunnableWithProgress {
@@ -117,17 +118,17 @@ public class CheckRun implements IRunnableWithProgress {
 			database.initialize();
 			
 			int numFiles = database.factory()
-				.select(database.factory().count())
-				.from(Files.FILES)
-				.fetchOne(database.factory().count())
+				.select(Factory.count())
+				.from(Tables.FILES)
+				.fetchOne(Factory.count())
 				.intValue();
 			monitor.beginTask(Messages.Title_CheckBackupIntegrity, numFiles);
 
 			Cursor<Record> cursor = null;
 			try {
 				cursor = database.factory()
-					.select(Files.ID, Files.BACKUP_PATH, Files.CHECKSUM, Files.LENGTH, Files.COMPRESSION)
-					.from(Files.FILES)
+					.select(Tables.FILES.ID, Tables.FILES.BACKUP_PATH, Tables.FILES.CHECKSUM, Tables.FILES.LENGTH, Tables.FILES.COMPRESSION)
+					.from(Tables.FILES)
 					.fetchLazy();
 				while (cursor.hasNext()) {
 					if (monitor.isCanceled()) {
@@ -135,21 +136,21 @@ public class CheckRun implements IRunnableWithProgress {
 					}
 					
 					Record record = cursor.fetchOne();
-					String backupPath = record.getValue(Files.BACKUP_PATH);
-					String checksum = record.getValue(Files.CHECKSUM);
-					long length = record.getValue(Files.LENGTH).longValue();
-					Compression compression = Compression.fromValue(record.getValue(Files.COMPRESSION).intValue());
+					String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
+					String checksum = record.getValue(Tables.FILES.CHECKSUM);
+					long length = record.getValue(Tables.FILES.LENGTH).longValue();
+					Compression compression = Compression.fromValue(record.getValue(Tables.FILES.COMPRESSION).intValue());
 					FileCheckResult checkResult = checkFile(backupPath, checksum, length, compression);
 					if (!checkResult.ok) {
 						backupOk = false;
 						break;
 					}
 					if (checksum.length() != SHA256_LENGTH) {
-						Integer id = record.getValue(Files.ID);
+						Integer id = record.getValue(Tables.FILES.ID);
 						database.factory()
-							.update(Files.FILES)
-							.set(Files.CHECKSUM, checkResult.checksumSHA256)
-							.where(Files.ID.equal(id))
+							.update(Tables.FILES)
+							.set(Tables.FILES.CHECKSUM, checkResult.checksumSHA256)
+							.where(Tables.FILES.ID.equal(id))
 							.execute();
 					}
 					monitor.worked(1);

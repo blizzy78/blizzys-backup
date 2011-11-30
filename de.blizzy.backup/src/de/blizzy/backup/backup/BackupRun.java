@@ -48,14 +48,14 @@ import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 import org.jooq.Cursor;
 import org.jooq.Record;
+import org.jooq.exception.DataAccessException;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
-import de.blizzy.backup.database.schema.tables.Backups;
-import de.blizzy.backup.database.schema.tables.Entries;
+import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.settings.Settings;
 import de.blizzy.backup.vfs.IFile;
 import de.blizzy.backup.vfs.IFileSystemEntry;
@@ -110,8 +110,8 @@ public class BackupRun implements Runnable {
 			database.initialize();
 			
 			database.factory()
-				.insertInto(Backups.BACKUPS)
-				.set(Backups.RUN_TIME, new Timestamp(System.currentTimeMillis()))
+				.insertInto(Tables.BACKUPS)
+				.set(Tables.BACKUPS.RUN_TIME, new Timestamp(System.currentTimeMillis()))
 				.execute();
 			backupId = database.factory().lastID().intValue();
 			
@@ -131,9 +131,9 @@ public class BackupRun implements Runnable {
 			}
 			
 			database.factory()
-				.update(Backups.BACKUPS)
-				.set(Backups.NUM_ENTRIES, Integer.valueOf(numEntries))
-				.where(Backups.ID.equal(Integer.valueOf(backupId)))
+				.update(Tables.BACKUPS)
+				.set(Tables.BACKUPS.NUM_ENTRIES, Integer.valueOf(numEntries))
+				.where(Tables.BACKUPS.ID.equal(Integer.valueOf(backupId)))
 				.execute();
 			
 			fireBackupStatusChanged(BackupStatus.CLEANUP);
@@ -199,15 +199,15 @@ public class BackupRun implements Runnable {
 		FileTime creationTime = folder.getCreationTime();
 		FileTime lastModificationTime = folder.getLastModificationTime();
 		database.factory()
-			.insertInto(Entries.ENTRIES)
-			.set(Entries.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
-			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
-			.set(Entries.TYPE, Integer.valueOf(EntryType.FOLDER.getValue()))
-			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
-			.set(Entries.HIDDEN, Boolean.valueOf(folder.isHidden()))
-			.set(Entries.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
-			.set(Entries.NAME_LOWER, StringUtils.isNotBlank(overrideName) ? overrideName.toLowerCase() : folder.getName().toLowerCase())
+			.insertInto(Tables.ENTRIES)
+			.set(Tables.ENTRIES.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
+			.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
+			.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FOLDER.getValue()))
+			.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+			.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+			.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(folder.isHidden()))
+			.set(Tables.ENTRIES.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
+			.set(Tables.ENTRIES.NAME_LOWER, StringUtils.isNotBlank(overrideName) ? overrideName.toLowerCase() : folder.getName().toLowerCase())
 			.execute();
 		int id = database.factory().lastID().intValue();
 		List<IFileSystemEntry> entries = new ArrayList<>(folder.list());
@@ -262,16 +262,16 @@ public class BackupRun implements Runnable {
 		}
 
 		database.factory()
-			.insertInto(Entries.ENTRIES)
-			.set(Entries.PARENT_ID, Integer.valueOf(parentFolderId))
-			.set(Entries.BACKUP_ID, Integer.valueOf(backupId))
-			.set(Entries.TYPE, Integer.valueOf(EntryType.FILE.getValue()))
-			.set(Entries.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Entries.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
-			.set(Entries.HIDDEN, Boolean.valueOf(file.isHidden()))
-			.set(Entries.NAME, file.getName())
-			.set(Entries.NAME_LOWER, file.getName().toLowerCase())
-			.set(Entries.FILE_ID, Integer.valueOf(fileId))
+			.insertInto(Tables.ENTRIES)
+			.set(Tables.ENTRIES.PARENT_ID, Integer.valueOf(parentFolderId))
+			.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
+			.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FILE.getValue()))
+			.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+			.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+			.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(file.isHidden()))
+			.set(Tables.ENTRIES.NAME, file.getName())
+			.set(Tables.ENTRIES.NAME_LOWER, file.getName().toLowerCase())
+			.set(Tables.ENTRIES.FILE_ID, Integer.valueOf(fileId))
 			.execute();
 		
 		numEntries++;
@@ -283,34 +283,34 @@ public class BackupRun implements Runnable {
 		Cursor<Record> cursor = null;
 		try {
 			cursor = database.factory()
-				.select(Backups.ID)
-				.from(Backups.BACKUPS)
-				.where(Backups.ID.notEqual(Integer.valueOf(backupId)))
-				.orderBy(Backups.RUN_TIME.desc())
+				.select(Tables.BACKUPS.ID)
+				.from(Tables.BACKUPS)
+				.where(Tables.BACKUPS.ID.notEqual(Integer.valueOf(backupId)))
+				.orderBy(Tables.BACKUPS.RUN_TIME.desc())
 				.fetchLazy();
 			while (cursor.hasNext()) {
-				int backupId = cursor.fetchOne().getValue(Backups.ID).intValue();
+				int backupId = cursor.fetchOne().getValue(Tables.BACKUPS.ID).intValue();
 				int entryId = findFileOrFolderEntryInBackup(file, backupId);
 				if (entryId > 0) {
 					Record record = database.factory()
-						.select(Entries.MODIFICATION_TIME,
-								de.blizzy.backup.database.schema.tables.Files.ID,
-								de.blizzy.backup.database.schema.tables.Files.LENGTH)
-						.from(Entries.ENTRIES)
-						.join(de.blizzy.backup.database.schema.tables.Files.FILES)
-							.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
-						.where(Entries.ID.equal(Integer.valueOf(entryId)),
-								Entries.TYPE.equal(Byte.valueOf((byte) EntryType.FILE.getValue())))
+						.select(Tables.ENTRIES.MODIFICATION_TIME,
+								Tables.FILES.ID,
+								Tables.FILES.LENGTH)
+						.from(Tables.ENTRIES)
+						.join(Tables.FILES)
+							.on(Tables.FILES.ID.equal(Tables.ENTRIES.FILE_ID))
+						.where(Tables.ENTRIES.ID.equal(Integer.valueOf(entryId)),
+								Tables.ENTRIES.TYPE.equal(Byte.valueOf((byte) EntryType.FILE.getValue())))
 						.fetchAny();
 					if (record != null) {
-						Timestamp entryModTime = record.getValue(Entries.MODIFICATION_TIME);
+						Timestamp entryModTime = record.getValue(Tables.ENTRIES.MODIFICATION_TIME);
 						long entryModificationTime = (entryModTime != null) ? entryModTime.getTime() : -1;
-						long entryLength = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
+						long entryLength = record.getValue(Tables.FILES.LENGTH).longValue();
 						if ((entryModificationTime > 0) &&
 							(lastModificationTime != null) && (entryModificationTime == lastModificationTime.toMillis()) &&
 							(entryLength == length)) {
 							
-							return record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue();
+							return record.getValue(Tables.FILES.ID).intValue();
 						}
 					}
 				}
@@ -326,13 +326,13 @@ public class BackupRun implements Runnable {
 		if (file.isFolder()) {
 			// try to find folder as root folder
 			Record record = database.factory()
-				.select(Entries.ID)
-				.from(Entries.ENTRIES)
-				.where(Entries.NAME.equal(file.getAbsolutePath()), Entries.PARENT_ID.isNull(),
-						Entries.BACKUP_ID.equal(Integer.valueOf(backupId)))
+				.select(Tables.ENTRIES.ID)
+				.from(Tables.ENTRIES)
+				.where(Tables.ENTRIES.NAME.equal(file.getAbsolutePath()), Tables.ENTRIES.PARENT_ID.isNull(),
+						Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
 				.fetchAny();
 			if (record != null) {
-				return record.getValue(Entries.ID).intValue();
+				return record.getValue(Tables.ENTRIES.ID).intValue();
 			}
 		}
 		
@@ -342,13 +342,13 @@ public class BackupRun implements Runnable {
 			int parentFolderId = findFileOrFolderEntryInBackup(parentFolder, backupId);
 			if (parentFolderId > 0) {
 				Record record = database.factory()
-					.select(Entries.ID)
-					.from(Entries.ENTRIES)
-					.where(Entries.NAME.equal(file.getName()), Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
-							Entries.BACKUP_ID.equal(Integer.valueOf(backupId)))
+					.select(Tables.ENTRIES.ID)
+					.from(Tables.ENTRIES)
+					.where(Tables.ENTRIES.NAME.equal(file.getName()), Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
+							Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
 					.fetchAny();
 				if (record != null) {
-					return record.getValue(Entries.ID).intValue();
+					return record.getValue(Tables.ENTRIES.ID).intValue();
 				}
 			}
 		}
@@ -356,20 +356,20 @@ public class BackupRun implements Runnable {
 		return -1;
 	}
 
-	private int findOldFileViaChecksum(IFile file, String checksum) throws SQLException, IOException {
+	private int findOldFileViaChecksum(IFile file, String checksum) throws IOException {
 		Record record = database.factory()
-			.select(de.blizzy.backup.database.schema.tables.Files.ID)
-			.from(de.blizzy.backup.database.schema.tables.Files.FILES)
-			.where(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.equal(checksum),
-					de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(file.getLength())))
+			.select(Tables.FILES.ID)
+			.from(Tables.FILES)
+			.where(Tables.FILES.CHECKSUM.equal(checksum),
+					Tables.FILES.LENGTH.equal(Long.valueOf(file.getLength())))
 			.fetchAny();
 		return (record != null) ?
-				record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue() :
+				record.getValue(Tables.FILES.ID).intValue() :
 				-1;
 	}
 
 	private int backupFileContents(IFile file, final File backupFile, String backupFilePath)
-		throws IOException, SQLException {
+		throws IOException {
 
 		FileUtils.forceMkdir(backupFile.getParentFile());
 
@@ -392,11 +392,11 @@ public class BackupRun implements Runnable {
 		String checksum = toHexString(digest[0]);
 
 		database.factory()
-			.insertInto(de.blizzy.backup.database.schema.tables.Files.FILES)
-			.set(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH, backupFilePath)
-			.set(de.blizzy.backup.database.schema.tables.Files.CHECKSUM, checksum)
-			.set(de.blizzy.backup.database.schema.tables.Files.LENGTH, Long.valueOf(file.getLength()))
-			.set(de.blizzy.backup.database.schema.tables.Files.COMPRESSION, Byte.valueOf((byte) Compression.BZIP2.getValue()))
+			.insertInto(Tables.FILES)
+			.set(Tables.FILES.BACKUP_PATH, backupFilePath)
+			.set(Tables.FILES.CHECKSUM, checksum)
+			.set(Tables.FILES.LENGTH, Long.valueOf(file.getLength()))
+			.set(Tables.FILES.COMPRESSION, Byte.valueOf((byte) Compression.BZIP2.getValue()))
 			.execute();
 		return database.factory().lastID().intValue();
 	}
@@ -503,22 +503,22 @@ public class BackupRun implements Runnable {
 	}
 	
 
-	private void removeOldBackups() throws SQLException {
+	private void removeOldBackups() {
 		removeOldBackupsDaily();
 		removeOldBackupsWeekly();
 		removeFailedBackups();
 	}
 
-	private void removeFailedBackups() throws SQLException {
+	private void removeFailedBackups() {
 		Set<Integer> ids = new HashSet<>(database.factory()
-			.select(Backups.ID)
-			.from(Backups.BACKUPS)
-			.where(Backups.NUM_ENTRIES.isNull())
-			.fetch(Backups.ID));
+			.select(Tables.BACKUPS.ID)
+			.from(Tables.BACKUPS)
+			.where(Tables.BACKUPS.NUM_ENTRIES.isNull())
+			.fetch(Tables.BACKUPS.ID));
 		removeBackups(ids);
 	}
 	
-	private void removeOldBackupsDaily() throws SQLException {
+	private void removeOldBackupsDaily() {
 		// collect IDs of all but the most recent backup each day
 		Set<Integer> backupsToRemove = new HashSet<>();
 		List<Date> days = getBackupRunsDays(BackupPlugin.KEEP_HOURLIES_DAYS);
@@ -541,17 +541,17 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private List<Integer> getBackupIds(long start, long end) throws SQLException {
+	private List<Integer> getBackupIds(long start, long end) {
 		return database.factory()
-			.select(Backups.ID)
-			.from(Backups.BACKUPS)
-			.where(Backups.RUN_TIME.greaterOrEqual(new Timestamp(start)),
-					Backups.RUN_TIME.lessThan(new Timestamp(end)))
-			.orderBy(Backups.RUN_TIME.desc())
-			.fetch(Backups.ID);
+			.select(Tables.BACKUPS.ID)
+			.from(Tables.BACKUPS)
+			.where(Tables.BACKUPS.RUN_TIME.greaterOrEqual(new Timestamp(start)),
+					Tables.BACKUPS.RUN_TIME.lessThan(new Timestamp(end)))
+			.orderBy(Tables.BACKUPS.RUN_TIME.desc())
+			.fetch(Tables.BACKUPS.ID);
 	}
 	
-	private void removeOldBackupsWeekly() throws SQLException {
+	private void removeOldBackupsWeekly() {
 		// collect IDs of all but the most recent backup each week
 		Set<Integer> backupsToRemove = new HashSet<>();
 		List<Date> days = getBackupRunsDays(BackupPlugin.KEEP_DAILIES_DAYS);
@@ -588,7 +588,7 @@ public class BackupRun implements Runnable {
 		return new Date(c.getTimeInMillis());
 	}
 
-	private List<Date> getBackupRunsDays(int skipDays) throws SQLException {
+	private List<Date> getBackupRunsDays(int skipDays) {
 		Cursor<Record> cursor = null;
 		try {
 			// get all days where there are backups (and which are older than skipDays days)
@@ -599,15 +599,15 @@ public class BackupRun implements Runnable {
 			c.set(Calendar.SECOND, 0);
 			c.set(Calendar.MILLISECOND, 0);
 			cursor = database.factory()
-				.select(Backups.RUN_TIME)
-				.from(Backups.BACKUPS)
-				.where(Backups.RUN_TIME.lessThan(new Timestamp(c.getTimeInMillis())))
-				.orderBy(Backups.RUN_TIME)
+				.select(Tables.BACKUPS.RUN_TIME)
+				.from(Tables.BACKUPS)
+				.where(Tables.BACKUPS.RUN_TIME.lessThan(new Timestamp(c.getTimeInMillis())))
+				.orderBy(Tables.BACKUPS.RUN_TIME)
 				.fetchLazy();
 			List<Date> days = new ArrayList<>();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
-				c.setTimeInMillis(record.getValue(Backups.RUN_TIME).getTime());
+				c.setTimeInMillis(record.getValue(Tables.BACKUPS.RUN_TIME).getTime());
 				c.set(Calendar.HOUR_OF_DAY, 0);
 				c.set(Calendar.MINUTE, 0);
 				c.set(Calendar.SECOND, 0);
@@ -620,36 +620,36 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private void removeBackups(Set<Integer> backupsToRemove) throws SQLException {
+	private void removeBackups(Set<Integer> backupsToRemove) {
 		for (Integer backupId : backupsToRemove) {
 			database.factory()
-				.delete(Entries.ENTRIES)
-				.where(Entries.BACKUP_ID.equal(backupId))
+				.delete(Tables.ENTRIES)
+				.where(Tables.ENTRIES.BACKUP_ID.equal(backupId))
 				.execute();
 			database.factory()
-				.delete(Backups.BACKUPS)
-				.where(Backups.ID.equal(backupId))
+				.delete(Tables.BACKUPS)
+				.where(Tables.BACKUPS.ID.equal(backupId))
 				.execute();
 		}
 	}
 
-	private void removeUnusedFiles() throws SQLException {
+	private void removeUnusedFiles() {
 		Cursor<Record> cursor = null;
 		Set<FileEntry> filesToRemove = new HashSet<>();
 		try {
 			cursor = database.factory()
-				.select(de.blizzy.backup.database.schema.tables.Files.ID,
-						de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH)
-				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
-				.leftOuterJoin(Entries.ENTRIES)
-					.on(Entries.FILE_ID.equal(de.blizzy.backup.database.schema.tables.Files.ID))
-				.where(Entries.FILE_ID.isNull())
+				.select(Tables.FILES.ID,
+						Tables.FILES.BACKUP_PATH)
+				.from(Tables.FILES)
+				.leftOuterJoin(Tables.ENTRIES)
+					.on(Tables.ENTRIES.FILE_ID.equal(Tables.FILES.ID))
+				.where(Tables.ENTRIES.FILE_ID.isNull())
 				.fetchLazy();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
 				FileEntry file = new FileEntry(
-						record.getValue(de.blizzy.backup.database.schema.tables.Files.ID).intValue(),
-						record.getValue(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH));
+						record.getValue(Tables.FILES.ID).intValue(),
+						record.getValue(Tables.FILES.BACKUP_PATH));
 				filesToRemove.add(file);
 			}
 		} finally {
@@ -662,7 +662,7 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private void removeFiles(Set<FileEntry> files) throws SQLException {
+	private void removeFiles(Set<FileEntry> files) {
 		for (FileEntry file : files) {
 			File f = Utils.toBackupFile(file.backupPath, settings.getOutputFolder());
 			Path path = f.toPath();
@@ -675,8 +675,8 @@ public class BackupRun implements Runnable {
 			removeFoldersIfEmpty(f.getParentFile());
 			
 			database.factory()
-				.delete(de.blizzy.backup.database.schema.tables.Files.FILES)
-				.where(de.blizzy.backup.database.schema.tables.Files.ID.equal(Integer.valueOf(file.id)))
+				.delete(Tables.FILES)
+				.where(Tables.FILES.ID.equal(Integer.valueOf(file.id)))
 				.execute();
 		}
 	}
@@ -721,41 +721,41 @@ public class BackupRun implements Runnable {
 			}
 		} catch (IOException e) {
 			// ignore
-		} catch (SQLException e) {
+		} catch (DataAccessException e) {
 			BackupPlugin.getDefault().logError("error removing oldest backup", e); //$NON-NLS-1$
 		}
 	}
 	
-	private boolean removeOldestBackup() throws SQLException {
+	private boolean removeOldestBackup() {
 		Record record = database.factory()
-			.select(Backups.ID)
-			.from(Backups.BACKUPS)
-			.where(Backups.NUM_ENTRIES.isNotNull())
-			.orderBy(Backups.RUN_TIME)
+			.select(Tables.BACKUPS.ID)
+			.from(Tables.BACKUPS)
+			.where(Tables.BACKUPS.NUM_ENTRIES.isNotNull())
+			.orderBy(Tables.BACKUPS.RUN_TIME)
 			.fetchAny();
 		if (record != null) {
-			Integer id = record.getValue(Backups.ID);
+			Integer id = record.getValue(Tables.BACKUPS.ID);
 			BackupPlugin.getDefault().logMessage("removing backup: " + id); //$NON-NLS-1$
 			removeBackups(Collections.singleton(id));
 		}
 		return record != null;
 	}
 
-	private void consolidateDuplicateFiles() throws SQLException {
+	private void consolidateDuplicateFiles() {
 		Cursor<Record> cursor = null;
 		try {
 			cursor = database.factory()
-				.select(de.blizzy.backup.database.schema.tables.Files.CHECKSUM,
-						de.blizzy.backup.database.schema.tables.Files.LENGTH)
-				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
-				.groupBy(de.blizzy.backup.database.schema.tables.Files.CHECKSUM,
-						de.blizzy.backup.database.schema.tables.Files.LENGTH)
-				.having(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.count().greaterThan(Integer.valueOf(1)))
+				.select(Tables.FILES.CHECKSUM,
+						Tables.FILES.LENGTH)
+				.from(Tables.FILES)
+				.groupBy(Tables.FILES.CHECKSUM,
+						Tables.FILES.LENGTH)
+				.having(Tables.FILES.CHECKSUM.count().greaterThan(Integer.valueOf(1)))
 				.fetchLazy();
 			while (cursor.hasNext()) {
 				Record record = cursor.fetchOne();
-				String checksum = record.getValue(de.blizzy.backup.database.schema.tables.Files.CHECKSUM);
-				long length = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH).longValue();
+				String checksum = record.getValue(Tables.FILES.CHECKSUM);
+				long length = record.getValue(Tables.FILES.LENGTH).longValue();
 				consolidateDuplicateFiles(checksum, length);
 			}
 		} finally {
@@ -763,15 +763,15 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
-	private void consolidateDuplicateFiles(String checksum, long length) throws SQLException {
+	private void consolidateDuplicateFiles(String checksum, long length) {
 		Cursor<Record> cursor = null;
 		try {
 			List<Integer> fileIds = database.factory()
-				.select(de.blizzy.backup.database.schema.tables.Files.ID)
-				.from(de.blizzy.backup.database.schema.tables.Files.FILES)
-				.where(de.blizzy.backup.database.schema.tables.Files.CHECKSUM.equal(checksum),
-						de.blizzy.backup.database.schema.tables.Files.LENGTH.equal(Long.valueOf(length)))
-				.fetch(de.blizzy.backup.database.schema.tables.Files.ID);
+				.select(Tables.FILES.ID)
+				.from(Tables.FILES)
+				.where(Tables.FILES.CHECKSUM.equal(checksum),
+						Tables.FILES.LENGTH.equal(Long.valueOf(length)))
+				.fetch(Tables.FILES.ID);
 			if (fileIds.size() >= 2) {
 				int masterFileId = fileIds.get(0).intValue();
 				fileIds = fileIds.subList(1, fileIds.size());
@@ -782,17 +782,17 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private void consolidateDuplicateFiles(int masterFileId, List<Integer> fileIds) throws SQLException {
+	private void consolidateDuplicateFiles(int masterFileId, List<Integer> fileIds) {
 		BackupPlugin.getDefault().logMessage("consolidating duplicate files: " + masterFileId + " <- " + fileIds); //$NON-NLS-1$ //$NON-NLS-2$
 
-		Long masterId = Long.valueOf(masterFileId);
+		Integer masterId = Integer.valueOf(masterFileId);
 		while (!fileIds.isEmpty()) {
 			int endIdx = Math.min(fileIds.size(), 10);
 			List<Integer> chunk = fileIds.subList(0, endIdx);
 			database.factory()
-				.update(Entries.ENTRIES)
-				.set(Entries.FILE_ID, masterId)
-				.where(Entries.FILE_ID.in(chunk))
+				.update(Tables.ENTRIES)
+				.set(Tables.ENTRIES.FILE_ID, masterId)
+				.where(Tables.ENTRIES.FILE_ID.in(chunk))
 				.execute();
 			fileIds = fileIds.subList(endIdx, fileIds.size());
 		}

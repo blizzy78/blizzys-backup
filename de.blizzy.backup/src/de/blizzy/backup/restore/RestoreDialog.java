@@ -89,8 +89,7 @@ import de.blizzy.backup.Messages;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
-import de.blizzy.backup.database.schema.tables.Backups;
-import de.blizzy.backup.database.schema.tables.Entries;
+import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.database.schema.tables.records.BackupsRecord;
 import de.blizzy.backup.settings.Settings;
 import de.blizzy.backup.vfs.filesystem.FileSystemFileOrFolder;
@@ -139,7 +138,7 @@ public class RestoreDialog extends Dialog {
 					database.initialize();
 					
 					cursor = database.factory()
-						.selectFrom(Backups.BACKUPS).where(Backups.NUM_ENTRIES.isNotNull()).orderBy(Backups.RUN_TIME.desc())
+						.selectFrom(Tables.BACKUPS).where(Tables.BACKUPS.NUM_ENTRIES.isNotNull()).orderBy(Tables.BACKUPS.RUN_TIME.desc())
 						.fetchLazy();
 					while (cursor.hasNext()) {
 						BackupsRecord record = cursor.fetchOne();
@@ -406,8 +405,8 @@ public class RestoreDialog extends Dialog {
 			Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 			try {
 				Integer parentIdInt = database.factory()
-					.select(Entries.PARENT_ID).from(Entries.ENTRIES).where(Entries.ID.equal(Integer.valueOf(folderId)))
-					.fetchOne(Entries.PARENT_ID);
+					.select(Tables.ENTRIES.PARENT_ID).from(Tables.ENTRIES).where(Tables.ENTRIES.ID.equal(Integer.valueOf(folderId)))
+					.fetchOne(Tables.ENTRIES.PARENT_ID);
 				showEntries(backup, folderId);
 				moveUpButton.setEnabled(true);
 				moveUpButton.setData((parentIdInt != null) ? parentIdInt : backup);
@@ -452,12 +451,12 @@ public class RestoreDialog extends Dialog {
 		}
 		
 		Record record = database.factory()
-			.select(Entries.NAME, Entries.PARENT_ID)
-			.from(Entries.ENTRIES)
-			.where(Entries.ID.equal(Integer.valueOf(folderId)))
+			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
+			.from(Tables.ENTRIES)
+			.where(Tables.ENTRIES.ID.equal(Integer.valueOf(folderId)))
 			.fetchOne();
-		String name = record.getValue(Entries.NAME);
-		Integer parentFolderId = record.getValue(Entries.PARENT_ID);
+		String name = record.getValue(Tables.ENTRIES.NAME);
+		Integer parentFolderId = record.getValue(Tables.ENTRIES.PARENT_ID);
 		String parentFolder = getFolderLink((parentFolderId != null) ? parentFolderId.intValue() : -1);
 		String part = "<a href=\"" + folderId + "_" + ((parentFolderId != null) ? parentFolderId.intValue() : -1) + //$NON-NLS-1$ //$NON-NLS-2$
 			"\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$
@@ -470,36 +469,36 @@ public class RestoreDialog extends Dialog {
 		}
 		
 		Record record = database.factory()
-			.select(Entries.NAME, Entries.PARENT_ID)
-			.from(Entries.ENTRIES)
-			.where(Entries.ID.equal(Integer.valueOf(folderId)))
+			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
+			.from(Tables.ENTRIES)
+			.where(Tables.ENTRIES.ID.equal(Integer.valueOf(folderId)))
 			.fetchOne();
-		String name = record.getValue(Entries.NAME);
-		Integer parentFolderId = record.getValue(Entries.PARENT_ID);
+		String name = record.getValue(Tables.ENTRIES.NAME);
+		Integer parentFolderId = record.getValue(Tables.ENTRIES.PARENT_ID);
 		String parentPath = getFolderPath((parentFolderId != null) ? parentFolderId.intValue() : -1);
 		return (parentPath != null) ? parentPath + File.separator + name : name;
 	}
 
-	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId, String searchText) throws SQLException {
+	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId, String searchText) {
 		Condition searchCondition;
 		if (StringUtils.isBlank(searchText)) {
 			searchCondition = (parentFolderId > 0) ?
-					Entries.PARENT_ID.equal(Integer.valueOf(parentFolderId)) :
-					Entries.PARENT_ID.isNull();
+					Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId)) :
+					Tables.ENTRIES.PARENT_ID.isNull();
 		} else {
-			searchCondition = Entries.NAME_LOWER.like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
+			searchCondition = Tables.ENTRIES.NAME_LOWER.like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 		return database.factory()
-			.select(Entries.ID, Entries.PARENT_ID, Entries.NAME, Entries.TYPE, Entries.CREATION_TIME, Entries.MODIFICATION_TIME,
-					Entries.HIDDEN, de.blizzy.backup.database.schema.tables.Files.LENGTH,
-					de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH,
-					de.blizzy.backup.database.schema.tables.Files.COMPRESSION)
-			.from(Entries.ENTRIES)
-			.leftOuterJoin(de.blizzy.backup.database.schema.tables.Files.FILES)
-				.on(de.blizzy.backup.database.schema.tables.Files.ID.equal(Entries.FILE_ID))
-			.where(Entries.BACKUP_ID.equal(Integer.valueOf(backupId)),
+			.select(Tables.ENTRIES.ID, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.NAME, Tables.ENTRIES.TYPE, Tables.ENTRIES.CREATION_TIME, Tables.ENTRIES.MODIFICATION_TIME,
+					Tables.ENTRIES.HIDDEN, Tables.FILES.LENGTH,
+					Tables.FILES.BACKUP_PATH,
+					Tables.FILES.COMPRESSION)
+			.from(Tables.ENTRIES)
+			.leftOuterJoin(Tables.FILES)
+				.on(Tables.FILES.ID.equal(Tables.ENTRIES.FILE_ID))
+			.where(Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)),
 					searchCondition)
-			.orderBy(Entries.NAME)
+			.orderBy(Tables.ENTRIES.NAME)
 			.fetchLazy();
 	}
 	
@@ -507,20 +506,20 @@ public class RestoreDialog extends Dialog {
 		List<Entry> entries = new ArrayList<>();
 		while (cursor.hasNext()) {
 			Record record = cursor.fetchOne();
-			int id = record.getValue(Entries.ID).intValue();
-			Integer parentIdInt = record.getValue(Entries.PARENT_ID);
+			int id = record.getValue(Tables.ENTRIES.ID).intValue();
+			Integer parentIdInt = record.getValue(Tables.ENTRIES.PARENT_ID);
 			int parentId = (parentIdInt != null) ? parentIdInt.intValue() : -1;
-			String name = record.getValue(Entries.NAME);
-			EntryType type = EntryType.fromValue(record.getValue(Entries.TYPE).intValue());
-			Timestamp createTime = record.getValue(Entries.CREATION_TIME);
+			String name = record.getValue(Tables.ENTRIES.NAME);
+			EntryType type = EntryType.fromValue(record.getValue(Tables.ENTRIES.TYPE).intValue());
+			Timestamp createTime = record.getValue(Tables.ENTRIES.CREATION_TIME);
 			Date creationTime = (createTime != null) ? new Date(createTime.getTime()) : null;
-			Timestamp modTime = record.getValue(Entries.MODIFICATION_TIME);
+			Timestamp modTime = record.getValue(Tables.ENTRIES.MODIFICATION_TIME);
 			Date modificationTime = (modTime != null) ? new Date(modTime.getTime()) : null;
-			boolean hidden = record.getValue(Entries.HIDDEN).booleanValue();
-			Long lengthLong = record.getValue(de.blizzy.backup.database.schema.tables.Files.LENGTH);
+			boolean hidden = record.getValue(Tables.ENTRIES.HIDDEN).booleanValue();
+			Long lengthLong = record.getValue(Tables.FILES.LENGTH);
 			long length = (lengthLong != null) ? lengthLong.longValue() : -1;
-			String backupPath = record.getValue(de.blizzy.backup.database.schema.tables.Files.BACKUP_PATH);
-			Byte compressionByte = record.getValue(de.blizzy.backup.database.schema.tables.Files.COMPRESSION);
+			String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
+			Byte compressionByte = record.getValue(Tables.FILES.COMPRESSION);
 			Compression compression = (compressionByte != null) ? Compression.fromValue(compressionByte.intValue()) : null;
 			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath,
 					compression);

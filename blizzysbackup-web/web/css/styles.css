@@ -39,3 +39,7 @@ code.plain {
 	background-color: white;
 	padding: 0;
 }
+
+p.social {
+	padding-top: 10px;
+}

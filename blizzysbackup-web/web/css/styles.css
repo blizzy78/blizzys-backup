@@ -1,0 +1,36 @@
+body {
+	padding-top: 40px;
+}
+
+.center {
+	text-align: center;
+}
+
+.site-head {
+	background-color: #4d5c84;
+	background-image: -moz-linear-gradient(#14223f, #8c97ba);
+	padding-top: 30px;
+	padding-bottom: 30px;
+}
+
+.site-head h1, .site-head p {
+	color: white;
+	margin-bottom: 9px;
+	text-align: center;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.site-head h1 {
+	font-size: 54px;
+	line-height: 1;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.site-head .lead {
+	font-size: 20px;
+	line-height: 27px;
+}
+
+section {
+	padding-top: 30px;
+}

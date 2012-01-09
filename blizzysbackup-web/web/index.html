@@ -1,0 +1,277 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+
+<head>
+<title>blizzy's Backup</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+<link rel="stylesheet" href="css/bootstrap-1.4.0.min.css" media="all"/>
+<link rel="stylesheet" href="css/styles.css" media="all"/>
+<link rel="stylesheet" href="css/lightbox-2.05.css" media="all"/>
+<script type="text/javascript" src="js/lightbox-2.05/prototype.js"></script>
+<script type="text/javascript" src="js/lightbox-2.05/scriptaculous.js?load=effects,builder"></script>
+<script type="text/javascript" src="js/lightbox-2.05/lightbox.js"></script>
+</head>
+
+<body id="#top">
+
+<div class="topbar" data-scrollspy="scrollspy">
+	<div class="topbar-inner">
+		<div class="container">
+			<a class="brand" href="#top">blizzy's Backup</a>
+			<ul class="nav">
+				<li><a href="#overview">Overview</a></li>
+				<li><a href="#download">Download</a></li>
+				<li><a href="#screenshots">Screenshots</a></li>
+				<li><a href="#faq">FAQ</a></li>
+				<li><a href="#source">Source Code</a></li>
+				<li><a href="#changelog">Change Log</a></li>
+			</ul>
+		</div>
+	</div>
+</div>
+
+<header class="site-head">
+	<div class="inner">
+		<div class="container">
+			<h1>blizzy's Backup</h1>
+			<p class="lead">
+			Easy to use personal file backup application
+			</p>
+		</div>
+	</div>
+</header>
+
+<div class="container">
+
+<section id="overview">
+
+<div class="page-header"><h1>Overview</h1></div>
+
+<p>
+blizzy's Backup is a personal file backup application that aims to be easy to use. No complicated settings,
+just backup of your preferred folders. The application is intentionally kept simple to set up and use.
+It also keeps a history, so you can step back to any point in time.
+</p>
+
+</section>
+
+<section id="download">
+
+<div class="page-header">
+<h2>Download <small>Current Version: 1.3.1</small></h2>
+</div>
+
+<p>
+<a class="btn primary" href="installer/blizzysbackup-setup.exe">Download Installer (Windows XP or higher, 32/64-bit, 21.2 MB)</a>
+</p>
+
+<p>
+<span class="label notice">NOTE</span>
+The installer is only necessary if installing for the first time. The application has a built-in
+update feature.
+</p>
+
+</section>
+
+<section id="screenshots">
+
+<div class="page-header"><h2>Screenshots</h2></div>
+
+<ul class="media-grid">
+	<li><a href="img/main.png" rel="lightbox[screenshots]" title="Main Window"><img class="thumbnail" src="img/main_thumb.png" alt="Main Window" title="Main Window"/></a></li>
+	<li><a href="img/settings.png" rel="lightbox[screenshots]" title="Settings Window"><img class="thumbnail" src="img/settings_thumb.png" alt="Settings Window" title="Settings Window"/></a></li>
+	<li><a href="img/restore.png" rel="lightbox[screenshots]" title="Restore Window"><img class="thumbnail" src="img/restore_thumb.png" alt="Restore Window" title="Restore Window"/></a></li>
+</ul>
+
+</section>
+
+<section id="faq">
+
+<div class="page-header"><h2>Frequently Asked Questions</h2></div>
+
+<h3>General</h3>
+
+<h5>What is the focus of blizzy's Backup?</h5>
+
+<p>
+The application's main target are home end users who want to keep regular backups of their files,
+along with a history of those. The focus is on simplicity and ease of use instead of number of features.
+</p>
+
+<h5>On what platforms does blizzy's Backup run?</h5>
+
+<p>
+Project development currently focuses on the Windows platform.
+</p>
+
+<h5>What are the requirements to run the application?</h5>
+
+<p>
+blizzy's Backup runs on any Windows platform that has JDK 7 installed, which can be downloaded
+<a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">here</a>.
+</p>
+
+<h5>In what languages is the application available?</h5>
+
+<p>
+The application is translated into English and German. If you want to help with translating to other
+languages, please see our <a href="http://crowdin.net/project/blizzysbackup/invite">translations page</a>.
+</p>
+
+<h5>Is blizzy's Backup free to use?</h5>
+
+<p>
+Yes. If you want, you can make donations by clicking here:<br/><br/>
+
+<a class="btn primary" href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WEEG3LK8Z456Y">Donate via PayPal &#xbb;</a>
+</p>
+
+<h5>Can you implement feature X?</h5>
+
+<p>
+Please feel free to discuss your idea in the
+<a href="http://groups.google.com/group/blizzys-backup-discuss/topics">discussion group</a>. 
+</p>
+
+<h3>Usage</h3>
+
+<h5>For how long does the application keep old backups?</h5>
+
+<p>
+Hourly backups (which are optional) are kept for 7 days. Daily backups are kept for 30 days.
+After that, those backups are deleted automatically with the exception of the most recent weekly backup.
+The weekly backups are kept until the device that holds the output folder is 80% full.
+</p>
+
+<p>
+In addition, the oldest backups are deleted whenever more space on the device is needed to run the
+current backup.
+</p>
+
+<p>
+See the following graphic for a timeline:
+</p>
+
+<div class="center">
+<img src="img/timeline.png" alt="Backups retention timeline" title="Backups retention timeline"/>
+</div>
+
+<h5>How does the application store backups?</h5>
+
+<p>
+Backup metadata and files are kept in a designated output folder. All files are compressed to save space.
+In addition, if a file has not changed from one backup to the next, it will not be copied again to save
+more space. (Instead it is visible in multiple backup runs when restoring.)
+</p>
+
+<h5>What devices can be used as backup medium?</h5>
+
+<p>
+The application stores backup files in a regular folder. This means it can store files on any device,
+be it your harddisk, a USB harddisk or USB stick, an iSCSI target (when mounted as a harddisk in Windows),
+or what have you.
+</p>
+
+<h5>Does the application update itself with new versions?</h5>
+
+<p>
+Yes. On startup the application looks for updates on the update server. This is done if the last search
+was more than 7 days ago, which means you might have to wait a few days to get an update.
+</p>
+
+<h5>Does blizzy's Backup support IPv6?</h5>
+
+<p>
+Currently no, until a <a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7077696">bug in Windows</a>
+is fixed.
+</p>
+
+</section>
+
+<section id="source">
+
+<div class="page-header"><h2>Source Code</h2></div>
+
+<p>
+blizzy's Backup is open-source and development takes place on GitHub. You're invited to contribute!
+<p>
+
+<p>
+<a class="btn primary" href="https://github.com/blizzy78/blizzys-backup">blizzy's Backup on GitHub &#xbb;</a>
+</p>
+
+</section>
+
+<section id="changelog">
+
+<div class="page-header"><h2>Change Log</h2></div>
+
+<h5>1.3.1, 2011-11-30</h5>
+<ul>
+	<li>minor improvements</li>
+</ul>
+
+<h5>1.3.0, 2011-11-21</h5>
+<ul>
+	<li>added support for FTP source locations</li>
+	<li>minor improvements to backup</li>
+</ul>
+
+<h5>1.2.7, 2011-10-29</h5>
+<ul>
+	<li>added function to search for files and folders when restoring</li>
+</ul>
+
+<h5>1.2.6, 2011-10-09</h5>
+<ul>
+	<li>backup run may be paused and stopped in GUI</li>
+	<li>files backed up from SFTP locations now have correct timestamps</li>
+</ul>
+
+<h5>1.2.5, 2011-10-05</h5>
+<ul>
+	<li>minor improvements</li>
+</ul>
+
+<h5>1.2.4, 2011-09-13</h5>
+<ul>
+	<li>minor improvements to backup</li>
+</ul>
+
+<h5>1.2.3, 2011-08-31</h5>
+<ul>
+	<li>use different compression algorithm to conserve more space on backup medium</li>
+</ul>
+
+<h5>1.2.2, 2011-08-20</h5>
+<ul>
+	<li>minor improvements to backup</li>
+</ul>
+
+<h5>1.2.1, 2011-08-12</h5>
+<ul>
+	<li>SFTP improvements</li>
+</ul>
+
+<h5>1.2.0, 2011-08-10</h5>
+<ul>
+	<li>added support for SFTP source locations</li>
+</ul>
+
+<h5>1.1.0, 2011-08-06</h5>
+<ul>
+	<li>file comparison may now work with timestamps instead of checksums</li>
+</ul>
+
+<h5>1.0.0, 2011-08-02</h5>
+<ul>
+	<li>initial release </li>
+</ul>
+
+</section>
+
+</div>
+
+</body>
+
+</html>

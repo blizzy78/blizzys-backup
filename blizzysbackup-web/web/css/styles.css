@@ -34,3 +34,8 @@ body {
 section {
 	padding-top: 30px;
 }
+
+code.plain {
+	background-color: white;
+	padding: 0;
+}

@@ -20,7 +20,7 @@ package de.blizzy.backup.backup;
 import java.util.EventObject;
 
 public class BackupEndedEvent extends EventObject {
-	public BackupEndedEvent(Object source) {
+	BackupEndedEvent(Object source) {
 		super(source);
 	}
 }

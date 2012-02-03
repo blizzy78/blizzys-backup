@@ -157,6 +157,7 @@ public class BackupRun implements Runnable {
 							backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
 						} catch (IOException e) {
 							BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+							fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 						} finally {
 							location.close();
 						}
@@ -180,6 +181,7 @@ public class BackupRun implements Runnable {
 						interceptor.showErrorMessage(e, BackupApplication.getBackupShellWindow());
 					}
 					BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 				} finally {
 					fireBackupStatusChanged(BackupStatus.FINALIZE);
 					database.close();
@@ -215,6 +217,7 @@ public class BackupRun implements Runnable {
 			database.backupDatabase(dbBackupFolder);
 		} catch (IOException e) {
 			BackupPlugin.getDefault().logError("Error while creating database backup", e); //$NON-NLS-1$
+			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 		}
 	}
 	
@@ -239,6 +242,7 @@ public class BackupRun implements Runnable {
 					} catch (IOException e) {
 						BackupPlugin.getDefault().logError("error while deleting old database backup folder: " + //$NON-NLS-1$
 								folder.getAbsolutePath(), e);
+						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 					}
 				}
 			}
@@ -282,6 +286,7 @@ public class BackupRun implements Runnable {
 			} catch (IOException e) {
 				BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
 						folder.getAbsolutePath(), e);
+				fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 			}
 		}
 		
@@ -505,8 +510,7 @@ public class BackupRun implements Runnable {
 				
 				@Override
 				public void handleException(Throwable t) {
-					// TODO
-					t.printStackTrace();
+					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
 				}
 			});
 		}
@@ -523,8 +527,24 @@ public class BackupRun implements Runnable {
 				
 				@Override
 				public void handleException(Throwable t) {
-					// TODO
-					t.printStackTrace();
+					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
+				}
+			});
+		}
+	}
+
+	private void fireBackupErrorOccurred(Throwable error, BackupErrorEvent.Severity severity) {
+		final BackupErrorEvent e = new BackupErrorEvent(this, error, severity);
+		for (final IBackupRunListener listener : getListeners()) {
+			SafeRunner.run(new ISafeRunnable() {
+				@Override
+				public void run() throws Exception {
+					listener.backupErrorOccurred(e);
+				}
+				
+				@Override
+				public void handleException(Throwable t) {
+					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
 				}
 			});
 		}
@@ -724,6 +744,7 @@ public class BackupRun implements Runnable {
 				Files.delete(path);
 			} catch (IOException e) {
 				BackupPlugin.getDefault().logError("error deleting file: " + file.backupPath, e); //$NON-NLS-1$
+				fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 			}
 			
 			removeFoldersIfEmpty(f.getParentFile());
@@ -748,6 +769,7 @@ public class BackupRun implements Runnable {
 				removeFoldersIfEmpty(parentFolder);
 			} catch (IOException e) {
 				BackupPlugin.getDefault().logError("error deleting folder: " + folder.getAbsolutePath(), e); //$NON-NLS-1$
+				fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 			}
 		}
 	}
@@ -777,6 +799,7 @@ public class BackupRun implements Runnable {
 			// ignore
 		} catch (DataAccessException e) {
 			BackupPlugin.getDefault().logError("error removing oldest backup", e); //$NON-NLS-1$
+			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 		}
 	}
 	
@@ -873,6 +896,7 @@ public class BackupRun implements Runnable {
 			}
 		} catch (IOException e) {
 			BackupPlugin.getDefault().logError("error while counting entries in folder: " + folder.getAbsolutePath(), e); //$NON-NLS-1$
+			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 		}
 	}
 	

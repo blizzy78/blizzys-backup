@@ -20,4 +20,5 @@ package de.blizzy.backup.backup;
 public interface IBackupRunListener {
 	void backupStatusChanged(BackupStatusEvent e);
 	void backupEnded(BackupEndedEvent e);
+	void backupErrorOccurred(BackupErrorEvent e);
 }

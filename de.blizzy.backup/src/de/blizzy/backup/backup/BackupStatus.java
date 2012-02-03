@@ -52,6 +52,10 @@ public class BackupStatus {
 		return totalEntries;
 	}
 	
+	public boolean isInitialize() {
+		return initialize;
+	}
+	
 	public boolean isCleanup() {
 		return cleanup;
 	}

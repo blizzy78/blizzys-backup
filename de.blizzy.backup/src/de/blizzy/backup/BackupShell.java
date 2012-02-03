@@ -54,6 +54,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolBar;
 
 import de.blizzy.backup.backup.BackupEndedEvent;
+import de.blizzy.backup.backup.BackupErrorEvent;
 import de.blizzy.backup.backup.BackupRun;
 import de.blizzy.backup.backup.BackupStatus;
 import de.blizzy.backup.backup.BackupStatusEvent;
@@ -95,6 +96,10 @@ class BackupShell {
 			pauseAction.setChecked(false);
 			pauseAction.setEnabled(true);
 			stopAction.setEnabled(true);
+		}
+		
+		@Override
+		public void backupErrorOccurred(BackupErrorEvent e) {
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {

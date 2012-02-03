@@ -1,6 +1,6 @@
 /*
 blizzy's Backup - Easy to use personal file backup application
-Copyright (C) 2011-2012 Maik Schreiber
+Copyright (C) 2011 Maik Schreiber
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,16 +17,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 package de.blizzy.backup.backup;
 
-public class BackupRunAdapter implements IBackupRunListener {
-	@Override
-	public void backupStatusChanged(BackupStatusEvent e) {
-	}
+import java.util.EventObject;
 
-	@Override
-	public void backupEnded(BackupEndedEvent e) {
+public class BackupErrorEvent extends EventObject {
+	public static enum Severity {
+		WARNING, ERROR;
 	}
 	
-	@Override
-	public void backupErrorOccurred(BackupErrorEvent e) {
+	private Throwable error;
+	private Severity severity;
+
+	BackupErrorEvent(Object source, Throwable error, Severity severity) {
+		super(source);
+
+		this.error = error;
+		this.severity = severity;
+	}
+	
+	public Throwable getError() {
+		return error;
+	}
+	
+	public Severity getSeverity() {
+		return severity;
 	}
 }

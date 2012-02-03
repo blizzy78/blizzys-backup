@@ -1,6 +1,6 @@
 /*
 blizzy's Backup - Easy to use personal file backup application
-Copyright (C) 2011 Maik Schreiber
+Copyright (C) 2011-2012 Maik Schreiber
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ LangString TXT_COMPONENT_DESC_AUTOSTART ${LANG_ENGLISH} "A shortcut to start the
 VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "blizzy's Backup"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "blizzy's Backup Installer"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "1.0.0.0"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (C) 2011 Maik Schreiber"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright (C) 2011-2012 Maik Schreiber"
 VIProductVersion "1.0.0.0"
 
 Function .onInit

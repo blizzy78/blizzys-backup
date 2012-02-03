@@ -1,6 +1,6 @@
 /*
 blizzy's Backup - Easy to use personal file backup application
-Copyright (C) 2011 Maik Schreiber
+Copyright (C) 2011-2012 Maik Schreiber
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

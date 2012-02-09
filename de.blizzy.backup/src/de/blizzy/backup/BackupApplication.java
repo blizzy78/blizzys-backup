@@ -267,4 +267,8 @@ public class BackupApplication implements IApplication {
 	static void runCheck() {
 		new CheckRun(settingsManager.getSettings(), backupShell.getShell()).runCheck();
 	}
+	
+	public static Shell getBackupShellWindow() {
+		return (backupShell != null) ? backupShell.getShell() : null;
+	}
 }

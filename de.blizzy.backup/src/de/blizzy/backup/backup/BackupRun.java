@@ -50,8 +50,11 @@ import org.jooq.Cursor;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
 
+import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
+import de.blizzy.backup.IStorageInterceptor;
+import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
@@ -75,6 +78,7 @@ public class BackupRun implements Runnable {
 	private boolean paused;
 	private int numEntries;
 	private int totalEntries;
+	private List<IStorageInterceptor> storageInterceptors = new ArrayList<>();
 
 	public BackupRun(Settings settings) {
 		this.settings = settings;
@@ -104,9 +108,34 @@ public class BackupRun implements Runnable {
 		
 		fireBackupStatusChanged(BackupStatus.INITIALIZE);
 		
+		final boolean[] ok = { true };
+		List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
+		for (final StorageInterceptorDescriptor desc : descs) {
+			final IStorageInterceptor interceptor = desc.getStorageInterceptor();
+			SafeRunner.run(new ISafeRunnable() {
+				@Override
+				public void run() throws Exception {
+					interceptor.initialize(BackupApplication.getBackupShellWindow());
+				}
+				
+				@Override
+				public void handleException(Throwable t) {
+					ok[0] = false;
+					interceptor.showErrorMessage(t, BackupApplication.getBackupShellWindow());
+					BackupPlugin.getDefault().logError(
+							"error while initializing storage interceptor '" + desc.getName() + "'", t); //$NON-NLS-1$ //$NON-NLS-2$
+				}
+			});
+			storageInterceptors.add(interceptor);
+		}
+
+		if (!ok[0]) {
+			return;
+		}
+		
 		database = new Database(settings, true);
 		try {
-			database.open();
+			database.open(storageInterceptors);
 			database.initialize();
 			
 			database.factory()
@@ -144,13 +173,28 @@ public class BackupRun implements Runnable {
 			
 			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 		} catch (SQLException | IOException | RuntimeException e) {
+			for (IStorageInterceptor interceptor : storageInterceptors) {
+				interceptor.showErrorMessage(e, BackupApplication.getBackupShellWindow());
+			}
 			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
 		} finally {
 			fireBackupStatusChanged(BackupStatus.FINALIZE);
 			database.close();
 			backupDatabase();
+			for (final IStorageInterceptor interceptor : storageInterceptors) {
+				SafeRunner.run(new ISafeRunnable() {
+					@Override
+					public void run() throws Exception {
+						interceptor.destroy();
+					}
+					
+					@Override
+					public void handleException(Throwable t) {
+						BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
+					}
+				});
+			}
 			System.gc();
-			
 			fireBackupEnded();
 			
 			BackupPlugin.getDefault().logMessage("Backup done"); //$NON-NLS-1$
@@ -368,7 +412,7 @@ public class BackupRun implements Runnable {
 				-1;
 	}
 
-	private int backupFileContents(IFile file, final File backupFile, String backupFilePath)
+	private int backupFileContents(final IFile file, final File backupFile, String backupFilePath)
 		throws IOException {
 
 		FileUtils.forceMkdir(backupFile.getParentFile());
@@ -379,10 +423,14 @@ public class BackupRun implements Runnable {
 			public OutputStream getOutputStream() throws IOException {
 				try {
 					digest[0] = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
-					return new DigestOutputStream(
-							Compression.BZIP2.getOutputStream(
-									new BufferedOutputStream(new FileOutputStream(backupFile))),
-							digest[0]);
+					OutputStream fileOut = new BufferedOutputStream(new FileOutputStream(backupFile));
+					OutputStream interceptOut = fileOut;
+					for (IStorageInterceptor interceptor : storageInterceptors) {
+						interceptOut = interceptor.interceptOutputStream(interceptOut, file.getLength());
+					}
+					OutputStream compressOut = Compression.BZIP2.getOutputStream(interceptOut);
+					OutputStream digestOut = new DigestOutputStream(compressOut, digest[0]);
+					return digestOut;
 				} catch (GeneralSecurityException e) {
 					throw new RuntimeException(e);
 				}

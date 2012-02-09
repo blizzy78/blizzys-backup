@@ -40,6 +40,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.ISafeRunnable;
+import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -58,6 +60,7 @@ import org.eclipse.jface.viewers.TableLayout;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
+import org.eclipse.jface.window.Window;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
@@ -85,7 +88,9 @@ import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
 import de.blizzy.backup.FileAttributes;
+import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.Messages;
+import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
@@ -106,6 +111,7 @@ public class RestoreDialog extends Dialog {
 	private Link currentFolderLink;
 	private Timer timer = new Timer();
 	private TimerTask searchTimerTask;
+	private List<IStorageInterceptor> storageInterceptors = new ArrayList<>();
 
 	public RestoreDialog(Shell parentShell) {
 		super(parentShell);
@@ -128,13 +134,41 @@ public class RestoreDialog extends Dialog {
 
 	@Override
 	public int open() {
+		final ProgressMonitorDialog dlg = new ProgressMonitorDialog(getParentShell());
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			@Override
-			public void run(IProgressMonitor monitor) throws InvocationTargetException {
+			public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
 				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
+				
+				final boolean[] ok = { true };
+				List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
+				for (final StorageInterceptorDescriptor desc : descs) {
+					final IStorageInterceptor interceptor = desc.getStorageInterceptor();
+					SafeRunner.run(new ISafeRunnable() {
+						@Override
+						public void run() throws Exception {
+							interceptor.initialize(dlg.getShell());
+						}
+						
+						@Override
+						public void handleException(Throwable t) {
+							ok[0] = false;
+							interceptor.showErrorMessage(t, dlg.getShell());
+							BackupPlugin.getDefault().logError(
+									"error while initializing storage interceptor '" + desc.getName() + "'", t); //$NON-NLS-1$ //$NON-NLS-2$
+						}
+					});
+					storageInterceptors.add(interceptor);
+				}
+				
+				if (!ok[0]) {
+					monitor.done();
+					return;
+				}
+				
 				Cursor<BackupsRecord> cursor = null;
 				try {
-					database.open();
+					database.open(storageInterceptors);
 					database.initialize();
 					
 					cursor = database.factory()
@@ -146,6 +180,15 @@ public class RestoreDialog extends Dialog {
 						backups.add(backup);
 					}
 				} catch (SQLException | IOException e) {
+					boolean handled = false;
+					for (IStorageInterceptor interceptor : storageInterceptors) {
+						if (interceptor.showErrorMessage(e, dlg.getShell())) {
+							handled = true;
+						}
+					}
+					if (handled) {
+						throw new InterruptedException();
+					}
 					throw new InvocationTargetException(e);
 				} finally {
 					database.closeQuietly(cursor);
@@ -153,14 +196,13 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		};
-		ProgressMonitorDialog dlg = new ProgressMonitorDialog(getParentShell());
 		try {
 			dlg.run(true, false, runnable);
 		} catch (InvocationTargetException e) {
 			// TODO
 			BackupPlugin.getDefault().logError("Error while opening backup database", e); //$NON-NLS-1$
 		} catch (InterruptedException e) {
-			// not cancelable
+			return Window.CANCEL;
 		}
 		
 		return super.open();
@@ -174,6 +216,19 @@ public class RestoreDialog extends Dialog {
 				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
 					database.close();
+					for (final IStorageInterceptor interceptor : storageInterceptors) {
+						SafeRunner.run(new ISafeRunnable() {
+							@Override
+							public void run() throws Exception {
+								interceptor.destroy();
+							}
+							
+							@Override
+							public void handleException(Throwable t) {
+								BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
+							}
+						});
+					}
 				} finally {
 					monitor.done();
 				}
@@ -614,7 +669,13 @@ public class RestoreDialog extends Dialog {
 			outputPath = outputFile.toPath();
 			InputStream in = null;
 			try {
-				in = entry.compression.getInputStream(new BufferedInputStream(new FileInputStream(inputFile)));
+				InputStream fileIn = new BufferedInputStream(new FileInputStream(inputFile));
+				InputStream interceptIn = fileIn;
+				for (IStorageInterceptor interceptor : storageInterceptors) {
+					interceptIn = interceptor.interceptInputStream(interceptIn, entry.length);
+				}
+				InputStream compressIn = entry.compression.getInputStream(interceptIn);
+				in = compressIn;
 				Files.copy(in, outputPath);
 			} finally {
 				IOUtils.closeQuietly(in);

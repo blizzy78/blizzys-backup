@@ -2,6 +2,7 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension-point id="locationProviders" name="Location Providers" schema="schema/locationProviders.exsd"/>
+   <extension-point id="storageInterceptors" name="Storage Interceptors" schema="schema/storageInterceptors.exsd"/>
    <extension
          id="backup"
          point="org.eclipse.core.runtime.applications">

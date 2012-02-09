@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -34,6 +35,8 @@ import org.jooq.impl.Factory;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
+import de.blizzy.backup.IDatabaseModifyingStorageInterceptor;
+import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.schema.PublicFactory;
 import de.blizzy.backup.database.schema.Tables;
@@ -54,17 +57,17 @@ public class Database {
 		this.heavyDuty = heavyDuty;
 	}
 	
-	public void open() throws SQLException, IOException {
+	public void open(Collection<IStorageInterceptor> storageInterceptors) throws SQLException, IOException {
 		if (heavyDuty) {
 			folder = Files.createTempDirectory("blizzysbackup-").toFile(); //$NON-NLS-1$
 			if (realFolder.isDirectory()) {
 				copyFolder(realFolder, folder, false);
 			}
 		}
-		open(folder);
+		open(folder, storageInterceptors);
 	}
 	
-	private void open(File folder) throws SQLException {
+	private void open(File folder, Collection<IStorageInterceptor> storageInterceptors) throws SQLException {
 		if (conn == null) {
 			try {
 				if (!folder.exists()) {
@@ -76,11 +79,21 @@ public class Database {
 				} catch (ClassNotFoundException e) {
 					throw new RuntimeException(e);
 				}
-	
+
+				StringBuilder paramsBuf = new StringBuilder("CACHE_SIZE=65536"); //$NON-NLS-1$
+				String password = StringUtils.EMPTY;
+				for (IStorageInterceptor interceptor : storageInterceptors) {
+					if (interceptor instanceof IDatabaseModifyingStorageInterceptor) {
+						IDatabaseModifyingStorageInterceptor i = (IDatabaseModifyingStorageInterceptor) interceptor;
+						paramsBuf.append(";").append(i.getDatabaseParameters()); //$NON-NLS-1$
+						password = i.getDatabasePassword() + " " + password; //$NON-NLS-1$
+					}
+				}
+
 				conn = DriverManager.getConnection(
 						"jdbc:h2:" + folder.getAbsolutePath() + "/backup" + //$NON-NLS-1$ //$NON-NLS-2$
-						";CACHE_SIZE=65536", //$NON-NLS-1$
-						"sa", StringUtils.EMPTY); //$NON-NLS-1$
+						";" + paramsBuf.toString(), //$NON-NLS-1$
+						"sa", password); //$NON-NLS-1$
 				conn.setAutoCommit(true);
 				factory = new PublicFactory(conn);
 			} catch (IOException e) {

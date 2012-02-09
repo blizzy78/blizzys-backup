@@ -131,4 +131,29 @@ public class BackupPlugin extends AbstractUIPlugin {
 		});
 		return result;
 	}
+
+	public List<StorageInterceptorDescriptor> getStorageInterceptors() {
+		List<StorageInterceptorDescriptor> result = new ArrayList<>();
+		IExtensionPoint point = Platform.getExtensionRegistry().getExtensionPoint(ID + ".storageInterceptors"); //$NON-NLS-1$
+		IExtension[] extensions = point.getExtensions();
+		for (IExtension extension : extensions) {
+			for (IConfigurationElement element : extension.getConfigurationElements()) {
+				try {
+					String name = element.getAttribute("name"); //$NON-NLS-1$
+					IStorageInterceptor storageInterceptor =
+							(IStorageInterceptor) element.createExecutableExtension("class"); //$NON-NLS-1$
+					result.add(new StorageInterceptorDescriptor(name, storageInterceptor));
+				} catch (CoreException e) {
+					logError("error while creating storage interceptor", e); //$NON-NLS-1$
+				}
+			}
+		}
+		Collections.sort(result, new Comparator<StorageInterceptorDescriptor>() {
+			@Override
+			public int compare(StorageInterceptorDescriptor d1, StorageInterceptorDescriptor d2) {
+				return Collator.getInstance().compare(d1.getName(), d2.getName());
+			}
+		});
+		return result;
+	}
 }

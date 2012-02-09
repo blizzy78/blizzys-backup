@@ -28,6 +28,8 @@ import java.security.DigestOutputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -35,6 +37,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.ISafeRunnable;
+import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
@@ -45,8 +49,10 @@ import org.jooq.impl.Factory;
 
 import de.blizzy.backup.BackupPlugin;
 import de.blizzy.backup.Compression;
+import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.LengthOutputStream;
 import de.blizzy.backup.Messages;
+import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.schema.Tables;
@@ -72,6 +78,7 @@ public class CheckRun implements IRunnableWithProgress {
 	private Shell parentShell;
 	private Database database;
 	private boolean backupOk = true;
+	private List<IStorageInterceptor> storageInterceptors = new ArrayList<>();
 
 	public CheckRun(Settings settings, Shell parentShell) {
 		this.settings = settings;
@@ -113,8 +120,34 @@ public class CheckRun implements IRunnableWithProgress {
 	public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
 		database = new Database(settings, false);
 		
+		final boolean[] ok = { true };
+		List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
+		for (final StorageInterceptorDescriptor desc : descs) {
+			final IStorageInterceptor interceptor = desc.getStorageInterceptor();
+			SafeRunner.run(new ISafeRunnable() {
+				@Override
+				public void run() throws Exception {
+					interceptor.initialize(parentShell);
+				}
+				
+				@Override
+				public void handleException(Throwable t) {
+					ok[0] = false;
+					interceptor.showErrorMessage(t, parentShell);
+					BackupPlugin.getDefault().logError(
+							"error while initializing storage interceptor '" + desc.getName() + "'", t); //$NON-NLS-1$ //$NON-NLS-2$
+				}
+			});
+			storageInterceptors.add(interceptor);
+		}
+
+		if (!ok[0]) {
+			monitor.done();
+			return;
+		}
+		
 		try {
-			database.open();
+			database.open(storageInterceptors);
 			database.initialize();
 			
 			int numFiles = database.factory()
@@ -159,9 +192,31 @@ public class CheckRun implements IRunnableWithProgress {
 				database.closeQuietly(cursor);
 			}
 		} catch (SQLException | IOException e) {
+			boolean handled = false;
+			for (IStorageInterceptor interceptor : storageInterceptors) {
+				if (interceptor.showErrorMessage(e, parentShell)) {
+					handled = true;
+				}
+			}
+			if (handled) {
+				throw new InterruptedException();
+			}
 			throw new InvocationTargetException(e);
 		} finally {
 			database.close();
+			for (final IStorageInterceptor interceptor : storageInterceptors) {
+				SafeRunner.run(new ISafeRunnable() {
+					@Override
+					public void run() throws Exception {
+						interceptor.destroy();
+					}
+					
+					@Override
+					public void handleException(Throwable t) {
+						BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
+					}
+				});
+			}
 			System.gc();
 			monitor.done();
 		}
@@ -175,7 +230,12 @@ public class CheckRun implements IRunnableWithProgress {
 			InputStream in = null;
 			OutputStream out = null;
 			try {
-				in = compression.getInputStream(new BufferedInputStream(new FileInputStream(backupFile)));
+				InputStream fileIn = new BufferedInputStream(new FileInputStream(backupFile));
+				InputStream interceptIn = fileIn;
+				for (IStorageInterceptor interceptor : storageInterceptors) {
+					interceptIn = interceptor.interceptInputStream(interceptIn, length);
+				}
+				InputStream compressIn = compression.getInputStream(interceptIn);
 				LengthOutputStream lengthOut = new LengthOutputStream(new NullOutputStream());
 				MessageDigest digest = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
 				out = new DigestOutputStream(lengthOut, digest);
@@ -184,6 +244,7 @@ public class CheckRun implements IRunnableWithProgress {
 					md5Digest = MessageDigest.getInstance("MD5"); //$NON-NLS-1$
 					out = new DigestOutputStream(out, md5Digest);
 				}
+				in = compressIn;
 				IOUtils.copy(in, out);
 				out.flush();
 				

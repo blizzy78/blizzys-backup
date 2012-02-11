@@ -2,7 +2,7 @@
 <feature
       id="de.blizzy.backup.rcp"
       label="blizzy&apos;s Backup RCP"
-      version="1.0.0"
+      version="1.0.1"
       provider-name="Maik Schreiber">
 
    <description url="http://www.example.com/description">

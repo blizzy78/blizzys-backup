@@ -46,6 +46,7 @@ import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.jooq.Cursor;
 import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
@@ -115,7 +116,11 @@ public class BackupRun implements Runnable {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
 				public void run() throws Exception {
-					interceptor.initialize(BackupApplication.getBackupShellWindow());
+					IDialogSettings settings = Utils.getChildSection(
+							Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
+					if (!interceptor.initialize(BackupApplication.getBackupShellWindow(), settings)) {
+						ok[0] = false;
+					}
 				}
 				
 				@Override
@@ -129,71 +134,72 @@ public class BackupRun implements Runnable {
 			storageInterceptors.add(interceptor);
 		}
 
-		if (!ok[0]) {
-			return;
-		}
-		
-		database = new Database(settings, true);
 		try {
-			database.open(storageInterceptors);
-			database.initialize();
-			
-			database.factory()
-				.insertInto(Tables.BACKUPS)
-				.set(Tables.BACKUPS.RUN_TIME, new Timestamp(System.currentTimeMillis()))
-				.execute();
-			backupId = database.factory().lastID().intValue();
-			
-			for (ILocation location : settings.getLocations()) {
-				if (!running) {
-					break;
-				}
-				doPause();
-
+			if (ok[0]) {
+				database = new Database(settings, true);
 				try {
-					backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
-				} catch (IOException e) {
-					BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
-				} finally {
-					location.close();
-				}
-			}
-			
-			database.factory()
-				.update(Tables.BACKUPS)
-				.set(Tables.BACKUPS.NUM_ENTRIES, Integer.valueOf(numEntries))
-				.where(Tables.BACKUPS.ID.equal(Integer.valueOf(backupId)))
-				.execute();
-			
-			fireBackupStatusChanged(BackupStatus.CLEANUP);
-			removeOldBackups();
-			consolidateDuplicateFiles();
-			removeUnusedFiles();
-			removeOldDatabaseBackups();
-			
-			database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
-		} catch (SQLException | IOException | RuntimeException e) {
-			for (IStorageInterceptor interceptor : storageInterceptors) {
-				interceptor.showErrorMessage(e, BackupApplication.getBackupShellWindow());
-			}
-			BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
-		} finally {
-			fireBackupStatusChanged(BackupStatus.FINALIZE);
-			database.close();
-			backupDatabase();
-			for (final IStorageInterceptor interceptor : storageInterceptors) {
-				SafeRunner.run(new ISafeRunnable() {
-					@Override
-					public void run() throws Exception {
-						interceptor.destroy();
+					database.open(storageInterceptors);
+					database.initialize();
+					
+					database.factory()
+						.insertInto(Tables.BACKUPS)
+						.set(Tables.BACKUPS.RUN_TIME, new Timestamp(System.currentTimeMillis()))
+						.execute();
+					backupId = database.factory().lastID().intValue();
+					
+					for (ILocation location : settings.getLocations()) {
+						if (!running) {
+							break;
+						}
+						doPause();
+		
+						try {
+							backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
+						} catch (IOException e) {
+							BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+						} finally {
+							location.close();
+						}
 					}
 					
-					@Override
-					public void handleException(Throwable t) {
-						BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
+					database.factory()
+						.update(Tables.BACKUPS)
+						.set(Tables.BACKUPS.NUM_ENTRIES, Integer.valueOf(numEntries))
+						.where(Tables.BACKUPS.ID.equal(Integer.valueOf(backupId)))
+						.execute();
+					
+					fireBackupStatusChanged(BackupStatus.CLEANUP);
+					removeOldBackups();
+					consolidateDuplicateFiles();
+					removeUnusedFiles();
+					removeOldDatabaseBackups();
+					
+					database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
+				} catch (SQLException | IOException | RuntimeException e) {
+					for (IStorageInterceptor interceptor : storageInterceptors) {
+						interceptor.showErrorMessage(e, BackupApplication.getBackupShellWindow());
 					}
-				});
+					BackupPlugin.getDefault().logError("error while running backup", e); //$NON-NLS-1$
+				} finally {
+					fireBackupStatusChanged(BackupStatus.FINALIZE);
+					database.close();
+					backupDatabase();
+					for (final IStorageInterceptor interceptor : storageInterceptors) {
+						SafeRunner.run(new ISafeRunnable() {
+							@Override
+							public void run() throws Exception {
+								interceptor.destroy();
+							}
+							
+							@Override
+							public void handleException(Throwable t) {
+								BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
+							}
+						});
+					}
+				}
 			}
+		} finally {
 			System.gc();
 			fireBackupEnded();
 			

@@ -139,10 +139,11 @@ public class BackupPlugin extends AbstractUIPlugin {
 		for (IExtension extension : extensions) {
 			for (IConfigurationElement element : extension.getConfigurationElements()) {
 				try {
+					String id = extension.getUniqueIdentifier();
 					String name = element.getAttribute("name"); //$NON-NLS-1$
 					IStorageInterceptor storageInterceptor =
 							(IStorageInterceptor) element.createExecutableExtension("class"); //$NON-NLS-1$
-					result.add(new StorageInterceptorDescriptor(name, storageInterceptor));
+					result.add(new StorageInterceptorDescriptor(id, name, storageInterceptor));
 				} catch (CoreException e) {
 					logError("error while creating storage interceptor", e); //$NON-NLS-1$
 				}

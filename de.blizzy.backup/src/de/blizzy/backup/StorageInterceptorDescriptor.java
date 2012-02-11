@@ -18,12 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup;
 
 public class StorageInterceptorDescriptor {
+	private String id;
 	private String name;
 	private IStorageInterceptor storageInterceptor;
 
-	StorageInterceptorDescriptor(String name, IStorageInterceptor storageInterceptor) {
+	StorageInterceptorDescriptor(String id, String name, IStorageInterceptor storageInterceptor) {
+		this.id = id;
 		this.name = name;
 		this.storageInterceptor = storageInterceptor;
+	}
+
+	public String getId() {
+		return id;
 	}
 	
 	public String getName() {

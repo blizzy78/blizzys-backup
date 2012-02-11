@@ -39,6 +39,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
@@ -127,7 +128,11 @@ public class CheckRun implements IRunnableWithProgress {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
 				public void run() throws Exception {
-					interceptor.initialize(parentShell);
+					IDialogSettings settings = Utils.getChildSection(
+							Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
+					if (!interceptor.initialize(parentShell, settings)) {
+						ok[0] = false;
+					}
 				}
 				
 				@Override
@@ -143,7 +148,7 @@ public class CheckRun implements IRunnableWithProgress {
 
 		if (!ok[0]) {
 			monitor.done();
-			return;
+			throw new InterruptedException();
 		}
 		
 		try {

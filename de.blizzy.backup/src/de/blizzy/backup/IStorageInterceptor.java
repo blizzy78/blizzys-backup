@@ -21,10 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.widgets.Shell;
 
 public interface IStorageInterceptor {
-	boolean initialize(Shell shell);
+	boolean initialize(Shell shell, IDialogSettings settings);
 	void destroy();
 	OutputStream interceptOutputStream(OutputStream out, long fileLength) throws IOException;
 	InputStream interceptInputStream(InputStream in, long fileLength) throws IOException;

@@ -44,6 +44,7 @@ import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
@@ -147,7 +148,11 @@ public class RestoreDialog extends Dialog {
 					SafeRunner.run(new ISafeRunnable() {
 						@Override
 						public void run() throws Exception {
-							interceptor.initialize(dlg.getShell());
+							IDialogSettings settings = Utils.getChildSection(
+									Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
+							if (!interceptor.initialize(dlg.getShell(), settings)) {
+								ok[0] = false;
+							}
 						}
 						
 						@Override
@@ -163,7 +168,7 @@ public class RestoreDialog extends Dialog {
 				
 				if (!ok[0]) {
 					monitor.done();
-					return;
+					throw new InterruptedException();
 				}
 				
 				Cursor<BackupsRecord> cursor = null;

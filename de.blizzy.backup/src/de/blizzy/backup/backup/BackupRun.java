@@ -277,16 +277,23 @@ public class BackupRun implements Runnable {
 			}
 			doPause();
 			
-			try {
-				if (entry.isFolder()) {
+			if (entry.isFolder()) {
+				try {
 					backupFolder((IFolder) entry, id, null);
-				} else {
-					backupFile((IFile) entry, id);
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
+							folder.getAbsolutePath(), e);
+					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 				}
-			} catch (IOException e) {
-				BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
-						folder.getAbsolutePath(), e);
-				fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
+			} else {
+				try {
+					backupFile((IFile) entry, id);
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("error while backing up file: " + //$NON-NLS-1$
+							folder.getAbsolutePath(), e);
+					// file might be in use this time so only show a warning instead of an error
+					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
+				}
 			}
 		}
 		

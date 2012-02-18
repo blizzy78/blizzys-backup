@@ -28,6 +28,7 @@ public class Messages extends NLS {
 	public static String Button_BackupNow;
 	public static String Button_Browse;
 	public static String Button_Check;
+	public static String Button_ClearErrors;
 	public static String Button_Exit;
 	public static String Button_MinimizeOnly;
 	public static String Button_MoveUp;
@@ -42,6 +43,7 @@ public class Messages extends NLS {
 	public static String CompareFilesChecksum;
 	public static String CompareFilesMetadata;
 	public static String DropFoldersHelp;
+	public static String Errors;
 	public static String ErrorsWhileCheckingBackup;
 	public static String ExitApplication;
 	public static String Finalizing;
@@ -90,10 +92,13 @@ public class Messages extends NLS {
 	public static String Title_BlizzysBackup;
 	public static String Title_CheckBackupIntegrity;
 	public static String Title_CloseBackupDatabase;
+	public static String Title_Date;
 	public static String Title_Error;
+	public static String Title_Errors;
 	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
 	public static String Title_FileComparison;
+	public static String Title_FileOrFolder;
 	public static String Title_FolderCannotBeAdded;
 	public static String Title_FolderNotEmpty;
 	public static String Title_FoldersToBackup;

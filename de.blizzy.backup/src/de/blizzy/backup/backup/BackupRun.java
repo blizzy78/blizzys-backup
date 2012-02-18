@@ -80,6 +80,7 @@ public class BackupRun implements Runnable {
 	private int numEntries;
 	private int totalEntries;
 	private List<IStorageInterceptor> storageInterceptors = new ArrayList<>();
+	private List<IFileSystemEntry> currentFileOrFolder = new ArrayList<>();
 
 	public BackupRun(Settings settings) {
 		this.settings = settings;
@@ -250,93 +251,103 @@ public class BackupRun implements Runnable {
 	}
 
 	private int backupFolder(IFolder folder, int parentFolderId, String overrideName) throws SQLException, IOException {
-		FileTime creationTime = folder.getCreationTime();
-		FileTime lastModificationTime = folder.getLastModificationTime();
-		database.factory()
-			.insertInto(Tables.ENTRIES)
-			.set(Tables.ENTRIES.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
-			.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
-			.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FOLDER.getValue()))
-			.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
-			.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(folder.isHidden()))
-			.set(Tables.ENTRIES.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
-			.set(Tables.ENTRIES.NAME_LOWER, StringUtils.isNotBlank(overrideName) ? overrideName.toLowerCase() : folder.getName().toLowerCase())
-			.execute();
-		int id = database.factory().lastID().intValue();
-		List<IFileSystemEntry> entries = new ArrayList<>(folder.list());
-		Collections.sort(entries, new Comparator<IFileSystemEntry>() {
-			@Override
-			public int compare(IFileSystemEntry e1, IFileSystemEntry e2) {
-				return e1.getName().compareTo(e2.getName());
+		currentFileOrFolder.add(folder);
+		try {
+			FileTime creationTime = folder.getCreationTime();
+			FileTime lastModificationTime = folder.getLastModificationTime();
+			database.factory()
+				.insertInto(Tables.ENTRIES)
+				.set(Tables.ENTRIES.PARENT_ID, (parentFolderId > 0) ? Integer.valueOf(parentFolderId) : null)
+				.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
+				.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FOLDER.getValue()))
+				.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+				.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+				.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(folder.isHidden()))
+				.set(Tables.ENTRIES.NAME, StringUtils.isNotBlank(overrideName) ? overrideName : folder.getName())
+				.set(Tables.ENTRIES.NAME_LOWER, StringUtils.isNotBlank(overrideName) ? overrideName.toLowerCase() : folder.getName().toLowerCase())
+				.execute();
+			int id = database.factory().lastID().intValue();
+			List<IFileSystemEntry> entries = new ArrayList<>(folder.list());
+			Collections.sort(entries, new Comparator<IFileSystemEntry>() {
+				@Override
+				public int compare(IFileSystemEntry e1, IFileSystemEntry e2) {
+					return e1.getName().compareTo(e2.getName());
+				}
+			});
+			for (IFileSystemEntry entry : entries) {
+				if (!running) {
+					break;
+				}
+				doPause();
+				
+				if (entry.isFolder()) {
+					try {
+						backupFolder((IFolder) entry, id, null);
+					} catch (IOException e) {
+						BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
+								folder.getAbsolutePath(), e);
+						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
+					}
+				} else {
+					try {
+						backupFile((IFile) entry, id);
+					} catch (IOException e) {
+						BackupPlugin.getDefault().logError("error while backing up file: " + //$NON-NLS-1$
+								folder.getAbsolutePath(), e);
+						// file might be in use this time so only show a warning instead of an error
+						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
+					}
+				}
 			}
-		});
-		for (IFileSystemEntry entry : entries) {
-			if (!running) {
-				break;
-			}
-			doPause();
 			
-			if (entry.isFolder()) {
-				try {
-					backupFolder((IFolder) entry, id, null);
-				} catch (IOException e) {
-					BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
-							folder.getAbsolutePath(), e);
-					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
-				}
-			} else {
-				try {
-					backupFile((IFile) entry, id);
-				} catch (IOException e) {
-					BackupPlugin.getDefault().logError("error while backing up file: " + //$NON-NLS-1$
-							folder.getAbsolutePath(), e);
-					// file might be in use this time so only show a warning instead of an error
-					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
-				}
-			}
+			return id;
+		} finally {
+			currentFileOrFolder.remove(currentFileOrFolder.size() - 1);
 		}
-		
-		return id;
 	}
 	
 	private void backupFile(IFile file, int parentFolderId) throws SQLException, IOException {
-		if ((numEntries % 50) == 0) {
-			checkDiskSpaceAndRemoveOldBackups();
+		currentFileOrFolder.add(file);
+		try {
+			if ((numEntries % 50) == 0) {
+				checkDiskSpaceAndRemoveOldBackups();
+			}
+	
+			fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath(), numEntries, totalEntries));
+			
+			FileTime creationTime = file.getCreationTime();
+			FileTime lastModificationTime = file.getLastModificationTime();
+	
+			int fileId = -1;
+			if (settings.isUseChecksums()) {
+				String checksum = getChecksum(file);
+				fileId = findOldFileViaChecksum(file, checksum);
+			} else {
+				fileId = findOldFileViaTimestamp(file);
+			}
+			if (fileId <= 0) {
+				String backupFilePath = Utils.createBackupFilePath();
+				File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
+				fileId = backupFileContents(file, backupFile, backupFilePath);
+			}
+	
+			database.factory()
+				.insertInto(Tables.ENTRIES)
+				.set(Tables.ENTRIES.PARENT_ID, Integer.valueOf(parentFolderId))
+				.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
+				.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FILE.getValue()))
+				.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
+				.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
+				.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(file.isHidden()))
+				.set(Tables.ENTRIES.NAME, file.getName())
+				.set(Tables.ENTRIES.NAME_LOWER, file.getName().toLowerCase())
+				.set(Tables.ENTRIES.FILE_ID, Integer.valueOf(fileId))
+				.execute();
+			
+			numEntries++;
+		} finally {
+			currentFileOrFolder.remove(currentFileOrFolder.size() - 1);
 		}
-
-		fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath(), numEntries, totalEntries));
-		
-		FileTime creationTime = file.getCreationTime();
-		FileTime lastModificationTime = file.getLastModificationTime();
-
-		int fileId = -1;
-		if (settings.isUseChecksums()) {
-			String checksum = getChecksum(file);
-			fileId = findOldFileViaChecksum(file, checksum);
-		} else {
-			fileId = findOldFileViaTimestamp(file);
-		}
-		if (fileId <= 0) {
-			String backupFilePath = Utils.createBackupFilePath();
-			File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
-			fileId = backupFileContents(file, backupFile, backupFilePath);
-		}
-
-		database.factory()
-			.insertInto(Tables.ENTRIES)
-			.set(Tables.ENTRIES.PARENT_ID, Integer.valueOf(parentFolderId))
-			.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
-			.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FILE.getValue()))
-			.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
-			.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
-			.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(file.isHidden()))
-			.set(Tables.ENTRIES.NAME, file.getName())
-			.set(Tables.ENTRIES.NAME_LOWER, file.getName().toLowerCase())
-			.set(Tables.ENTRIES.FILE_ID, Integer.valueOf(fileId))
-			.execute();
-		
-		numEntries++;
 	}
 	
 	private int findOldFileViaTimestamp(IFile file) throws SQLException, IOException {
@@ -541,7 +552,10 @@ public class BackupRun implements Runnable {
 	}
 
 	private void fireBackupErrorOccurred(Throwable error, BackupErrorEvent.Severity severity) {
-		final BackupErrorEvent e = new BackupErrorEvent(this, error, severity);
+		IFileSystemEntry fileOrFolder = !currentFileOrFolder.isEmpty() ?
+				currentFileOrFolder.get(currentFileOrFolder.size() - 1) :
+				null;
+		final BackupErrorEvent e = new BackupErrorEvent(this, fileOrFolder, new Date(), error, severity);
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override

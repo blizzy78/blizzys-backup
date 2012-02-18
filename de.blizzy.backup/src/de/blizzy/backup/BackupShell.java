@@ -18,7 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
@@ -71,7 +73,7 @@ class BackupShell {
 	private Button checkButton;
 	private Composite progressComposite;
 	private ProgressBar progressBar;
-	private Label statusLabel;
+	private Link statusLabel;
 	private BackupRun backupRun;
 	private IBackupRunListener backupRunListener = new IBackupRunListener() {
 		@Override
@@ -100,6 +102,9 @@ class BackupShell {
 		
 		@Override
 		public void backupErrorOccurred(BackupErrorEvent e) {
+			synchronized (backupErrors) {
+				backupErrors.add(new BackupError(e));
+			}
 		}
 	};
 	private ISettingsListener settingsListener = new ISettingsListener() {
@@ -113,6 +118,7 @@ class BackupShell {
 	};
 	private IAction pauseAction;
 	private IAction stopAction;
+	private List<BackupError> backupErrors = new ArrayList<>();
 
 	BackupShell(Display display) {
 		shell = new Shell(display, SWT.SHELL_TRIM ^ SWT.MAX);
@@ -275,7 +281,7 @@ class BackupShell {
 		ToolBar toolBar = toolBarManager.createControl(progressComposite);
 		toolBar.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		
-		statusLabel = new Label(progressStatusComposite, SWT.NONE);
+		statusLabel = new Link(progressStatusComposite, SWT.NONE);
 		statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		updateStatusLabel(null);
 
@@ -317,6 +323,15 @@ class BackupShell {
 				}
 			});
 		}
+		
+		statusLabel.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if (e.text.equals("errors")) { //$NON-NLS-1$
+					showErrors();
+				}
+			}
+		});
 		
 		shell.addDisposeListener(new DisposeListener() {
 			@Override
@@ -370,24 +385,34 @@ class BackupShell {
 			@Override
 			public void run() {
 				if (!statusLabel.isDisposed()) {
+					String text;
 					if (status != null) {
 						int numEntries = status.getNumEntries();
 						int totalEntries = status.getTotalEntries();
-						statusLabel.setText(Messages.Label_Status + ": " + Messages.Running + " " + //$NON-NLS-1$ //$NON-NLS-2$
-								(((numEntries >= 0) && (totalEntries >= 0)) ?
-										("(" + (int) Math.round(numEntries * 100d / totalEntries) + "%) ") : "") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-								"- " + status.getText()); //$NON-NLS-1$
+						synchronized (backupErrors) {
+							text = Messages.Label_Status + ": " + Messages.Running + " " + //$NON-NLS-1$ //$NON-NLS-2$
+									(((numEntries >= 0) && (totalEntries >= 0)) ?
+											("(" + (int) Math.round(numEntries * 100d / totalEntries) + "%) ") : "") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+									(!backupErrors.isEmpty() ? "(<a href=\"errors\">" + Messages.Errors + "</a>) " : "") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+									"- " + //$NON-NLS-1$
+									status.getText();
+						}
 						if ((numEntries >= 0) && (totalEntries >= 0)) {
 							progressBar.setMaximum(totalEntries);
 							progressBar.setSelection(numEntries);
 						}
 					} else {
 						Date nextRunDate = new Date(BackupApplication.getNextScheduledBackupRunTime());
-						statusLabel.setText(Messages.Label_Status + ": " + Messages.Idle + " - " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-								DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate));
+						synchronized (backupErrors) {
+							text = Messages.Label_Status + ": " + Messages.Idle + " " + //$NON-NLS-1$ //$NON-NLS-2$
+									(!backupErrors.isEmpty() ? "(<a href=\"errors\">" + Messages.Errors + "</a>) " : "") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+									"- " + Messages.Label_NextRun + ": " + //$NON-NLS-1$ //$NON-NLS-2$
+									DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(nextRunDate);
+						}
 						progressBar.setMaximum(0);
 						progressBar.setSelection(0);
 					}
+					statusLabel.setText(text);
 				}
 			}
 		});
@@ -485,6 +510,24 @@ class BackupShell {
 		});
 	}
 
+	private void showErrors() {
+		List<BackupError> errors;
+		synchronized (backupErrors) {
+			errors = new ArrayList<>(backupErrors);
+		}
+		ErrorsDialog dlg = new ErrorsDialog(shell, errors);
+		dlg.open();
+		if (dlg.isClearErrors()) {
+			synchronized (backupErrors) {
+				backupErrors.clear();
+			}
+			BackupApplication.resetTrayIconErrors();
+			if (backupRun == null) {
+				updateStatusLabel(null);
+			}
+		}
+	}
+	
 	Shell getShell() {
 		return shell;
 	}

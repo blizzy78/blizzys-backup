@@ -197,8 +197,8 @@ class TrayIcon implements IBackupRunListener, ISettingsListener {
 				@Override
 				public void run() {
 					if (!display.isDisposed() && !trayItem.isDisposed()) {
+						currentImage = (backupRun != null) ? progressImage : idleImage;
 						setBlink(false);
-						trayItem.setImage(idleImage);
 					}
 				}
 			});

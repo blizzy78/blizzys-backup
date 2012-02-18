@@ -271,4 +271,8 @@ public class BackupApplication implements IApplication {
 	public static Shell getBackupShellWindow() {
 		return (backupShell != null) ? backupShell.getShell() : null;
 	}
+
+	static void resetTrayIconErrors() {
+		trayIcon.resetImage();
+	}
 }

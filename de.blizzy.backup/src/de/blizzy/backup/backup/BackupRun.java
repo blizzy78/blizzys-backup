@@ -814,6 +814,8 @@ public class BackupRun implements Runnable {
 					if (!removeOldestBackup()) {
 						break;
 					}
+					
+					removeUnusedFiles();
 				}
 			}
 		} catch (IOException e) {

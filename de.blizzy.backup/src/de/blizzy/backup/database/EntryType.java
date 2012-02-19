@@ -19,7 +19,8 @@ package de.blizzy.backup.database;
 
 public enum EntryType {
 	FOLDER(1),
-	FILE(2);
+	FILE(2),
+	FAILED_FILE(3);
 	
 	private int value;
 
@@ -37,6 +38,9 @@ public enum EntryType {
 		}
 		if (value == FILE.value) {
 			return FILE;
+		}
+		if (value == FAILED_FILE.value) {
+			return FAILED_FILE;
 		}
 		throw new IllegalArgumentException("unknown value: " + value); //$NON-NLS-1$
 	}

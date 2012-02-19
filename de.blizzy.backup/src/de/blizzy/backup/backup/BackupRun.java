@@ -57,6 +57,7 @@ import de.blizzy.backup.Compression;
 import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
+import de.blizzy.backup.backup.BackupErrorEvent.Severity;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
 import de.blizzy.backup.database.schema.Tables;
@@ -285,7 +286,7 @@ public class BackupRun implements Runnable {
 						backupFolder((IFolder) entry, id, null);
 					} catch (IOException e) {
 						BackupPlugin.getDefault().logError("error while backing up folder: " + //$NON-NLS-1$
-								folder.getAbsolutePath(), e);
+								entry.getAbsolutePath(), e);
 						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 					}
 				} else {
@@ -293,9 +294,8 @@ public class BackupRun implements Runnable {
 						backupFile((IFile) entry, id);
 					} catch (IOException e) {
 						BackupPlugin.getDefault().logError("error while backing up file: " + //$NON-NLS-1$
-								folder.getAbsolutePath(), e);
-						// file might be in use this time so only show a warning instead of an error
-						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
+								entry.getAbsolutePath(), e);
+						fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 					}
 				}
 			}
@@ -325,23 +325,32 @@ public class BackupRun implements Runnable {
 			} else {
 				fileId = findOldFileViaTimestamp(file);
 			}
+			EntryType type = EntryType.FILE;
 			if (fileId <= 0) {
-				String backupFilePath = Utils.createBackupFilePath();
-				File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
-				fileId = backupFileContents(file, backupFile, backupFilePath);
+				try {
+					String backupFilePath = Utils.createBackupFilePath();
+					File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
+					fileId = backupFileContents(file, backupFile, backupFilePath);
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("error while backing up file: " + //$NON-NLS-1$
+							file.getAbsolutePath(), e);
+					// file might be in use this time so only show a warning instead of an error
+					fireBackupErrorOccurred(e, Severity.WARNING);
+					type = EntryType.FAILED_FILE;
+				}
 			}
 	
 			database.factory()
 				.insertInto(Tables.ENTRIES)
 				.set(Tables.ENTRIES.PARENT_ID, Integer.valueOf(parentFolderId))
 				.set(Tables.ENTRIES.BACKUP_ID, Integer.valueOf(backupId))
-				.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) EntryType.FILE.getValue()))
+				.set(Tables.ENTRIES.TYPE, Byte.valueOf((byte) type.getValue()))
 				.set(Tables.ENTRIES.CREATION_TIME, (creationTime != null) ? new Timestamp(creationTime.toMillis()) : null)
 				.set(Tables.ENTRIES.MODIFICATION_TIME, (lastModificationTime != null) ? new Timestamp(lastModificationTime.toMillis()) : null)
 				.set(Tables.ENTRIES.HIDDEN, Boolean.valueOf(file.isHidden()))
 				.set(Tables.ENTRIES.NAME, file.getName())
 				.set(Tables.ENTRIES.NAME_LOWER, file.getName().toLowerCase())
-				.set(Tables.ENTRIES.FILE_ID, Integer.valueOf(fileId))
+				.set(Tables.ENTRIES.FILE_ID, (fileId > 0) ? Integer.valueOf(fileId) : null)
 				.execute();
 			
 			numEntries++;

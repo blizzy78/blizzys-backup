@@ -84,6 +84,7 @@ import org.eclipse.swt.widgets.Text;
 import org.jooq.Condition;
 import org.jooq.Cursor;
 import org.jooq.Record;
+import org.jooq.exception.DataAccessException;
 
 import de.blizzy.backup.BackupApplication;
 import de.blizzy.backup.BackupPlugin;
@@ -480,9 +481,9 @@ public class RestoreDialog extends Dialog {
 		List<Entry> entries = Collections.emptyList();
 		Cursor<Record> cursor = null;
 		try {
-			cursor = getEntriesCursor(backup.id, parentFolderId, null);
+			cursor = getEntriesCursor(backup.id, null, parentFolderId, null, null);
 			entries = getEntries(cursor, false);
-		} catch (SQLException e) {
+		} catch (DataAccessException e) {
 			BackupPlugin.getDefault().logError("error while loading entries", e); //$NON-NLS-1$
 		} finally {
 			database.closeQuietly(cursor);
@@ -523,7 +524,7 @@ public class RestoreDialog extends Dialog {
 		return (parentFolder != null) ? parentFolder + File.separator + part : part;
 	}
 	
-	private String getFolderPath(int folderId) throws SQLException {
+	private String getFolderPath(int folderId) {
 		if (folderId <= 0) {
 			return null;
 		}
@@ -539,7 +540,7 @@ public class RestoreDialog extends Dialog {
 		return (parentPath != null) ? parentPath + File.separator + name : name;
 	}
 
-	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId, String searchText) {
+	private Cursor<Record> getEntriesCursor(int backupId, Date backupRunTime, int parentFolderId, String entryName, String searchText) {
 		Condition searchCondition;
 		if (StringUtils.isBlank(searchText)) {
 			searchCondition = (parentFolderId > 0) ?
@@ -548,47 +549,88 @@ public class RestoreDialog extends Dialog {
 		} else {
 			searchCondition = Tables.ENTRIES.NAME_LOWER.like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
+		Condition backupCondition;
+		if (backupId > 0) {
+			backupCondition = Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId));
+		} else {
+			backupCondition = Tables.BACKUPS.RUN_TIME.lessThan(new Timestamp(backupRunTime.getTime()));
+		}
+		Condition entryNameCondition = null;
+		if (entryName != null) {
+			entryNameCondition = Tables.ENTRIES.NAME.equal(entryName);
+		}
 		return database.factory()
-			.select(Tables.ENTRIES.ID, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.NAME, Tables.ENTRIES.TYPE, Tables.ENTRIES.CREATION_TIME, Tables.ENTRIES.MODIFICATION_TIME,
-					Tables.ENTRIES.HIDDEN, Tables.FILES.LENGTH,
-					Tables.FILES.BACKUP_PATH,
-					Tables.FILES.COMPRESSION)
+			.select(Tables.ENTRIES.ID, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.NAME, Tables.ENTRIES.TYPE,
+					Tables.ENTRIES.CREATION_TIME, Tables.ENTRIES.MODIFICATION_TIME, Tables.ENTRIES.HIDDEN,
+					Tables.FILES.LENGTH, Tables.FILES.BACKUP_PATH, Tables.FILES.COMPRESSION)
 			.from(Tables.ENTRIES)
+			.join(Tables.BACKUPS)
+				.on(Tables.BACKUPS.ID.equal(Tables.ENTRIES.BACKUP_ID))
 			.leftOuterJoin(Tables.FILES)
 				.on(Tables.FILES.ID.equal(Tables.ENTRIES.FILE_ID))
-			.where(Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)),
-					searchCondition)
-			.orderBy(Tables.ENTRIES.NAME)
+			.where((entryNameCondition != null) ?
+					new Condition[] { backupCondition, searchCondition, entryNameCondition } :
+					new Condition[] { backupCondition, searchCondition })
+			.orderBy(Tables.ENTRIES.NAME.asc(), Tables.BACKUPS.RUN_TIME.desc())
 			.fetchLazy();
 	}
 	
-	private List<Entry> getEntries(Cursor<Record> cursor, boolean fullPaths) throws SQLException {
+	private List<Entry> getEntries(Cursor<Record> cursor, boolean fullPaths) {
 		List<Entry> entries = new ArrayList<>();
 		while (cursor.hasNext()) {
 			Record record = cursor.fetchOne();
-			int id = record.getValue(Tables.ENTRIES.ID).intValue();
-			Integer parentIdInt = record.getValue(Tables.ENTRIES.PARENT_ID);
-			int parentId = (parentIdInt != null) ? parentIdInt.intValue() : -1;
-			String name = record.getValue(Tables.ENTRIES.NAME);
-			EntryType type = EntryType.fromValue(record.getValue(Tables.ENTRIES.TYPE).intValue());
-			Timestamp createTime = record.getValue(Tables.ENTRIES.CREATION_TIME);
-			Date creationTime = (createTime != null) ? new Date(createTime.getTime()) : null;
-			Timestamp modTime = record.getValue(Tables.ENTRIES.MODIFICATION_TIME);
-			Date modificationTime = (modTime != null) ? new Date(modTime.getTime()) : null;
-			boolean hidden = record.getValue(Tables.ENTRIES.HIDDEN).booleanValue();
-			Long lengthLong = record.getValue(Tables.FILES.LENGTH);
-			long length = (lengthLong != null) ? lengthLong.longValue() : -1;
-			String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
-			Byte compressionByte = record.getValue(Tables.FILES.COMPRESSION);
-			Compression compression = (compressionByte != null) ? Compression.fromValue(compressionByte.intValue()) : null;
-			Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath,
-					compression);
-			if (fullPaths) {
-				entry.fullPath = getFolderPath(parentId);
-			}
+			Entry entry = toEntry(record, fullPaths);
 			entries.add(entry);
 		}
 		return entries;
+	}
+
+	private Entry toEntry(Record record, boolean fullPaths) {
+		int id = record.getValue(Tables.ENTRIES.ID).intValue();
+		Integer parentIdInt = record.getValue(Tables.ENTRIES.PARENT_ID);
+		int parentId = (parentIdInt != null) ? parentIdInt.intValue() : -1;
+		String name = record.getValue(Tables.ENTRIES.NAME);
+		EntryType type = EntryType.fromValue(record.getValue(Tables.ENTRIES.TYPE).intValue());
+		Timestamp createTime = record.getValue(Tables.ENTRIES.CREATION_TIME);
+		Date creationTime = (createTime != null) ? new Date(createTime.getTime()) : null;
+		Timestamp modTime = record.getValue(Tables.ENTRIES.MODIFICATION_TIME);
+		Date modificationTime = (modTime != null) ? new Date(modTime.getTime()) : null;
+		boolean hidden = record.getValue(Tables.ENTRIES.HIDDEN).booleanValue();
+		Long lengthLong = record.getValue(Tables.FILES.LENGTH);
+		long length = (lengthLong != null) ? lengthLong.longValue() : -1;
+		String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
+		Byte compressionByte = record.getValue(Tables.FILES.COMPRESSION);
+		Compression compression = (compressionByte != null) ? Compression.fromValue(compressionByte.intValue()) : null;
+		Entry entry = new Entry(id, parentId, name, type, creationTime, modificationTime, hidden, length, backupPath,
+				compression);
+		if (fullPaths) {
+			entry.fullPath = getFolderPath(parentId);
+		}
+		return entry;
+	}
+	
+	private Entry findInOlderBackups(Entry entry) {
+		Date runTime = new Date(database.factory()
+			.select(Tables.BACKUPS.RUN_TIME)
+			.from(Tables.ENTRIES)
+			.join(Tables.BACKUPS)
+				.on(Tables.BACKUPS.ID.equal(Tables.ENTRIES.BACKUP_ID))
+			.where(Tables.ENTRIES.ID.equal(Integer.valueOf(entry.id)))
+			.fetchOne()
+			.getValue(Tables.BACKUPS.RUN_TIME).getTime());
+		// FIXME: entry.parentId points to the current backup instead of the older backup
+		// getEntriesCursor() will therefore not find anything
+		Cursor<Record> cursor = getEntriesCursor(-1, runTime, entry.parentId, entry.name, null);
+		try {
+			for (Entry olderEntry : getEntries(cursor, false)) {
+				if (olderEntry.type == EntryType.FILE) {
+					return olderEntry;
+				}
+			}
+		} finally {
+			database.closeQuietly(cursor);
+		}
+		return null;
 	}
 	
 	private void restore(final Collection<Entry> entries) {
@@ -652,50 +694,58 @@ public class RestoreDialog extends Dialog {
 		if (monitor.isCanceled()) {
 			throw new InterruptedException();
 		}
-		
-		Path outputPath;
-		if (entry.type == EntryType.FOLDER) {
-			File newFolder = new File(parentFolder, escapeFileName(entry.name));
-			FileUtils.forceMkdir(newFolder);
-			
-			Cursor<Record> cursor = getEntriesCursor(backupId, entry.id, null);
-			try {
-				for (Entry e : getEntries(cursor, false)) {
-					restoreEntry(e, newFolder, outputFolder, backupId, monitor);
-				}
-			} finally {
-				database.closeQuietly(cursor);
-			}
 
-			outputPath = newFolder.toPath();
-		} else {
-			File inputFile = Utils.toBackupFile(entry.backupPath, outputFolder);
-			File outputFile = new File(parentFolder, escapeFileName(entry.name));
-			outputPath = outputFile.toPath();
-			InputStream in = null;
-			try {
-				InputStream fileIn = new BufferedInputStream(new FileInputStream(inputFile));
-				InputStream interceptIn = fileIn;
-				for (IStorageInterceptor interceptor : storageInterceptors) {
-					interceptIn = interceptor.interceptInputStream(interceptIn, entry.length);
-				}
-				InputStream compressIn = entry.compression.getInputStream(interceptIn);
-				in = compressIn;
-				Files.copy(in, outputPath);
-			} finally {
-				IOUtils.closeQuietly(in);
-			}
+		boolean isFolder = entry.type == EntryType.FOLDER;
+		
+		if (entry.type == EntryType.FAILED_FILE) {
+			entry = findInOlderBackups(entry);
 		}
 
-		FileAttributes fileAttributes = FileAttributes.get(outputPath);
-		if (entry.hidden) {
-			fileAttributes.setHidden(entry.hidden);
+		if (entry != null) {
+			Path outputPath;
+			if (entry.type == EntryType.FOLDER) {
+				File newFolder = new File(parentFolder, escapeFileName(entry.name));
+				FileUtils.forceMkdir(newFolder);
+				
+				Cursor<Record> cursor = getEntriesCursor(backupId, null, entry.id, null, null);
+				try {
+					for (Entry e : getEntries(cursor, false)) {
+						restoreEntry(e, newFolder, outputFolder, backupId, monitor);
+					}
+				} finally {
+					database.closeQuietly(cursor);
+				}
+	
+				outputPath = newFolder.toPath();
+			} else {
+				File inputFile = Utils.toBackupFile(entry.backupPath, outputFolder);
+				File outputFile = new File(parentFolder, escapeFileName(entry.name));
+				outputPath = outputFile.toPath();
+				InputStream in = null;
+				try {
+					InputStream fileIn = new BufferedInputStream(new FileInputStream(inputFile));
+					InputStream interceptIn = fileIn;
+					for (IStorageInterceptor interceptor : storageInterceptors) {
+						interceptIn = interceptor.interceptInputStream(interceptIn, entry.length);
+					}
+					InputStream compressIn = entry.compression.getInputStream(interceptIn);
+					in = compressIn;
+					Files.copy(in, outputPath);
+				} finally {
+					IOUtils.closeQuietly(in);
+				}
+			}
+	
+			FileAttributes fileAttributes = FileAttributes.get(outputPath);
+			if (entry.hidden) {
+				fileAttributes.setHidden(entry.hidden);
+			}
+			FileTime createTime = (entry.creationTime != null) ? FileTime.fromMillis(entry.creationTime.getTime()) : null;
+			FileTime modTime = (entry.modificationTime != null) ? FileTime.fromMillis(entry.modificationTime.getTime()) : null;
+			fileAttributes.setTimes(createTime, modTime);
 		}
-		FileTime createTime = (entry.creationTime != null) ? FileTime.fromMillis(entry.creationTime.getTime()) : null;
-		FileTime modTime = (entry.modificationTime != null) ? FileTime.fromMillis(entry.modificationTime.getTime()) : null;
-		fileAttributes.setTimes(createTime, modTime);
-		
-		if (entry.type != EntryType.FOLDER) {
+
+		if (!isFolder) {
 			monitor.worked(1);
 		}
 	}
@@ -769,7 +819,7 @@ public class RestoreDialog extends Dialog {
 		Cursor<Record> cursor = null;
 		try {
 			if (backupId[0] > 0) {
-				cursor = getEntriesCursor(backupId[0], -1, text);
+				cursor = getEntriesCursor(backupId[0], null, -1, null, text);
 				final List<Entry> entries = getEntries(cursor, true);
 				if (!display.isDisposed()) {
 					display.syncExec(new Runnable() {
@@ -786,7 +836,7 @@ public class RestoreDialog extends Dialog {
 					});
 				}
 			}
-		} catch (SQLException e) {
+		} catch (DataAccessException e) {
 			BackupPlugin.getDefault().logError("error while searching for entries", e); //$NON-NLS-1$
 		} finally {
 			database.closeQuietly(cursor);

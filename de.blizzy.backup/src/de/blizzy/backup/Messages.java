@@ -80,6 +80,7 @@ public class Messages extends NLS {
 	public static String OutputFolderIsInBackup;
 	public static String ParentFolderInBackup;
 	public static String ProgramRunning;
+	public static String RestoreFailedFilesFromOlderBackups;
 	public static String RestoreFromBackup;
 	public static String RunBackupNow;
 	public static String Running;
@@ -97,6 +98,7 @@ public class Messages extends NLS {
 	public static String Title_Errors;
 	public static String Title_ExistingBackup;
 	public static String Title_ExitApplication;
+	public static String Title_FailedFiles;
 	public static String Title_FileComparison;
 	public static String Title_FileOrFolder;
 	public static String Title_FolderCannotBeAdded;

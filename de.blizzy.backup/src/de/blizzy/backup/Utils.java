@@ -34,11 +34,20 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.swt.widgets.Display;
+import org.jooq.Record;
 
 import de.blizzy.backup.database.Database;
+import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.vfs.IFolder;
 
 public final class Utils {
+	public static interface IFileOrFolderEntry {
+		boolean isFolder() throws IOException;
+		IFileOrFolderEntry getParentFolder() throws IOException;
+		String getAbsolutePath();
+		String getName();
+	}
+
 	private static final String DIALOG_SECTION = BackupPlugin.ID + ".dialog"; //$NON-NLS-1$
 	private static final DateFormat BACKUP_PATH_FORMAT =
 		new SimpleDateFormat("yyyy'/'MM'/'dd'/'HHmm"); //$NON-NLS-1$
@@ -123,5 +132,42 @@ public final class Utils {
 			// ignore
 		}
 		return file.getAbsoluteFile();
+	}
+
+	public static int findFileOrFolderEntryInBackup(IFileOrFolderEntry fileOrFolder, int backupId, Database database)
+			throws IOException {
+		
+		if (fileOrFolder.isFolder()) {
+			// try to find folder as root folder
+			Record record = database.factory()
+				.select(Tables.ENTRIES.ID)
+				.from(Tables.ENTRIES)
+				.where(Tables.ENTRIES.NAME.equal(fileOrFolder.getAbsolutePath()), Tables.ENTRIES.PARENT_ID.isNull(),
+						Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
+				.fetchAny();
+			if (record != null) {
+				return record.getValue(Tables.ENTRIES.ID).intValue();
+			}
+		}
+		
+		// find entry in parent folder
+		IFileOrFolderEntry parentFolder = fileOrFolder.getParentFolder();
+		if (parentFolder != null) {
+			int parentFolderId = findFileOrFolderEntryInBackup(parentFolder, backupId, database);
+			if (parentFolderId > 0) {
+				Record record = database.factory()
+					.select(Tables.ENTRIES.ID)
+					.from(Tables.ENTRIES)
+					.where(Tables.ENTRIES.NAME.equal(fileOrFolder.getName()),
+							Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
+							Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
+					.fetchAny();
+				if (record != null) {
+					return record.getValue(Tables.ENTRIES.ID).intValue();
+				}
+			}
+		}
+		
+		return -1;
 	}
 }

@@ -94,6 +94,7 @@ import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.Messages;
 import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
+import de.blizzy.backup.Utils.IFileOrFolderEntry;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
 import de.blizzy.backup.database.schema.Tables;
@@ -114,6 +115,7 @@ public class RestoreDialog extends Dialog {
 	private Timer timer = new Timer();
 	private TimerTask searchTimerTask;
 	private List<IStorageInterceptor> storageInterceptors = new ArrayList<>();
+	private Boolean alwaysRestoreFromOlderBackups;
 
 	public RestoreDialog(Shell parentShell) {
 		super(parentShell);
@@ -354,7 +356,7 @@ public class RestoreDialog extends Dialog {
 				try {
 					Backup backup = (Backup) ((IStructuredSelection) e.getSelection()).getFirstElement();
 					showBackup(backup);
-				} catch (SQLException ex) {
+				} catch (DataAccessException ex) {
 					BackupPlugin.getDefault().logError("error while showing backup", ex); //$NON-NLS-1$
 				}
 			}
@@ -385,7 +387,7 @@ public class RestoreDialog extends Dialog {
 						try {
 							Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 							showFolder(backup, entry);
-						} catch (SQLException ex) {
+						} catch (DataAccessException ex) {
 							BackupPlugin.getDefault().logError("error while showing folder", ex); //$NON-NLS-1$
 						}
 					}
@@ -405,7 +407,7 @@ public class RestoreDialog extends Dialog {
 			public void widgetSelected(SelectionEvent e) {
 				try {
 					moveUp();
-				} catch (SQLException ex) {
+				} catch (DataAccessException ex) {
 					BackupPlugin.getDefault().logError("error while moving up", ex); //$NON-NLS-1$
 				}
 			}
@@ -429,7 +431,7 @@ public class RestoreDialog extends Dialog {
 					int folderId = Integer.parseInt(e.text.substring(0, pos));
 					int parentFolderId = Integer.parseInt(e.text.substring(pos + 1));
 					showFolder(backup, folderId, parentFolderId);
-				} catch (SQLException ex) {
+				} catch (DataAccessException ex) {
 					BackupPlugin.getDefault().logError("error while showing folder", ex); //$NON-NLS-1$
 				}
 			}
@@ -442,22 +444,22 @@ public class RestoreDialog extends Dialog {
 		return composite;
 	}
 
-	private void showBackup(Backup backup) throws SQLException {
+	private void showBackup(Backup backup) {
 		showEntries(backup, -1);
 		moveUpButton.setEnabled(false);
 	}
 
-	private void showFolder(Backup backup, Entry entry) throws SQLException {
+	private void showFolder(Backup backup, Entry entry) {
 		showFolder(backup, entry.id, entry.parentId);
 	}
 
-	private void showFolder(Backup backup, int entryId, int parentFolderId) throws SQLException {
+	private void showFolder(Backup backup, int entryId, int parentFolderId) {
 		showEntries(backup, entryId);
 		moveUpButton.setEnabled(true);
 		moveUpButton.setData((parentFolderId > 0) ? Integer.valueOf(parentFolderId) : backup);
 	}
 
-	private void moveUp() throws SQLException {
+	private void moveUp() {
 		Object data = moveUpButton.getData();
 		if (data instanceof Backup) {
 			showBackup((Backup) data);
@@ -471,17 +473,17 @@ public class RestoreDialog extends Dialog {
 				showEntries(backup, folderId);
 				moveUpButton.setEnabled(true);
 				moveUpButton.setData((parentIdInt != null) ? parentIdInt : backup);
-			} catch (SQLException e) {
+			} catch (DataAccessException e) {
 				BackupPlugin.getDefault().logError("error while getting parent ID", e); //$NON-NLS-1$
 			}
 		}
 	}
 
-	private void showEntries(Backup backup, int parentFolderId) throws SQLException {
+	private void showEntries(Backup backup, int parentFolderId) {
 		List<Entry> entries = Collections.emptyList();
 		Cursor<Record> cursor = null;
 		try {
-			cursor = getEntriesCursor(backup.id, null, parentFolderId, null, null);
+			cursor = getEntriesCursor(backup.id, parentFolderId, null, -1);
 			entries = getEntries(cursor, false);
 		} catch (DataAccessException e) {
 			BackupPlugin.getDefault().logError("error while loading entries", e); //$NON-NLS-1$
@@ -506,7 +508,7 @@ public class RestoreDialog extends Dialog {
 				StringUtils.EMPTY);
 	}
 
-	private String getFolderLink(int folderId) throws SQLException {
+	private String getFolderLink(int folderId) {
 		if (folderId <= 0) {
 			return null;
 		}
@@ -540,38 +542,27 @@ public class RestoreDialog extends Dialog {
 		return (parentPath != null) ? parentPath + File.separator + name : name;
 	}
 
-	private Cursor<Record> getEntriesCursor(int backupId, Date backupRunTime, int parentFolderId, String entryName, String searchText) {
+	private Cursor<Record> getEntriesCursor(int backupId, int parentFolderId, String searchText, int entryId) {
 		Condition searchCondition;
-		if (StringUtils.isBlank(searchText)) {
-			searchCondition = (parentFolderId > 0) ?
-					Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId)) :
-					Tables.ENTRIES.PARENT_ID.isNull();
-		} else {
+		if (entryId > 0) {
+			searchCondition = Tables.ENTRIES.ID.equal(Integer.valueOf(entryId));
+		} else if (StringUtils.isNotBlank(searchText)) {
 			searchCondition = Tables.ENTRIES.NAME_LOWER.like("%" + searchText.toLowerCase() + "%"); //$NON-NLS-1$ //$NON-NLS-2$
-		}
-		Condition backupCondition;
-		if (backupId > 0) {
-			backupCondition = Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId));
+		} else if (parentFolderId > 0) {
+			searchCondition = Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId));
 		} else {
-			backupCondition = Tables.BACKUPS.RUN_TIME.lessThan(new Timestamp(backupRunTime.getTime()));
-		}
-		Condition entryNameCondition = null;
-		if (entryName != null) {
-			entryNameCondition = Tables.ENTRIES.NAME.equal(entryName);
+			searchCondition = Tables.ENTRIES.PARENT_ID.isNull();
 		}
 		return database.factory()
 			.select(Tables.ENTRIES.ID, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.NAME, Tables.ENTRIES.TYPE,
 					Tables.ENTRIES.CREATION_TIME, Tables.ENTRIES.MODIFICATION_TIME, Tables.ENTRIES.HIDDEN,
 					Tables.FILES.LENGTH, Tables.FILES.BACKUP_PATH, Tables.FILES.COMPRESSION)
 			.from(Tables.ENTRIES)
-			.join(Tables.BACKUPS)
-				.on(Tables.BACKUPS.ID.equal(Tables.ENTRIES.BACKUP_ID))
 			.leftOuterJoin(Tables.FILES)
 				.on(Tables.FILES.ID.equal(Tables.ENTRIES.FILE_ID))
-			.where((entryNameCondition != null) ?
-					new Condition[] { backupCondition, searchCondition, entryNameCondition } :
-					new Condition[] { backupCondition, searchCondition })
-			.orderBy(Tables.ENTRIES.NAME.asc(), Tables.BACKUPS.RUN_TIME.desc())
+			.where(Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)),
+					searchCondition)
+			.orderBy(Tables.ENTRIES.NAME.asc())
 			.fetchLazy();
 	}
 	
@@ -609,7 +600,7 @@ public class RestoreDialog extends Dialog {
 		return entry;
 	}
 	
-	private Entry findInOlderBackups(Entry entry) {
+	private Entry findInOlderBackups(Entry entry) throws IOException {
 		Date runTime = new Date(database.factory()
 			.select(Tables.BACKUPS.RUN_TIME)
 			.from(Tables.ENTRIES)
@@ -618,19 +609,85 @@ public class RestoreDialog extends Dialog {
 			.where(Tables.ENTRIES.ID.equal(Integer.valueOf(entry.id)))
 			.fetchOne()
 			.getValue(Tables.BACKUPS.RUN_TIME).getTime());
-		// FIXME: entry.parentId points to the current backup instead of the older backup
-		// getEntriesCursor() will therefore not find anything
-		Cursor<Record> cursor = getEntriesCursor(-1, runTime, entry.parentId, entry.name, null);
+		Cursor<Record> cursor = database.factory()
+			.select(Tables.BACKUPS.ID)
+			.from(Tables.BACKUPS)
+			.where(Tables.BACKUPS.RUN_TIME.lessThan(new Timestamp(runTime.getTime())))
+			.orderBy(Tables.BACKUPS.RUN_TIME.desc())
+			.fetchLazy();
 		try {
-			for (Entry olderEntry : getEntries(cursor, false)) {
-				if (olderEntry.type == EntryType.FILE) {
-					return olderEntry;
+			while (cursor.hasNext()) {
+				Record record = cursor.fetchOne();
+				int backupId = record.getValue(Tables.BACKUPS.ID).intValue();
+				int oldEntryId = findInBackup(entry.id, backupId);
+				if (oldEntryId > 0) {
+					Cursor<Record> entriesCursor = getEntriesCursor(backupId, -1, null, oldEntryId);
+					try {
+						List<Entry> entries = getEntries(entriesCursor, false);
+						if (!entries.isEmpty()) {
+							Entry oldEntry = entries.get(0);
+							if (oldEntry.type == EntryType.FILE) {
+								return oldEntry;
+							}
+						}
+					} finally {
+						database.closeQuietly(entriesCursor);
+					}
 				}
 			}
 		} finally {
 			database.closeQuietly(cursor);
 		}
+		
 		return null;
+	}
+	
+	private int findInBackup(int entryId, int backupId) throws IOException {
+		IFileOrFolderEntry entry = toFileOrFolderEntry(entryId);
+		return Utils.findFileOrFolderEntryInBackup(entry, backupId, database);
+	}
+	
+	private Utils.IFileOrFolderEntry toFileOrFolderEntry(final int entryId) {
+		Record record = database.factory()
+				.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.TYPE)
+				.from(Tables.ENTRIES)
+				.where(Tables.ENTRIES.ID.equal(Integer.valueOf(entryId)))
+				.fetchOne();
+		final String name = record.getValue(Tables.ENTRIES.NAME);
+		final Integer parentId = record.getValue(Tables.ENTRIES.PARENT_ID);
+		final EntryType type = EntryType.fromValue(record.getValue(Tables.ENTRIES.TYPE).intValue());
+		return new Utils.IFileOrFolderEntry() {
+			@Override
+			public boolean isFolder() throws IOException {
+				return type == EntryType.FOLDER;
+			}
+			
+			@Override
+			public IFileOrFolderEntry getParentFolder() throws IOException {
+				return (parentId != null) ? toFileOrFolderEntry(parentId.intValue()) : null;
+			}
+			
+			@Override
+			public String getName() {
+				return name;
+			}
+			
+			@Override
+			public String getAbsolutePath() {
+				return RestoreDialog.this.getAbsolutePath(entryId);
+			}
+		};
+	}
+	
+	private String getAbsolutePath(int entryId) {
+		Record record = database.factory()
+			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
+			.from(Tables.ENTRIES)
+			.where(Tables.ENTRIES.ID.equal(Integer.valueOf(entryId)))
+			.fetchOne();
+		String name = record.getValue(Tables.ENTRIES.NAME);
+		Integer parentId = record.getValue(Tables.ENTRIES.PARENT_ID);
+		return (parentId != null) ? getAbsolutePath(parentId.intValue()) + File.separator + name : name;
 	}
 	
 	private void restore(final Collection<Entry> entries) {
@@ -655,10 +712,13 @@ public class RestoreDialog extends Dialog {
 		}
 		
 		if (folder != null) {
+			alwaysRestoreFromOlderBackups = null;
+			
 			final String myFolder = folder;
 			Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 			final int backupId = backup.id;
 			final int numEntries = backup.numEntries;
+			final ProgressMonitorDialog dlg = new ProgressMonitorDialog(getShell());
 			IRunnableWithProgress runnable = new IRunnableWithProgress() {
 				@Override
 				public void run(IProgressMonitor monitor) throws InvocationTargetException,
@@ -667,16 +727,16 @@ public class RestoreDialog extends Dialog {
 					try {
 						monitor.beginTask(Messages.Title_RestoreFromBackup, numEntries);
 						for (Entry entry : entries) {
-							restoreEntry(entry, new File(myFolder), settings.getOutputFolder(), backupId, monitor);
+							restoreEntry(entry, new File(myFolder), settings.getOutputFolder(), backupId,
+									monitor, dlg.getShell());
 						}
-					} catch (SQLException | IOException e) {
+					} catch (IOException e) {
 						throw new InvocationTargetException(e);
 					} finally {
 						monitor.done();
 					}
 				}
 			};
-			ProgressMonitorDialog dlg = new ProgressMonitorDialog(getShell());
 			try {
 				dlg.run(true, true, runnable);
 			} catch (InvocationTargetException e) {
@@ -688,8 +748,8 @@ public class RestoreDialog extends Dialog {
 		}
 	}
 
-	private void restoreEntry(Entry entry, File parentFolder, String outputFolder, int backupId, IProgressMonitor monitor)
-		throws IOException, SQLException, InterruptedException {
+	private void restoreEntry(Entry entry, File parentFolder, String outputFolder, int backupId,
+			IProgressMonitor monitor, Shell shell) throws IOException, InterruptedException {
 
 		if (monitor.isCanceled()) {
 			throw new InterruptedException();
@@ -698,19 +758,24 @@ public class RestoreDialog extends Dialog {
 		boolean isFolder = entry.type == EntryType.FOLDER;
 		
 		if (entry.type == EntryType.FAILED_FILE) {
-			entry = findInOlderBackups(entry);
+			if (alwaysRestoreFromOlderBackups == null) {
+				alwaysRestoreFromOlderBackups = Boolean.valueOf(promptRestoreFromOlderBackups(shell));
+			}
+			if (alwaysRestoreFromOlderBackups.booleanValue()) {
+				entry = findInOlderBackups(entry);
+			}
 		}
 
-		if (entry != null) {
+		if ((entry != null) && (entry.type != EntryType.FAILED_FILE)) {
 			Path outputPath;
 			if (entry.type == EntryType.FOLDER) {
 				File newFolder = new File(parentFolder, escapeFileName(entry.name));
 				FileUtils.forceMkdir(newFolder);
 				
-				Cursor<Record> cursor = getEntriesCursor(backupId, null, entry.id, null, null);
+				Cursor<Record> cursor = getEntriesCursor(backupId, entry.id, null, -1);
 				try {
 					for (Entry e : getEntries(cursor, false)) {
-						restoreEntry(e, newFolder, outputFolder, backupId, monitor);
+						restoreEntry(e, newFolder, outputFolder, backupId, monitor, shell);
 					}
 				} finally {
 					database.closeQuietly(cursor);
@@ -750,6 +815,20 @@ public class RestoreDialog extends Dialog {
 		}
 	}
 
+	private boolean promptRestoreFromOlderBackups(final Shell shell) {
+		Display display = shell.getDisplay();
+		final boolean[] result = new boolean[1];
+		display.syncExec(new Runnable() {
+			@Override
+			public void run() {
+				if (!shell.isDisposed()) {
+					result[0] = MessageDialog.openQuestion(shell, Messages.Title_FailedFiles, Messages.RestoreFailedFilesFromOlderBackups);
+				}
+			}
+		});
+		return result[0];
+	}
+
 	private String escapeFileName(String name) {
 		return name
 			.replace('/', '_')
@@ -781,7 +860,7 @@ public class RestoreDialog extends Dialog {
 										Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 										try {
 											showBackup(backup);
-										} catch (SQLException e) {
+										} catch (DataAccessException e) {
 											BackupPlugin.getDefault().logError("error while showing backup", e); //$NON-NLS-1$
 										}
 									}
@@ -819,7 +898,7 @@ public class RestoreDialog extends Dialog {
 		Cursor<Record> cursor = null;
 		try {
 			if (backupId[0] > 0) {
-				cursor = getEntriesCursor(backupId[0], null, -1, null, text);
+				cursor = getEntriesCursor(backupId[0], -1, text, -1);
 				final List<Entry> entries = getEntries(cursor, true);
 				if (!display.isDisposed()) {
 					display.syncExec(new Runnable() {

@@ -57,6 +57,7 @@ import de.blizzy.backup.Compression;
 import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.StorageInterceptorDescriptor;
 import de.blizzy.backup.Utils;
+import de.blizzy.backup.Utils.IFileOrFolderEntry;
 import de.blizzy.backup.backup.BackupErrorEvent.Severity;
 import de.blizzy.backup.database.Database;
 import de.blizzy.backup.database.EntryType;
@@ -251,7 +252,7 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private int backupFolder(IFolder folder, int parentFolderId, String overrideName) throws SQLException, IOException {
+	private int backupFolder(IFolder folder, int parentFolderId, String overrideName) throws IOException {
 		currentFileOrFolder.add(folder);
 		try {
 			FileTime creationTime = folder.getCreationTime();
@@ -306,7 +307,7 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
-	private void backupFile(IFile file, int parentFolderId) throws SQLException, IOException {
+	private void backupFile(IFile file, int parentFolderId) throws IOException {
 		currentFileOrFolder.add(file);
 		try {
 			if ((numEntries % 50) == 0) {
@@ -359,7 +360,7 @@ public class BackupRun implements Runnable {
 		}
 	}
 	
-	private int findOldFileViaTimestamp(IFile file) throws SQLException, IOException {
+	private int findOldFileViaTimestamp(IFile file) throws IOException {
 		FileTime lastModificationTime = file.getLastModificationTime();
 		long length = file.getLength();
 		Cursor<Record> cursor = null;
@@ -404,38 +405,34 @@ public class BackupRun implements Runnable {
 		return -1;
 	}
 	
-	private int findFileOrFolderEntryInBackup(IFileSystemEntry file, int backupId) throws SQLException, IOException {
-		if (file.isFolder()) {
-			// try to find folder as root folder
-			Record record = database.factory()
-				.select(Tables.ENTRIES.ID)
-				.from(Tables.ENTRIES)
-				.where(Tables.ENTRIES.NAME.equal(file.getAbsolutePath()), Tables.ENTRIES.PARENT_ID.isNull(),
-						Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
-				.fetchAny();
-			if (record != null) {
-				return record.getValue(Tables.ENTRIES.ID).intValue();
+	private int findFileOrFolderEntryInBackup(final IFileSystemEntry file, int backupId) throws IOException {
+		IFileOrFolderEntry entry = toFileOrFolderEntry(file);
+		return Utils.findFileOrFolderEntryInBackup(entry, backupId, database);
+	}
+	
+	private Utils.IFileOrFolderEntry toFileOrFolderEntry(final IFileSystemEntry fileOrFolder) {
+		return new Utils.IFileOrFolderEntry() {
+			@Override
+			public boolean isFolder() throws IOException {
+				return fileOrFolder.isFolder();
 			}
-		}
-		
-		// find entry in parent folder
-		IFolder parentFolder = file.getParentFolder();
-		if (parentFolder != null) {
-			int parentFolderId = findFileOrFolderEntryInBackup(parentFolder, backupId);
-			if (parentFolderId > 0) {
-				Record record = database.factory()
-					.select(Tables.ENTRIES.ID)
-					.from(Tables.ENTRIES)
-					.where(Tables.ENTRIES.NAME.equal(file.getName()), Tables.ENTRIES.PARENT_ID.equal(Integer.valueOf(parentFolderId)),
-							Tables.ENTRIES.BACKUP_ID.equal(Integer.valueOf(backupId)))
-					.fetchAny();
-				if (record != null) {
-					return record.getValue(Tables.ENTRIES.ID).intValue();
-				}
+			
+			@Override
+			public IFileOrFolderEntry getParentFolder() throws IOException {
+				IFolder parentFolder = fileOrFolder.getParentFolder();
+				return (parentFolder != null) ? toFileOrFolderEntry(parentFolder) : null;
 			}
-		}
-		
-		return -1;
+			
+			@Override
+			public String getName() {
+				return fileOrFolder.getName();
+			}
+			
+			@Override
+			public String getAbsolutePath() {
+				return fileOrFolder.getAbsolutePath();
+			}
+		};
 	}
 
 	private int findOldFileViaChecksum(IFile file, String checksum) throws IOException {

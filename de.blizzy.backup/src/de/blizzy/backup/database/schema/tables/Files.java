@@ -9,10 +9,10 @@ package de.blizzy.backup.database.schema.tables;
 @SuppressWarnings("nls")
 public class Files extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.database.schema.tables.records.FilesRecord> {
 
-	private static final long serialVersionUID = 1202571702;
+	private static final long serialVersionUID = -756341517;
 
 	/**
-	 * The singleton instance of FILES
+	 * The singleton instance of PUBLIC.FILES
 	 */
 	public static final de.blizzy.backup.database.schema.tables.Files FILES = new de.blizzy.backup.database.schema.tables.Files();
 

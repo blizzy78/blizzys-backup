@@ -12,17 +12,17 @@ package de.blizzy.backup.database.schema;
 public final class Sequences {
 
 	/**
-	 * The sequence PUBLIC.PUBLIC.SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157
+	 * The sequence PUBLIC.SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157
 	 */
 	public static final org.jooq.Sequence<java.lang.Long> SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157 = new org.jooq.impl.SequenceImpl<>("SYSTEM_SEQUENCE_272ECCB1_C60B_481D_A120_FE6BE013F157", de.blizzy.backup.database.schema.Public.PUBLIC, org.jooq.impl.SQLDataType.BIGINT);
 
 	/**
-	 * The sequence PUBLIC.PUBLIC.SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B
+	 * The sequence PUBLIC.SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B
 	 */
 	public static final org.jooq.Sequence<java.lang.Long> SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B = new org.jooq.impl.SequenceImpl<>("SYSTEM_SEQUENCE_3DB333FB_C924_4A63_B127_4D4510874A0B", de.blizzy.backup.database.schema.Public.PUBLIC, org.jooq.impl.SQLDataType.BIGINT);
 
 	/**
-	 * The sequence PUBLIC.PUBLIC.SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233
+	 * The sequence PUBLIC.SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233
 	 */
 	public static final org.jooq.Sequence<java.lang.Long> SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233 = new org.jooq.impl.SequenceImpl<>("SYSTEM_SEQUENCE_4E57D207_CE3B_4692_8806_5237E4801233", de.blizzy.backup.database.schema.Public.PUBLIC, org.jooq.impl.SQLDataType.BIGINT);
 

@@ -9,10 +9,10 @@ package de.blizzy.backup.database.schema.tables;
 @SuppressWarnings("nls")
 public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord> {
 
-	private static final long serialVersionUID = -1351996227;
+	private static final long serialVersionUID = 340939450;
 
 	/**
-	 * The singleton instance of ENTRIES
+	 * The singleton instance of PUBLIC.ENTRIES
 	 */
 	public static final de.blizzy.backup.database.schema.tables.Entries ENTRIES = new de.blizzy.backup.database.schema.tables.Entries();
 

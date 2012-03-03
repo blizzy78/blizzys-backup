@@ -55,6 +55,7 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 
 import de.blizzy.backup.BackupApplication;
@@ -75,6 +76,9 @@ public class SettingsDialog extends Dialog {
 	private Button fileCompareMetadataRadio;
 	private Button fileCompareChecksumRadio;
 	private Label scheduleExplanationLabel;
+	private Button maxAgeDaysRadio;
+	private Spinner maxAgeDaysSpinner;
+	private Spinner maxDiskFillRateSpinner;
 
 	public SettingsDialog(Shell parentShell) {
 		super(parentShell);
@@ -206,6 +210,48 @@ public class SettingsDialog extends Dialog {
 		fileCompareMetadataRadio.setSelection(!settings.isUseChecksums());
 		fileCompareChecksumRadio.setSelection(settings.isUseChecksums());
 		
+		Group maxAgeComposite = new Group(composite, SWT.NONE);
+		maxAgeComposite.setText(Messages.Title_MaximumBackupAge);
+		maxAgeComposite.setLayout(new GridLayout(2, false));
+		maxAgeComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		
+		Button maxAgeUnlimitedRadio = new Button(maxAgeComposite, SWT.RADIO);
+		maxAgeUnlimitedRadio.setText(Messages.Label_KeepAll);
+		gd = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+		gd.horizontalSpan = 2;
+		maxAgeUnlimitedRadio.setLayoutData(gd);
+		
+		maxAgeDaysRadio = new Button(maxAgeComposite, SWT.RADIO);
+		maxAgeDaysRadio.setText(Messages.Label_DeleteAfterDays + ":"); //$NON-NLS-1$
+		maxAgeDaysRadio.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		
+		maxAgeDaysSpinner = new Spinner(maxAgeComposite, SWT.BORDER);
+		maxAgeDaysSpinner.setMinimum(14);
+		maxAgeDaysSpinner.setMaximum(365);
+
+		maxAgeUnlimitedRadio.setSelection(settings.getMaxAgeDays() < 0);
+		maxAgeDaysRadio.setSelection(settings.getMaxAgeDays() > 0);
+		maxAgeDaysSpinner.setEnabled(settings.getMaxAgeDays() > 0);
+		maxAgeDaysSpinner.setSelection(settings.getMaxAgeDays() > 0 ? settings.getMaxAgeDays() : 90);
+		
+		Group maxDiskFillRateComposite = new Group(composite, SWT.NONE);
+		maxDiskFillRateComposite.setText(Messages.Title_MaximumDiskFillRate);
+		maxDiskFillRateComposite.setLayout(new GridLayout(3, false));
+		maxDiskFillRateComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		
+		label = new Label(maxDiskFillRateComposite, SWT.NONE);
+		label.setText(Messages.Label_DiskFillRate + ":"); //$NON-NLS-1$
+		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		
+		maxDiskFillRateSpinner = new Spinner(maxDiskFillRateComposite, SWT.BORDER);
+		maxDiskFillRateSpinner.setMinimum(5);
+		maxDiskFillRateSpinner.setMaximum(95);
+		maxDiskFillRateSpinner.setSelection(settings.getMaxDiskFillRate());
+
+		label = new Label(maxDiskFillRateComposite, SWT.NONE);
+		label.setText("%"); //$NON-NLS-1$
+		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
 		Group scheduleExplanationComposite = new Group(composite, SWT.NONE);
 		scheduleExplanationComposite.setText(Messages.Title_ScheduleExplanation);
 		scheduleExplanationComposite.setLayout(new GridLayout(1, false));
@@ -255,6 +301,29 @@ public class SettingsDialog extends Dialog {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				showWarnings(fileCompareChecksumRadio);
+			}
+		});
+		
+		maxAgeDaysRadio.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				maxAgeDaysSpinner.setEnabled(maxAgeDaysRadio.getSelection());
+				updateExplanationLabel();
+			}
+		});
+		
+		maxAgeDaysSpinner.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				maxAgeDaysSpinner.setEnabled(maxAgeDaysRadio.getSelection());
+				updateExplanationLabel();
+			}
+		});
+		
+		maxDiskFillRateSpinner.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateExplanationLabel();
 			}
 		});
 		
@@ -476,8 +545,12 @@ public class SettingsDialog extends Dialog {
 				"- " + //$NON-NLS-1$
 				NLS.bind(Messages.ScheduleExplanation_DailyBackupsKeepTime, Integer.valueOf(BackupPlugin.KEEP_DAILIES_DAYS)) +
 				"\n" + //$NON-NLS-1$
+				"- " + (maxAgeDaysRadio.getSelection() ? //$NON-NLS-1$
+						NLS.bind(Messages.ScheduleExplanation_WeeklyBackupsKeepDays, Integer.valueOf(maxAgeDaysSpinner.getSelection())) :
+						Messages.ScheduleExplanation_WeeklyBackupsNoAge) +
+				"\n" + //$NON-NLS-1$
 				"- " + //$NON-NLS-1$
-				NLS.bind(Messages.ScheduleExplanation_WeeklyBackupsKeepDisk, Integer.valueOf(BackupPlugin.MAX_DISK_FILL_RATE)) +
+				NLS.bind(Messages.ScheduleExplanation_WeeklyBackupsKeepDisk, Integer.valueOf(maxDiskFillRateSpinner.getSelection())) +
 				// compensate for missing line
 				(!runHourlyRadio.getSelection() ? "\n " : "")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
@@ -492,7 +565,9 @@ public class SettingsDialog extends Dialog {
 				outputFolder = null;
 			}
 			Settings settings = new Settings(folders, outputFolder, runHourlyRadio.getSelection(),
-					dailyTime.getHours(), dailyTime.getMinutes(), fileCompareChecksumRadio.getSelection());
+					dailyTime.getHours(), dailyTime.getMinutes(), fileCompareChecksumRadio.getSelection(),
+					maxAgeDaysRadio.getSelection() ? maxAgeDaysSpinner.getSelection() : -1,
+					maxDiskFillRateSpinner.getSelection());
 			BackupApplication.getSettingsManager().setSettings(settings);
 		}
 		

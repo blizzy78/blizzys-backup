@@ -33,6 +33,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -605,6 +606,7 @@ public class BackupRun implements Runnable {
 	
 
 	private void removeOldBackups() {
+		removeOldBackupsMaxAge();
 		removeOldBackupsDaily();
 		removeOldBackupsWeekly();
 		removeFailedBackups();
@@ -617,6 +619,19 @@ public class BackupRun implements Runnable {
 			.where(Tables.BACKUPS.NUM_ENTRIES.isNull())
 			.fetch(Tables.BACKUPS.ID));
 		removeBackups(ids);
+	}
+	
+	private void removeOldBackupsMaxAge() {
+		if (settings.getMaxAgeDays() > 0) {
+			Calendar c = Calendar.getInstance();
+			c.add(Calendar.DAY_OF_MONTH, -settings.getMaxAgeDays());
+			List<Integer> backupIds = getBackupIds(0, c.getTimeInMillis());
+			
+			BackupPlugin.getDefault().logMessage("removing backups (age): " + backupIds); //$NON-NLS-1$
+			if (!backupIds.isEmpty()) {
+				removeBackups(backupIds);
+			}
+		}
 	}
 	
 	private void removeOldBackupsDaily() {
@@ -721,7 +736,7 @@ public class BackupRun implements Runnable {
 		}
 	}
 
-	private void removeBackups(Set<Integer> backupsToRemove) {
+	private void removeBackups(Collection<Integer> backupsToRemove) {
 		for (Integer backupId : backupsToRemove) {
 			database.factory()
 				.delete(Tables.ENTRIES)
@@ -813,7 +828,7 @@ public class BackupRun implements Runnable {
 					}
 					
 					double avail = available * 100d / total;
-					if (avail >= (100d - BackupPlugin.MAX_DISK_FILL_RATE)) {
+					if (avail >= (100d - settings.getMaxDiskFillRate())) {
 						break;
 					}
 					

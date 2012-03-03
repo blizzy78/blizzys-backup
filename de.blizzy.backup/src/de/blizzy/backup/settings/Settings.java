@@ -28,9 +28,11 @@ public class Settings {
 	private int dailyHours;
 	private int dailyMinutes;
 	private boolean useChecksums;
+	private int maxAgeDays;
+	private int maxDiskFillRate;
 
 	public Settings(Set<ILocation> locations, String outputFolder, boolean runHourly, int dailyHours, int dailyMinutes,
-			boolean useChecksums) {
+			boolean useChecksums, int maxAgeDays, int maxDiskFillRate) {
 		
 		this.locations = locations;
 		this.outputFolder = outputFolder;
@@ -38,6 +40,8 @@ public class Settings {
 		this.dailyHours = dailyHours;
 		this.dailyMinutes = dailyMinutes;
 		this.useChecksums = useChecksums;
+		this.maxAgeDays = maxAgeDays;
+		this.maxDiskFillRate = maxDiskFillRate;
 	}
 	
 	public Set<ILocation> getLocations() {
@@ -62,5 +66,13 @@ public class Settings {
 	
 	public boolean isUseChecksums() {
 		return useChecksums;
+	}
+	
+	public int getMaxAgeDays() {
+		return maxAgeDays;
+	}
+	
+	public int getMaxDiskFillRate() {
+		return maxDiskFillRate;
 	}
 }

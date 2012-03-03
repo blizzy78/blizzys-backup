@@ -60,8 +60,11 @@ public class Messages extends NLS {
 	public static String Initializing;
 	public static String Label_BackupOutputFolder;
 	public static String Label_CurrentFolder;
+	public static String Label_DeleteAfterDays;
+	public static String Label_DiskFillRate;
 	public static String Label_Folder;
 	public static String Label_Host;
+	public static String Label_KeepAll;
 	public static String Label_Login;
 	public static String Label_ModificationDate;
 	public static String Label_Name;
@@ -88,7 +91,9 @@ public class Messages extends NLS {
 	public static String ScheduleExplanation_DailyBackupsKeepTime;
 	public static String ScheduleExplanation_HourlyBackups;
 	public static String ScheduleExplanation_HourlyBackupsKeepTime;
+	public static String ScheduleExplanation_WeeklyBackupsKeepDays;
 	public static String ScheduleExplanation_WeeklyBackupsKeepDisk;
+	public static String ScheduleExplanation_WeeklyBackupsNoAge;
 	public static String Title_BackupIntegrityCheck;
 	public static String Title_BlizzysBackup;
 	public static String Title_CheckBackupIntegrity;
@@ -108,6 +113,8 @@ public class Messages extends NLS {
 	public static String Title_Information;
 	public static String Title_InvalidFolder;
 	public static String Title_License;
+	public static String Title_MaximumBackupAge;
+	public static String Title_MaximumDiskFillRate;
 	public static String Title_NewVersionAvailable;
 	public static String Title_NoNewVersionAvailable;
 	public static String Title_OpenBackupDatabase;

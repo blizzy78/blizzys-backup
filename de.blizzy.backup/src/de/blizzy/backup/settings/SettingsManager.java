@@ -84,7 +84,17 @@ public class SettingsManager {
 		if (section.get("useChecksums") != null) { //$NON-NLS-1$
 			useChecksums = section.getBoolean("useChecksums"); //$NON-NLS-1$
 		}
-		return new Settings(locations, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums);
+		int maxAgeDays = -1;
+		if (section.get("maxAgeDays") != null) { //$NON-NLS-1$
+			maxAgeDays = section.getInt("maxAgeDays"); //$NON-NLS-1$
+		}
+		int maxDiskFillRate = 80;
+		if (section.get("maxDiskFillRate") != null) { //$NON-NLS-1$
+			maxDiskFillRate = section.getInt("maxDiskFillRate"); //$NON-NLS-1$
+		}
+		
+		return new Settings(locations, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums,
+				maxAgeDays, maxDiskFillRate);
 	}
 
 	private IDialogSettings getSection() {
@@ -110,6 +120,8 @@ public class SettingsManager {
 		section.put("dailyHours", settings.getDailyHours()); //$NON-NLS-1$
 		section.put("dailyMinutes", settings.getDailyMinutes()); //$NON-NLS-1$
 		section.put("useChecksums", settings.isUseChecksums()); //$NON-NLS-1$
+		section.put("maxAgeDays", settings.getMaxAgeDays()); //$NON-NLS-1$
+		section.put("maxDiskFillRate", settings.getMaxDiskFillRate()); //$NON-NLS-1$
 		
 		fireSettingsChanged();
 	}

@@ -152,7 +152,7 @@ class ErrorsDialog extends Dialog {
 		Composite composite = (Composite) super.createDialogArea(parent);
 		((GridLayout) composite.getLayout()).numColumns = 1;
 		
-		TableViewer viewer = new TableViewer(composite, SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+		TableViewer viewer = new TableViewer(composite, SWT.SINGLE | SWT.FULL_SELECTION | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		viewer.setContentProvider(new ErrorsContentProvider());
 		viewer.setLabelProvider(new ErrorsLabelProvider(parent.getDisplay()));
 		

@@ -56,9 +56,6 @@ public class BackupApplication implements IApplication {
 
 	@Override
 	public Object start(IApplicationContext context) throws IOException {
-		// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7077696
-		System.setProperty("java.net.preferIPv4Stack", "true"); //$NON-NLS-1$ //$NON-NLS-2$
-		
 		display = Display.getDefault();
 
 		boolean restartNecessary = false;

@@ -2,7 +2,7 @@
 <feature
       id="de.blizzy.backup"
       label="blizzy&apos;s Backup"
-      version="1.5.2"
+      version="1.5.3"
       provider-name="Maik Schreiber">
 
    <description url="http://www.example.com/description">

@@ -8,5 +8,5 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .,
  lib/mockito-all-1.9.0-rc1.jar
-Require-Bundle: org.junit;bundle-version="4.8.1",
- de.blizzy.backup;bundle-version="1.2.4"
+Require-Bundle: org.junit;bundle-version="4.8.2",
+ de.blizzy.backup;bundle-version="1.5.4"

@@ -97,7 +97,7 @@ public class Updater {
 		progress.beginTask(Messages.CheckingForNewVersion, 2);
 		
 		BundleContext bundleContext = BackupPlugin.getDefault().getBundle().getBundleContext();
-		ServiceReference ref = bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
+		ServiceReference<?> ref = bundleContext.getServiceReference(IProvisioningAgent.SERVICE_NAME);
 		IProvisioningAgent agent = (IProvisioningAgent) bundleContext.getService(ref);
 		boolean restartNecessary = false;
 		ProvisioningSession session = new ProvisioningSession(agent);

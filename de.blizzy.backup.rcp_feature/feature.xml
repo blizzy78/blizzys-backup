@@ -679,4 +679,11 @@
          version="1.0.300.v20111126-0153"
          unpack="false"/>
 
+   <plugin
+         id="org.eclipse.equinox.p2.transport.ecf"
+         download-size="0"
+         install-size="0"
+         version="1.0.0.v20111128-0624"
+         unpack="false"/>
+
 </feature>

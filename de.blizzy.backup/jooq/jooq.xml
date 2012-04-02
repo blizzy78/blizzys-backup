@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<configuration>
+	<jdbc>
+		<driver>org.h2.Driver</driver>
+		<url>jdbc:h2:G:\\blizzysbackup\\$blizzysbackup/backup</url>
+		<user>sa</user>
+		<password></password>
+	</jdbc>
+	
+	<generator>
+		<database>
+			<name>org.jooq.util.h2.H2Database</name>
+			<includes>.*</includes>
+			<inputSchema>PUBLIC</inputSchema>
+		</database>
+	
+		<generate>
+			<relations>true</relations>
+			<deprecated>false</deprecated>
+			<generatedAnnotation>false</generatedAnnotation>
+		</generate>
+		
+		<target>
+			<packageName>de.blizzy.backup.database.schema</packageName>
+			<directory>D:\\bZ\\git_working\\blizzys-backup\\de.blizzy.backup\\src</directory>
+		</target>
+	</generator>
+</configuration>

@@ -20,12 +20,16 @@ package de.blizzy.backup;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.UUID;
+import java.util.List;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -67,8 +71,16 @@ public final class Utils {
 		return section;
 	}
 
-	public static String createBackupFilePath() {
-		return BACKUP_PATH_FORMAT.format(new Date()) + "/" + UUID.randomUUID().toString(); //$NON-NLS-1$
+	public static String createBackupFilePath(String outputFolder) {
+		String datePath = BACKUP_PATH_FORMAT.format(new Date());
+		File folder = toBackupFile(datePath + "/dummy", outputFolder).getParentFile(); //$NON-NLS-1$
+		int maxIdx = getMaxBackupFileIndex(folder);
+		int newIdx = maxIdx + 1;
+		return datePath + "/" + toBackupFileName(newIdx); //$NON-NLS-1$
+	}
+	
+	public static String createSampleBackupFilePath() {
+		return BACKUP_PATH_FORMAT.format(new Date()) + "/" + toBackupFileName(Integer.MAX_VALUE); //$NON-NLS-1$
 	}
 
 	public static File toBackupFile(String backupFilePath, String outputFolder) {
@@ -169,5 +181,42 @@ public final class Utils {
 		}
 		
 		return -1;
+	}
+
+	public static int getMaxBackupFileIndex(File folder) {
+		if (folder.isDirectory()) {
+			List<String> files = Arrays.asList(folder.list(new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String name) {
+					return name.indexOf('-') < 0;
+				}
+			}));
+			if (!files.isEmpty()) {
+				Collections.sort(files, new Comparator<String>() {
+					@Override
+					public int compare(String f1, String f2) {
+						int idx1 = toBackupFileIndex(f1);
+						int idx2 = toBackupFileIndex(f2);
+						if (idx1 < idx2) {
+							return -1;
+						}
+						if (idx1 > idx2) {
+							return 1;
+						}
+						return 0;
+					}
+				});
+				return toBackupFileIndex(files.get(files.size() - 1));
+			}
+		}
+		return 0;
+	}
+	
+	public static String toBackupFileName(int index) {
+		return Integer.toString(index, 36);
+	}
+	
+	public static int toBackupFileIndex(String fileName) {
+		return Integer.parseInt(fileName, 36);
 	}
 }

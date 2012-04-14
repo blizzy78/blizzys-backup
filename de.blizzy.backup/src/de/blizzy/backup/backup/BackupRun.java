@@ -330,7 +330,7 @@ public class BackupRun implements Runnable {
 			EntryType type = EntryType.FILE;
 			if (fileId <= 0) {
 				try {
-					String backupFilePath = Utils.createBackupFilePath();
+					String backupFilePath = Utils.createBackupFilePath(settings.getOutputFolder());
 					File backupFile = Utils.toBackupFile(backupFilePath, settings.getOutputFolder());
 					fileId = backupFileContents(file, backupFile, backupFilePath);
 				} catch (IOException e) {

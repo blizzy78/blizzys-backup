@@ -30,6 +30,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.Cursor;
+import org.jooq.Record;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.Factory;
 
@@ -45,6 +46,7 @@ import de.blizzy.backup.settings.Settings;
 public class Database {
 	private static final String DB_FOLDER_NAME = "$blizzysbackup"; //$NON-NLS-1$
 	
+	private String outputFolder;
 	private File realFolder;
 	private boolean heavyDuty;
 	private File folder;
@@ -52,7 +54,8 @@ public class Database {
 	private Factory factory;
 
 	public Database(Settings settings, boolean heavyDuty) {
-		this.realFolder = new File(new File(settings.getOutputFolder()), DB_FOLDER_NAME);
+		this.outputFolder = settings.getOutputFolder();
+		this.realFolder = new File(new File(outputFolder), DB_FOLDER_NAME);
 		folder = realFolder;
 		this.heavyDuty = heavyDuty;
 	}
@@ -166,10 +169,10 @@ public class Database {
 					")") //$NON-NLS-1$
 					.execute();
 			
-			String sampleBackupPath = Utils.createBackupFilePath();
+			int sampleBackupPathLength = Utils.createSampleBackupFilePath().length();
 			factory.query("CREATE TABLE IF NOT EXISTS files (" + //$NON-NLS-1$
 					"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " + //$NON-NLS-1$
-					"backup_path VARCHAR(" + sampleBackupPath.length() + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
+					"backup_path VARCHAR(" + sampleBackupPathLength + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
 					"checksum VARCHAR(" + sha256Length + ") NOT NULL, " + //$NON-NLS-1$ //$NON-NLS-2$
 					"length BIGINT NOT NULL, " + //$NON-NLS-1$
 					"compression TINYINT NOT NULL" + //$NON-NLS-1$
@@ -233,9 +236,45 @@ public class Database {
 					"(backup_id, name_lower)") //$NON-NLS-1$
 					.execute();
 			
+			if (getTableColumnSize("FILES", "BACKUP_PATH") != sampleBackupPathLength) { //$NON-NLS-1$ //$NON-NLS-2$
+				Cursor<Record> cursor = null;
+				try {
+					cursor = factory.select(Tables.FILES.ID, Tables.FILES.BACKUP_PATH)
+						.from(Tables.FILES)
+						.fetchLazy();
+					while (cursor.hasNext()) {
+						Record record = cursor.fetchOne();
+						String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
+						String backupFileName = StringUtils.substringAfterLast(backupPath, "/"); //$NON-NLS-1$
+						if (backupFileName.indexOf('-') > 0) {
+							Integer id = record.getValue(Tables.FILES.ID);
+							File backupFile = Utils.toBackupFile(backupPath, outputFolder);
+							File folder = backupFile.getParentFile();
+							int maxIdx = Utils.getMaxBackupFileIndex(folder);
+							int newIdx = maxIdx + 1;
+							String newBackupFileName = Utils.toBackupFileName(newIdx);
+							File newBackupFile = new File(folder, newBackupFileName);
+							FileUtils.moveFile(backupFile, newBackupFile);
+							String newBackupPath = StringUtils.substringBeforeLast(backupPath, "/") + "/" + newBackupFileName; //$NON-NLS-1$ //$NON-NLS-2$
+							factory.update(Tables.FILES)
+								.set(Tables.FILES.BACKUP_PATH, newBackupPath)
+								.where(Tables.FILES.ID.equal(id))
+								.execute();
+						}
+					}
+
+					factory.query("ALTER TABLE files ALTER COLUMN backup_path VARCHAR(" + sampleBackupPathLength + ") NOT NULL") //$NON-NLS-1$ //$NON-NLS-2$
+						.execute();
+				} finally {
+					closeQuietly(cursor);
+				}
+			}
+			
 			factory.query("ANALYZE") //$NON-NLS-1$
 					.execute();
 		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}

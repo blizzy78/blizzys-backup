@@ -15,7 +15,7 @@ import de.blizzy.backup.vfs.IFolder;
 public class UtilsTest {
 	@Test
 	public void createBackupFilePath() {
-		String path = Utils.createBackupFilePath();
+		String path = Utils.createBackupFilePath("dummy"); //$NON-NLS-1$
 		assertTrue(Integer.parseInt(path.substring(0, 4)) >= 1);
 		assertEquals("/", path.substring(4, 5)); //$NON-NLS-1$
 		assertTrue(Integer.parseInt(path.substring(5, 7)) >= 1);

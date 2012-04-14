@@ -9,7 +9,7 @@ package de.blizzy.backup.database.schema.tables;
 @SuppressWarnings("nls")
 public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.database.schema.tables.records.EntriesRecord> {
 
-	private static final long serialVersionUID = 340939450;
+	private static final long serialVersionUID = -1107299574;
 
 	/**
 	 * The singleton instance of PUBLIC.ENTRIES
@@ -81,17 +81,11 @@ public class Entries extends org.jooq.impl.UpdatableTableImpl<de.blizzy.backup.d
 	 */
 	public final org.jooq.TableField<de.blizzy.backup.database.schema.tables.records.EntriesRecord, java.lang.String> NAME_LOWER = createField("NAME_LOWER", org.jooq.impl.SQLDataType.VARCHAR, this);
 
-	/**
-	 * No further instances allowed
-	 */
-	private Entries() {
+	public Entries() {
 		super("ENTRIES", de.blizzy.backup.database.schema.Public.PUBLIC);
 	}
 
-	/**
-	 * No further instances allowed
-	 */
-	private Entries(java.lang.String alias) {
+	public Entries(java.lang.String alias) {
 		super(alias, de.blizzy.backup.database.schema.Public.PUBLIC, de.blizzy.backup.database.schema.tables.Entries.ENTRIES);
 	}
 

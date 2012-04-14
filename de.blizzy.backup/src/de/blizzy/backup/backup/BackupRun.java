@@ -472,7 +472,23 @@ public class BackupRun implements Runnable {
 				}
 			}
 		};
-		file.copy(outputStreamProvider);
+		boolean fileCopied = false;
+		try {
+			file.copy(outputStreamProvider);
+			fileCopied = true;
+		} finally {
+			if (!fileCopied) {
+				try {
+					Files.delete(backupFile.toPath());
+				} catch (IOException e) {
+					BackupPlugin.getDefault().logError("error while deleting file: " + //$NON-NLS-1$
+							backupFile.getAbsolutePath(), e);
+					fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
+				}
+				removeFoldersIfEmpty(backupFile.getParentFile());
+			}
+		}
+		
 		String checksum = toHexString(digest[0]);
 
 		database.factory()

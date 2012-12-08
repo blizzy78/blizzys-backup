@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -55,7 +54,7 @@ public class BackupApplication implements IApplication {
 	private static TrayIcon trayIcon;
 
 	@Override
-	public Object start(IApplicationContext context) throws IOException {
+	public Object start(IApplicationContext context) {
 		display = Display.getDefault();
 
 		boolean restartNecessary = false;

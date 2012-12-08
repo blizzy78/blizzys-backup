@@ -55,7 +55,7 @@ public class Updater {
 			IRunnableWithProgress runnable = new IRunnableWithProgress() {
 				@Override
 				@SuppressWarnings("synthetic-access")
-				public void run(IProgressMonitor monitor) throws InvocationTargetException {
+				public void run(IProgressMonitor monitor) {
 					SubMonitor progress = SubMonitor.convert(monitor);
 					restartNecessary[0] = updateInJob(progress, pmd.getShell());
 					monitor.done();

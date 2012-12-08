@@ -75,12 +75,12 @@ public abstract class RemoteFileOrFolder<L extends RemoteLocation> implements IF
 	}
 	
 	@Override
-	public boolean isHidden() throws IOException {
+	public boolean isHidden() {
 		return getName().startsWith("."); //$NON-NLS-1$
 	}
 
 	@Override
-	public FileTime getCreationTime() throws IOException {
+	public FileTime getCreationTime() {
 		return null;
 	}
 

@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package de.blizzy.backup.vfs.ftp;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.ftp.FtpFileSystemConfigBuilder;
 import org.eclipse.jface.dialogs.IDialogSettings;
@@ -46,7 +45,7 @@ class FtpLocation extends RemoteLocation {
 	}
 
 	@Override
-	protected void setFileSystemOptions(FileSystemOptions options) throws FileSystemException {
+	protected void setFileSystemOptions(FileSystemOptions options) {
 		FtpFileSystemConfigBuilder.getInstance().setPassiveMode(options, true);
 	}
 	

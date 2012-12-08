@@ -220,7 +220,7 @@ public class RestoreDialog extends Dialog {
 	public boolean close() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
 			@Override
-			public void run(IProgressMonitor monitor) throws InvocationTargetException {
+			public void run(IProgressMonitor monitor) {
 				monitor.beginTask(Messages.Title_CloseBackupDatabase, IProgressMonitor.UNKNOWN);
 				try {
 					database.close();
@@ -658,12 +658,12 @@ public class RestoreDialog extends Dialog {
 		final EntryType type = EntryType.fromValue(record.getValue(Tables.ENTRIES.TYPE).intValue());
 		return new Utils.IFileOrFolderEntry() {
 			@Override
-			public boolean isFolder() throws IOException {
+			public boolean isFolder() {
 				return type == EntryType.FOLDER;
 			}
 			
 			@Override
-			public IFileOrFolderEntry getParentFolder() throws IOException {
+			public IFileOrFolderEntry getParentFolder() {
 				return (parentId != null) ? toFileOrFolderEntry(parentId.intValue()) : null;
 			}
 			

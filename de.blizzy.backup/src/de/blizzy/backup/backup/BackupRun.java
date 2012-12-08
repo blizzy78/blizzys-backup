@@ -419,7 +419,7 @@ public class BackupRun implements Runnable {
 			}
 			
 			@Override
-			public IFileOrFolderEntry getParentFolder() throws IOException {
+			public IFileOrFolderEntry getParentFolder() {
 				IFolder parentFolder = fileOrFolder.getParentFolder();
 				return (parentFolder != null) ? toFileOrFolderEntry(parentFolder) : null;
 			}
@@ -505,7 +505,7 @@ public class BackupRun implements Runnable {
 		final MessageDigest[] digest = new MessageDigest[1];
 		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
 			@Override
-			public OutputStream getOutputStream() throws IOException {
+			public OutputStream getOutputStream() {
 				try {
 					digest[0] = MessageDigest.getInstance("SHA-256"); //$NON-NLS-1$
 					return new DigestOutputStream(new NullOutputStream(), digest[0]);

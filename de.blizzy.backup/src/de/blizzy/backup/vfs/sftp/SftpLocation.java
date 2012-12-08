@@ -92,7 +92,7 @@ class SftpLocation implements ILocation {
 		if (sftpClient != null) {
 			try {
 				sftpClient.close();
-			} catch (IOException e) {
+			} catch (IOException | RuntimeException e) {
 				BackupPlugin.getDefault().logError("error while closing SFTP client", e); //$NON-NLS-1$
 			} finally {
 				sftpClient = null;
@@ -102,7 +102,7 @@ class SftpLocation implements ILocation {
 		if (sshClient != null) {
 			try {
 				sshClient.close();
-			} catch (IOException e) {
+			} catch (IOException | RuntimeException e) {
 				BackupPlugin.getDefault().logError("error while closing SSH client", e); //$NON-NLS-1$
 			} finally {
 				sshClient = null;

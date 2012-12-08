@@ -31,6 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.Cursor;
 import org.jooq.Record;
+import org.jooq.SQLDialect;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.Factory;
 
@@ -39,7 +40,6 @@ import de.blizzy.backup.Compression;
 import de.blizzy.backup.IDatabaseModifyingStorageInterceptor;
 import de.blizzy.backup.IStorageInterceptor;
 import de.blizzy.backup.Utils;
-import de.blizzy.backup.database.schema.PublicFactory;
 import de.blizzy.backup.database.schema.Tables;
 import de.blizzy.backup.settings.Settings;
 
@@ -98,7 +98,7 @@ public class Database {
 						";" + paramsBuf.toString(), //$NON-NLS-1$
 						"sa", password); //$NON-NLS-1$
 				conn.setAutoCommit(true);
-				factory = new PublicFactory(conn);
+				factory = new Factory(conn, SQLDialect.MYSQL);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}

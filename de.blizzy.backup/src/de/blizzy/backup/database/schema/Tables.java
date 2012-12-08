@@ -8,22 +8,23 @@ package de.blizzy.backup.database.schema;
  *
  * Convenience access to all tables in PUBLIC
  */
+@java.lang.SuppressWarnings("all")
 public final class Tables {
 
 	/**
 	 * The table PUBLIC.BACKUPS
 	 */
-	public static de.blizzy.backup.database.schema.tables.Backups BACKUPS = de.blizzy.backup.database.schema.tables.Backups.BACKUPS;
+	public static final de.blizzy.backup.database.schema.tables.Backups BACKUPS = de.blizzy.backup.database.schema.tables.Backups.BACKUPS;
 
 	/**
 	 * The table PUBLIC.ENTRIES
 	 */
-	public static de.blizzy.backup.database.schema.tables.Entries ENTRIES = de.blizzy.backup.database.schema.tables.Entries.ENTRIES;
+	public static final de.blizzy.backup.database.schema.tables.Entries ENTRIES = de.blizzy.backup.database.schema.tables.Entries.ENTRIES;
 
 	/**
 	 * The table PUBLIC.FILES
 	 */
-	public static de.blizzy.backup.database.schema.tables.Files FILES = de.blizzy.backup.database.schema.tables.Files.FILES;
+	public static final de.blizzy.backup.database.schema.tables.Files FILES = de.blizzy.backup.database.schema.tables.Files.FILES;
 
 	/**
 	 * No instances

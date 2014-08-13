@@ -123,14 +123,14 @@ public class RestoreDialog extends Dialog {
 		settings = BackupApplication.getSettingsManager().getSettings();
 		database = new Database(settings, false);
 	}
-	
+
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
 		newShell.setImages(BackupApplication.getWindowImages());
 		newShell.setText(Messages.Title_Restore);
 	}
-	
+
 	@Override
 	protected boolean isResizable() {
 		return true;
@@ -143,21 +143,21 @@ public class RestoreDialog extends Dialog {
 			@Override
 			public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
 				monitor.beginTask(Messages.Title_OpenBackupDatabase, IProgressMonitor.UNKNOWN);
-				
+
 				final boolean[] ok = { true };
 				List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
 				for (final StorageInterceptorDescriptor desc : descs) {
 					final IStorageInterceptor interceptor = desc.getStorageInterceptor();
 					SafeRunner.run(new ISafeRunnable() {
 						@Override
-						public void run() throws Exception {
+						public void run() {
 							IDialogSettings settings = Utils.getChildSection(
 									Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
 							if (!interceptor.initialize(dlg.getShell(), settings)) {
 								ok[0] = false;
 							}
 						}
-						
+
 						@Override
 						public void handleException(Throwable t) {
 							ok[0] = false;
@@ -168,17 +168,17 @@ public class RestoreDialog extends Dialog {
 					});
 					storageInterceptors.add(interceptor);
 				}
-				
+
 				if (!ok[0]) {
 					monitor.done();
 					throw new InterruptedException();
 				}
-				
+
 				Cursor<BackupsRecord> cursor = null;
 				try {
 					database.open(storageInterceptors);
 					database.initialize();
-					
+
 					cursor = database.factory()
 						.selectFrom(Tables.BACKUPS).where(Tables.BACKUPS.NUM_ENTRIES.isNotNull()).orderBy(Tables.BACKUPS.RUN_TIME.desc())
 						.fetchLazy();
@@ -212,10 +212,10 @@ public class RestoreDialog extends Dialog {
 		} catch (InterruptedException e) {
 			return Window.CANCEL;
 		}
-		
+
 		return super.open();
 	}
-	
+
 	@Override
 	public boolean close() {
 		IRunnableWithProgress runnable = new IRunnableWithProgress() {
@@ -227,10 +227,10 @@ public class RestoreDialog extends Dialog {
 					for (final IStorageInterceptor interceptor : storageInterceptors) {
 						SafeRunner.run(new ISafeRunnable() {
 							@Override
-							public void run() throws Exception {
+							public void run() {
 								interceptor.destroy();
 							}
-							
+
 							@Override
 							public void handleException(Throwable t) {
 								BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
@@ -251,17 +251,17 @@ public class RestoreDialog extends Dialog {
 		} catch (InterruptedException e) {
 			// not cancelable
 		}
-		
+
 		System.gc();
-		
+
 		return super.close();
 	}
-	
+
 	@Override
 	protected void createButtonsForButtonBar(Composite parent) {
 		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CLOSE_LABEL, false);
 	}
-	
+
 	@Override
 	protected Control createDialogArea(Composite parent) {
 		Composite composite = (Composite) super.createDialogArea(parent);
@@ -274,24 +274,24 @@ public class RestoreDialog extends Dialog {
 		layout.marginHeight = 0;
 		backupsAndSearchComposite.setLayout(layout);
 		backupsAndSearchComposite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		Label label = new Label(backupsAndSearchComposite, SWT.NONE);
 		label.setText(Messages.Label_ShowBackupContentsAt + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		
+
 		backupsViewer = new ComboViewer(backupsAndSearchComposite);
 		backupsViewer.getCombo().setVisibleItemCount(10);
 		backupsViewer.getControl().setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		
+
 		label = new Label(backupsAndSearchComposite, SWT.NONE);
 		label.setText(Messages.Label_SearchFileFolder + ":"); //$NON-NLS-1$
 		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
 		searchText = new Text(backupsAndSearchComposite, SWT.BORDER);
 		searchText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		new Label(composite, SWT.NONE);
-		
+
 		backupsViewer.setContentProvider(new ArrayContentProvider());
 		backupsViewer.setLabelProvider(new BackupLabelProvider());
 		backupsViewer.setSorter(new ViewerSorter() {
@@ -317,7 +317,7 @@ public class RestoreDialog extends Dialog {
 		table.setLayout(tableLayout);
 		table.setHeaderVisible(true);
 		table.setLinesVisible(false);
-		
+
 		TableColumn col = new TableColumn(table, SWT.LEFT);
 		col.setText(Messages.Label_Name);
 		tableLayout.addColumnData(new ColumnWeightData(50, true));
@@ -334,22 +334,22 @@ public class RestoreDialog extends Dialog {
 		layout.marginHeight = 0;
 		entriesButtonsComposite.setLayout(layout);
 		entriesButtonsComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, true));
-		
+
 		moveUpButton = new Button(entriesButtonsComposite, SWT.PUSH);
 		moveUpButton.setText(Messages.Button_MoveUp);
 		moveUpButton.setEnabled(false);
 		moveUpButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		final Button restoreButton = new Button(entriesButtonsComposite, SWT.PUSH);
 		restoreButton.setText(Messages.Button_Restore + "..."); //$NON-NLS-1$
 		restoreButton.setEnabled(false);
 		restoreButton.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		currentFolderLink = new Link(composite, SWT.NONE);
 		gd = new GridData(SWT.FILL, SWT.CENTER, true, false);
 		gd.horizontalSpan = 2;
 		currentFolderLink.setLayoutData(gd);
-		
+
 		backupsViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
@@ -361,7 +361,7 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		});
-		
+
 		searchText.addModifyListener(new ModifyListener() {
 			@Override
 			public void modifyText(ModifyEvent e) {
@@ -370,7 +370,7 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		});
-		
+
 		entriesViewer.addOpenListener(new IOpenListener() {
 			@Override
 			public void open(OpenEvent e) {
@@ -394,14 +394,14 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		});
-		
+
 		entriesViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			@Override
 			public void selectionChanged(SelectionChangedEvent e) {
 				restoreButton.setEnabled(!e.getSelection().isEmpty());
 			}
 		});
-		
+
 		moveUpButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -412,7 +412,7 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		});
-		
+
 		restoreButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -421,7 +421,7 @@ public class RestoreDialog extends Dialog {
 				restore(entries);
 			}
 		});
-		
+
 		currentFolderLink.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -436,11 +436,11 @@ public class RestoreDialog extends Dialog {
 				}
 			}
 		});
-		
+
 		if (!backups.isEmpty()) {
 			backupsViewer.setSelection(new StructuredSelection(backups.get(0)), true);
 		}
-		
+
 		return composite;
 	}
 
@@ -490,7 +490,7 @@ public class RestoreDialog extends Dialog {
 		} finally {
 			database.closeQuietly(cursor);
 		}
-		
+
 		((EntryLabelProvider) entriesViewer.getLabelProvider()).setShowFullPath(false);
 		((EntrySorter) entriesViewer.getSorter()).setSortFullPath(false);
 		entriesViewer.setInput(entries);
@@ -501,7 +501,7 @@ public class RestoreDialog extends Dialog {
 		} finally {
 			listenForSearchText = true;
 		}
-		
+
 		String folder = getFolderLink(parentFolderId);
 		currentFolderLink.setText(StringUtils.isNotBlank(folder) ?
 				Messages.Label_CurrentFolder + ": " + getFolderLink(parentFolderId) : //$NON-NLS-1$
@@ -512,7 +512,7 @@ public class RestoreDialog extends Dialog {
 		if (folderId <= 0) {
 			return null;
 		}
-		
+
 		Record record = database.factory()
 			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
 			.from(Tables.ENTRIES)
@@ -525,12 +525,12 @@ public class RestoreDialog extends Dialog {
 			"\">" + name + "</a>"; //$NON-NLS-1$ //$NON-NLS-2$
 		return (parentFolder != null) ? parentFolder + File.separator + part : part;
 	}
-	
+
 	private String getFolderPath(int folderId) {
 		if (folderId <= 0) {
 			return null;
 		}
-		
+
 		Record record = database.factory()
 			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
 			.from(Tables.ENTRIES)
@@ -565,7 +565,7 @@ public class RestoreDialog extends Dialog {
 			.orderBy(Tables.ENTRIES.NAME.asc())
 			.fetchLazy();
 	}
-	
+
 	private List<Entry> getEntries(Cursor<Record> cursor, boolean fullPaths) {
 		List<Entry> entries = new ArrayList<>();
 		while (cursor.hasNext()) {
@@ -599,7 +599,7 @@ public class RestoreDialog extends Dialog {
 		}
 		return entry;
 	}
-	
+
 	private Entry findInOlderBackups(Entry entry) throws IOException {
 		Date runTime = new Date(database.factory()
 			.select(Tables.BACKUPS.RUN_TIME)
@@ -638,15 +638,15 @@ public class RestoreDialog extends Dialog {
 		} finally {
 			database.closeQuietly(cursor);
 		}
-		
+
 		return null;
 	}
-	
+
 	private int findInBackup(int entryId, int backupId) throws IOException {
 		IFileOrFolderEntry entry = toFileOrFolderEntry(entryId);
 		return Utils.findFileOrFolderEntryInBackup(entry, backupId, database);
 	}
-	
+
 	private Utils.IFileOrFolderEntry toFileOrFolderEntry(final int entryId) {
 		Record record = database.factory()
 				.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID, Tables.ENTRIES.TYPE)
@@ -661,24 +661,24 @@ public class RestoreDialog extends Dialog {
 			public boolean isFolder() {
 				return type == EntryType.FOLDER;
 			}
-			
+
 			@Override
 			public IFileOrFolderEntry getParentFolder() {
 				return (parentId != null) ? toFileOrFolderEntry(parentId.intValue()) : null;
 			}
-			
+
 			@Override
 			public String getName() {
 				return name;
 			}
-			
+
 			@Override
 			public String getAbsolutePath() {
 				return RestoreDialog.this.getAbsolutePath(entryId);
 			}
 		};
 	}
-	
+
 	private String getAbsolutePath(int entryId) {
 		Record record = database.factory()
 			.select(Tables.ENTRIES.NAME, Tables.ENTRIES.PARENT_ID)
@@ -689,7 +689,7 @@ public class RestoreDialog extends Dialog {
 		Integer parentId = record.getValue(Tables.ENTRIES.PARENT_ID);
 		return (parentId != null) ? getAbsolutePath(parentId.intValue()) + File.separator + name : name;
 	}
-	
+
 	private void restore(final Collection<Entry> entries) {
 		String folder = null;
 		for (;;) {
@@ -700,7 +700,7 @@ public class RestoreDialog extends Dialog {
 			if (folder == null) {
 				break;
 			}
-			
+
 			if (new File(folder).list().length > 0) {
 				MessageDialog.openError(getShell(), Messages.Title_FolderNotEmpty,
 						NLS.bind(Messages.FolderNotEmpty,
@@ -710,10 +710,10 @@ public class RestoreDialog extends Dialog {
 
 			break;
 		}
-		
+
 		if (folder != null) {
 			alwaysRestoreFromOlderBackups = null;
-			
+
 			final String myFolder = folder;
 			Backup backup = (Backup) ((IStructuredSelection) backupsViewer.getSelection()).getFirstElement();
 			final int backupId = backup.id;
@@ -756,7 +756,7 @@ public class RestoreDialog extends Dialog {
 		}
 
 		boolean isFolder = entry.type == EntryType.FOLDER;
-		
+
 		if (entry.type == EntryType.FAILED_FILE) {
 			if (alwaysRestoreFromOlderBackups == null) {
 				alwaysRestoreFromOlderBackups = Boolean.valueOf(promptRestoreFromOlderBackups(shell));
@@ -771,7 +771,7 @@ public class RestoreDialog extends Dialog {
 			if (entry.type == EntryType.FOLDER) {
 				File newFolder = new File(parentFolder, escapeFileName(entry.name));
 				FileUtils.forceMkdir(newFolder);
-				
+
 				Cursor<Record> cursor = getEntriesCursor(backupId, entry.id, null, -1);
 				try {
 					for (Entry e : getEntries(cursor, false)) {
@@ -780,7 +780,7 @@ public class RestoreDialog extends Dialog {
 				} finally {
 					database.closeQuietly(cursor);
 				}
-	
+
 				outputPath = newFolder.toPath();
 			} else {
 				File inputFile = Utils.toBackupFile(entry.backupPath, outputFolder);
@@ -800,7 +800,7 @@ public class RestoreDialog extends Dialog {
 					IOUtils.closeQuietly(in);
 				}
 			}
-	
+
 			FileAttributes fileAttributes = FileAttributes.get(outputPath);
 			if (entry.hidden) {
 				fileAttributes.setHidden(entry.hidden);
@@ -837,13 +837,13 @@ public class RestoreDialog extends Dialog {
 			.replace(';', '_')
 			.replaceAll("__", "_"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
-	
+
 	private void startSearchTimer(final String text) {
 		synchronized (this) {
 			if (searchTimerTask != null) {
 				searchTimerTask.cancel();
 			}
-			
+
 			searchTimerTask = new TimerTask() {
 				@Override
 				public void run() {
@@ -919,7 +919,7 @@ public class RestoreDialog extends Dialog {
 			BackupPlugin.getDefault().logError("error while searching for entries", e); //$NON-NLS-1$
 		} finally {
 			database.closeQuietly(cursor);
-			
+
 			if (!display.isDisposed()) {
 				display.syncExec(new Runnable() {
 					@Override

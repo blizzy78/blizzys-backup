@@ -92,7 +92,7 @@ public class BackupRun implements Runnable {
 	public void runBackup() {
 		thread = new Thread(this, "Backup"); //$NON-NLS-1$
 		thread.start();
-		
+
 		Runnable runnable = new Runnable() {
 			@Override
 			public void run() {
@@ -110,23 +110,23 @@ public class BackupRun implements Runnable {
 	@Override
 	public void run() {
 		BackupPlugin.getDefault().logMessage("Starting backup"); //$NON-NLS-1$
-		
+
 		fireBackupStatusChanged(BackupStatus.INITIALIZE);
-		
+
 		final boolean[] ok = { true };
 		List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
 		for (final StorageInterceptorDescriptor desc : descs) {
 			final IStorageInterceptor interceptor = desc.getStorageInterceptor();
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					IDialogSettings settings = Utils.getChildSection(
 							Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
 					if (!interceptor.initialize(BackupApplication.getBackupShellWindow(), settings)) {
 						ok[0] = false;
 					}
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					ok[0] = false;
@@ -144,19 +144,19 @@ public class BackupRun implements Runnable {
 				try {
 					database.open(storageInterceptors);
 					database.initialize();
-					
+
 					database.factory()
 						.insertInto(Tables.BACKUPS)
 						.set(Tables.BACKUPS.RUN_TIME, new Timestamp(System.currentTimeMillis()))
 						.execute();
 					backupId = database.factory().lastID().intValue();
-					
+
 					for (ILocation location : settings.getLocations()) {
 						if (!running) {
 							break;
 						}
 						doPause();
-		
+
 						try {
 							backupFolder(location.getRootFolder(), -1, location.getRootFolder().getAbsolutePath());
 						} catch (IOException | RuntimeException e) {
@@ -166,19 +166,19 @@ public class BackupRun implements Runnable {
 							location.close();
 						}
 					}
-					
+
 					database.factory()
 						.update(Tables.BACKUPS)
 						.set(Tables.BACKUPS.NUM_ENTRIES, Integer.valueOf(numEntries))
 						.where(Tables.BACKUPS.ID.equal(Integer.valueOf(backupId)))
 						.execute();
-					
+
 					fireBackupStatusChanged(BackupStatus.CLEANUP);
 					removeOldBackups();
 					consolidateDuplicateFiles();
 					removeUnusedFiles();
 					removeOldDatabaseBackups();
-					
+
 					database.factory().query("ANALYZE").execute(); //$NON-NLS-1$
 				} catch (SQLException | IOException | RuntimeException e) {
 					for (IStorageInterceptor interceptor : storageInterceptors) {
@@ -193,10 +193,10 @@ public class BackupRun implements Runnable {
 					for (final IStorageInterceptor interceptor : storageInterceptors) {
 						SafeRunner.run(new ISafeRunnable() {
 							@Override
-							public void run() throws Exception {
+							public void run() {
 								interceptor.destroy();
 							}
-							
+
 							@Override
 							public void handleException(Throwable t) {
 								BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
@@ -208,7 +208,7 @@ public class BackupRun implements Runnable {
 		} finally {
 			System.gc();
 			fireBackupEnded();
-			
+
 			BackupPlugin.getDefault().logMessage("Backup done"); //$NON-NLS-1$
 		}
 	}
@@ -224,7 +224,7 @@ public class BackupRun implements Runnable {
 			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.ERROR);
 		}
 	}
-	
+
 	private void removeOldDatabaseBackups() {
 		File outputFolder = new File(settings.getOutputFolder());
 		File dbBackupRootFolder = new File(outputFolder, "$db-backup"); //$NON-NLS-1$
@@ -282,7 +282,7 @@ public class BackupRun implements Runnable {
 					break;
 				}
 				doPause();
-				
+
 				if (entry.isFolder()) {
 					try {
 						backupFolder((IFolder) entry, id, null);
@@ -301,25 +301,25 @@ public class BackupRun implements Runnable {
 					}
 				}
 			}
-			
+
 			return id;
 		} finally {
 			currentFileOrFolder.remove(currentFileOrFolder.size() - 1);
 		}
 	}
-	
+
 	private void backupFile(IFile file, int parentFolderId) throws IOException {
 		currentFileOrFolder.add(file);
 		try {
 			if ((numEntries % 50) == 0) {
 				checkDiskSpaceAndRemoveOldBackups();
 			}
-	
+
 			fireBackupStatusChanged(new BackupStatus(file.getAbsolutePath(), numEntries, totalEntries));
-			
+
 			FileTime creationTime = file.getCreationTime();
 			FileTime lastModificationTime = file.getLastModificationTime();
-	
+
 			int fileId = -1;
 			if (settings.isUseChecksums()) {
 				String checksum = getChecksum(file);
@@ -341,7 +341,7 @@ public class BackupRun implements Runnable {
 					type = EntryType.FAILED_FILE;
 				}
 			}
-	
+
 			database.factory()
 				.insertInto(Tables.ENTRIES)
 				.set(Tables.ENTRIES.PARENT_ID, Integer.valueOf(parentFolderId))
@@ -354,13 +354,13 @@ public class BackupRun implements Runnable {
 				.set(Tables.ENTRIES.NAME_LOWER, file.getName().toLowerCase())
 				.set(Tables.ENTRIES.FILE_ID, (fileId > 0) ? Integer.valueOf(fileId) : null)
 				.execute();
-			
+
 			numEntries++;
 		} finally {
 			currentFileOrFolder.remove(currentFileOrFolder.size() - 1);
 		}
 	}
-	
+
 	private int findOldFileViaTimestamp(IFile file) throws IOException {
 		FileTime lastModificationTime = file.getLastModificationTime();
 		long length = file.getLength();
@@ -393,7 +393,7 @@ public class BackupRun implements Runnable {
 						if ((entryModificationTime > 0) &&
 							(lastModificationTime != null) && (entryModificationTime == lastModificationTime.toMillis()) &&
 							(entryLength == length)) {
-							
+
 							return record.getValue(Tables.FILES.ID).intValue();
 						}
 					}
@@ -402,33 +402,33 @@ public class BackupRun implements Runnable {
 		} finally {
 			database.closeQuietly(cursor);
 		}
-		
+
 		return -1;
 	}
-	
+
 	private int findFileOrFolderEntryInBackup(final IFileSystemEntry file, int backupId) throws IOException {
 		IFileOrFolderEntry entry = toFileOrFolderEntry(file);
 		return Utils.findFileOrFolderEntryInBackup(entry, backupId, database);
 	}
-	
+
 	private Utils.IFileOrFolderEntry toFileOrFolderEntry(final IFileSystemEntry fileOrFolder) {
 		return new Utils.IFileOrFolderEntry() {
 			@Override
 			public boolean isFolder() throws IOException {
 				return fileOrFolder.isFolder();
 			}
-			
+
 			@Override
 			public IFileOrFolderEntry getParentFolder() {
 				IFolder parentFolder = fileOrFolder.getParentFolder();
 				return (parentFolder != null) ? toFileOrFolderEntry(parentFolder) : null;
 			}
-			
+
 			@Override
 			public String getName() {
 				return fileOrFolder.getName();
 			}
-			
+
 			@Override
 			public String getAbsolutePath() {
 				return fileOrFolder.getAbsolutePath();
@@ -488,7 +488,7 @@ public class BackupRun implements Runnable {
 				removeFoldersIfEmpty(backupFile.getParentFile());
 			}
 		}
-		
+
 		String checksum = toHexString(digest[0]);
 
 		database.factory()
@@ -500,7 +500,7 @@ public class BackupRun implements Runnable {
 			.execute();
 		return database.factory().lastID().intValue();
 	}
-	
+
 	private String getChecksum(IFile file) throws IOException {
 		final MessageDigest[] digest = new MessageDigest[1];
 		IOutputStreamProvider outputStreamProvider = new IOutputStreamProvider() {
@@ -533,22 +533,22 @@ public class BackupRun implements Runnable {
 			listeners.remove(listener);
 		}
 	}
-	
+
 	private List<IBackupRunListener> getListeners() {
 		synchronized (listeners) {
 			return new ArrayList<>(listeners);
 		}
 	}
-	
+
 	private void fireBackupStatusChanged(BackupStatus status) {
 		final BackupStatusEvent e = new BackupStatusEvent(this, status);
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					listener.backupStatusChanged(e);
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
@@ -562,10 +562,10 @@ public class BackupRun implements Runnable {
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					listener.backupEnded(e);
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
@@ -582,10 +582,10 @@ public class BackupRun implements Runnable {
 		for (final IBackupRunListener listener : getListeners()) {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					listener.backupErrorOccurred(e);
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					BackupPlugin.getDefault().logError("error while notifying listener", t); //$NON-NLS-1$
@@ -607,19 +607,19 @@ public class BackupRun implements Runnable {
 			// ignore
 		}
 	}
-	
+
 	public void stopBackup() {
 		running = false;
 		setPaused(false);
 	}
-	
+
 	public void setPaused(boolean paused) {
 		synchronized (this) {
 			this.paused = paused;
 			notify();
 		}
 	}
-	
+
 
 	private void removeOldBackups() {
 		removeOldBackupsMaxAge();
@@ -636,20 +636,20 @@ public class BackupRun implements Runnable {
 			.fetch(Tables.BACKUPS.ID));
 		removeBackups(ids);
 	}
-	
+
 	private void removeOldBackupsMaxAge() {
 		if (settings.getMaxAgeDays() > 0) {
 			Calendar c = Calendar.getInstance();
 			c.add(Calendar.DAY_OF_MONTH, -settings.getMaxAgeDays());
 			List<Integer> backupIds = getBackupIds(0, c.getTimeInMillis());
-			
+
 			BackupPlugin.getDefault().logMessage("removing backups (age): " + backupIds); //$NON-NLS-1$
 			if (!backupIds.isEmpty()) {
 				removeBackups(backupIds);
 			}
 		}
 	}
-	
+
 	private void removeOldBackupsDaily() {
 		// collect IDs of all but the most recent backup each day
 		Set<Integer> backupsToRemove = new HashSet<>();
@@ -682,7 +682,7 @@ public class BackupRun implements Runnable {
 			.orderBy(Tables.BACKUPS.RUN_TIME.desc())
 			.fetch(Tables.BACKUPS.ID);
 	}
-	
+
 	private void removeOldBackupsWeekly() {
 		// collect IDs of all but the most recent backup each week
 		Set<Integer> backupsToRemove = new HashSet<>();
@@ -787,7 +787,7 @@ public class BackupRun implements Runnable {
 		} finally {
 			database.closeQuietly(cursor);
 		}
-		
+
 		BackupPlugin.getDefault().logMessage("removing unused files: " + filesToRemove); //$NON-NLS-1$
 		if (!filesToRemove.isEmpty()) {
 			removeFiles(filesToRemove);
@@ -804,16 +804,16 @@ public class BackupRun implements Runnable {
 				BackupPlugin.getDefault().logError("error deleting file: " + file.backupPath, e); //$NON-NLS-1$
 				fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 			}
-			
+
 			removeFoldersIfEmpty(f.getParentFile());
-			
+
 			database.factory()
 				.delete(Tables.FILES)
 				.where(Tables.FILES.ID.equal(Integer.valueOf(file.id)))
 				.execute();
 		}
 	}
-	
+
 	private void removeFoldersIfEmpty(File folder) {
 		File outputFolder = new File(settings.getOutputFolder());
 		if (Utils.isParent(new FileSystemFileOrFolder(outputFolder), new FileSystemFileOrFolder(folder)) &&
@@ -842,16 +842,16 @@ public class BackupRun implements Runnable {
 					if (available <= 0) {
 						break;
 					}
-					
+
 					double avail = available * 100d / total;
 					if (avail >= (100d - settings.getMaxDiskFillRate())) {
 						break;
 					}
-					
+
 					if (!removeOldestBackup()) {
 						break;
 					}
-					
+
 					removeUnusedFiles();
 				}
 			}
@@ -862,7 +862,7 @@ public class BackupRun implements Runnable {
 			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 		}
 	}
-	
+
 	private boolean removeOldestBackup() {
 		Record record = database.factory()
 			.select(Tables.BACKUPS.ID)
@@ -899,7 +899,7 @@ public class BackupRun implements Runnable {
 			database.closeQuietly(cursor);
 		}
 	}
-	
+
 	private void consolidateDuplicateFiles(String checksum, long length) {
 		Cursor<Record> cursor = null;
 		try {
@@ -959,7 +959,7 @@ public class BackupRun implements Runnable {
 			fireBackupErrorOccurred(e, BackupErrorEvent.Severity.WARNING);
 		}
 	}
-	
+
 	private void doPause() {
 		synchronized (this) {
 			while (paused) {

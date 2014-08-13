@@ -62,7 +62,7 @@ import de.blizzy.backup.settings.Settings;
 public class CheckRun implements IRunnableWithProgress {
 	private static final class FileCheckResult {
 		static final FileCheckResult BROKEN = new FileCheckResult(false, null);
-		
+
 		boolean ok;
 		String checksumSHA256;
 
@@ -71,9 +71,9 @@ public class CheckRun implements IRunnableWithProgress {
 			this.checksumSHA256 = checksumSHA256;
 		}
 	}
-	
+
 	private static final int SHA256_LENGTH = DigestUtils.sha256Hex(StringUtils.EMPTY).length();
-	
+
 	private Settings settings;
 	private String outputFolder;
 	private Shell parentShell;
@@ -84,7 +84,7 @@ public class CheckRun implements IRunnableWithProgress {
 	public CheckRun(Settings settings, Shell parentShell) {
 		this.settings = settings;
 		this.parentShell = parentShell;
-		
+
 		outputFolder = settings.getOutputFolder();
 	}
 
@@ -103,7 +103,7 @@ public class CheckRun implements IRunnableWithProgress {
 		} catch (InterruptedException e) {
 			canceled = true;
 		}
-		
+
 		if (!canceled) {
 			if (errors) {
 				MessageDialog.openError(parentShell, Messages.Title_BackupIntegrityCheck, Messages.ErrorsWhileCheckingBackup);
@@ -120,21 +120,21 @@ public class CheckRun implements IRunnableWithProgress {
 	@Override
 	public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
 		database = new Database(settings, false);
-		
+
 		final boolean[] ok = { true };
 		List<StorageInterceptorDescriptor> descs = BackupPlugin.getDefault().getStorageInterceptors();
 		for (final StorageInterceptorDescriptor desc : descs) {
 			final IStorageInterceptor interceptor = desc.getStorageInterceptor();
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					IDialogSettings settings = Utils.getChildSection(
 							Utils.getSection("storageInterceptors"), desc.getId()); //$NON-NLS-1$
 					if (!interceptor.initialize(parentShell, settings)) {
 						ok[0] = false;
 					}
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					ok[0] = false;
@@ -150,11 +150,11 @@ public class CheckRun implements IRunnableWithProgress {
 			monitor.done();
 			throw new InterruptedException();
 		}
-		
+
 		try {
 			database.open(storageInterceptors);
 			database.initialize();
-			
+
 			int numFiles = database.factory()
 				.select(Factory.count())
 				.from(Tables.FILES)
@@ -172,7 +172,7 @@ public class CheckRun implements IRunnableWithProgress {
 					if (monitor.isCanceled()) {
 						throw new InterruptedException();
 					}
-					
+
 					Record record = cursor.fetchOne();
 					String backupPath = record.getValue(Tables.FILES.BACKUP_PATH);
 					String checksum = record.getValue(Tables.FILES.CHECKSUM);
@@ -212,10 +212,10 @@ public class CheckRun implements IRunnableWithProgress {
 			for (final IStorageInterceptor interceptor : storageInterceptors) {
 				SafeRunner.run(new ISafeRunnable() {
 					@Override
-					public void run() throws Exception {
+					public void run() {
 						interceptor.destroy();
 					}
-					
+
 					@Override
 					public void handleException(Throwable t) {
 						BackupPlugin.getDefault().logError("error while destroying storage interceptor", t); //$NON-NLS-1$
@@ -252,7 +252,7 @@ public class CheckRun implements IRunnableWithProgress {
 				in = compressIn;
 				IOUtils.copy(in, out);
 				out.flush();
-				
+
 				String fileChecksum = Hex.encodeHexString(digest.digest());
 				String fileChecksumMD5 = (md5Digest != null) ? Hex.encodeHexString(md5Digest.digest()) : null;
 				long fileLength = lengthOut.getLength();

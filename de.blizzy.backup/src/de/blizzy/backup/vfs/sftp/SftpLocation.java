@@ -42,7 +42,7 @@ import de.blizzy.backup.vfs.ILocationProvider;
 
 class SftpLocation implements ILocation {
 	static final int MAX_TRIES = 5;
-	
+
 	private String host;
 	private int port;
 	private String login;
@@ -54,7 +54,7 @@ class SftpLocation implements ILocation {
 
 	public SftpLocation(String host, int port, String login, String password, String folder,
 			SftpLocationProvider provider) {
-		
+
 		this.host = host;
 		this.port = port;
 		this.login = login;
@@ -87,7 +87,7 @@ class SftpLocation implements ILocation {
 	public void reconnect() {
 		disconnect();
 	}
-	
+
 	private void disconnect() {
 		if (sftpClient != null) {
 			try {
@@ -120,7 +120,7 @@ class SftpLocation implements ILocation {
 		}
 		return sftpClient;
 	}
-	
+
 	private SSHClient getSshClient() throws IOException {
 		if (sshClient == null) {
 			Config config = new DefaultConfig();
@@ -135,7 +135,7 @@ class SftpLocation implements ILocation {
 		}
 		return sshClient;
 	}
-	
+
 	boolean canRetryAction(IOException e) {
 		if (e instanceof SFTPException) {
 			SFTPException ex = (SFTPException) e;
@@ -143,6 +143,8 @@ class SftpLocation implements ILocation {
 				case UNKNOWN:
 				case PROTOCOL_ERROR:
 					return true;
+				default:
+					// ignore
 			}
 		}
 		return false;
@@ -167,7 +169,7 @@ class SftpLocation implements ILocation {
 			login.hashCode() ^ password.hashCode() ^
 			folder.hashCode();
 	}
-	
+
 	@Override
 	public boolean equals(Object o) {
 		if (o == this) {

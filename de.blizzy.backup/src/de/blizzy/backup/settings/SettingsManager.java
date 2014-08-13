@@ -37,7 +37,7 @@ import de.blizzy.backup.vfs.filesystem.FileSystemLocationProvider;
 
 public class SettingsManager {
 	private List<ISettingsListener> listeners = new ArrayList<>();
-	
+
 	public Settings getSettings() {
 		IDialogSettings section = getSection();
 		Set<ILocation> locations = new HashSet<>();
@@ -66,7 +66,7 @@ public class SettingsManager {
 				}
 			}
 		}
-		
+
 		String outputFolder = section.get("outputFolder"); //$NON-NLS-1$
 		boolean runHourly = true;
 		if (section.get("runHourly") != null) { //$NON-NLS-1$
@@ -92,7 +92,7 @@ public class SettingsManager {
 		if (section.get("maxDiskFillRate") != null) { //$NON-NLS-1$
 			maxDiskFillRate = section.getInt("maxDiskFillRate"); //$NON-NLS-1$
 		}
-		
+
 		return new Settings(locations, outputFolder, runHourly, dailyHours, dailyMinutes, useChecksums,
 				maxAgeDays, maxDiskFillRate);
 	}
@@ -100,7 +100,7 @@ public class SettingsManager {
 	private IDialogSettings getSection() {
 		return Utils.getChildSection(Utils.getSection("backup"), "settings"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
-	
+
 	public void setSettings(Settings settings) {
 		IDialogSettings section = getSection();
 
@@ -111,10 +111,10 @@ public class SettingsManager {
 			locationSection.put("__type", location.getProvider().getId()); //$NON-NLS-1$
 			location.getProvider().saveSettings(location, locationSection);
 		}
-		
+
 		// clean out old folders section
 		section.put("folders", ArrayUtils.EMPTY_STRING_ARRAY); //$NON-NLS-1$
-		
+
 		section.put("outputFolder", settings.getOutputFolder()); //$NON-NLS-1$
 		section.put("runHourly", settings.isRunHourly()); //$NON-NLS-1$
 		section.put("dailyHours", settings.getDailyHours()); //$NON-NLS-1$
@@ -122,10 +122,10 @@ public class SettingsManager {
 		section.put("useChecksums", settings.isUseChecksums()); //$NON-NLS-1$
 		section.put("maxAgeDays", settings.getMaxAgeDays()); //$NON-NLS-1$
 		section.put("maxDiskFillRate", settings.getMaxDiskFillRate()); //$NON-NLS-1$
-		
+
 		fireSettingsChanged();
 	}
-	
+
 	public void addListener(ISettingsListener listener) {
 		synchronized (listeners) {
 			listeners.add(listener);
@@ -137,7 +137,7 @@ public class SettingsManager {
 			listeners.remove(listener);
 		}
 	}
-	
+
 	private void fireSettingsChanged() {
 		List<ISettingsListener> ls;
 		synchronized (listeners) {
@@ -146,10 +146,10 @@ public class SettingsManager {
 		for (final ISettingsListener l : ls) {
 			SafeRunner.run(new ISafeRunnable() {
 				@Override
-				public void run() throws Exception {
+				public void run() {
 					l.settingsChanged();
 				}
-				
+
 				@Override
 				public void handleException(Throwable t) {
 					BackupPlugin.getDefault().logError(StringUtils.EMPTY, t);
